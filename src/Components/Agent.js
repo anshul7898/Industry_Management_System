@@ -13,7 +13,6 @@ import Navbar from './Navbar';
 
 export default function Agent() {
   const [searchText, setSearchText] = useState('');
-
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 5,
@@ -23,19 +22,16 @@ export default function Agent() {
   const [loading, setLoading] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // add | edit
+  const [modalMode, setModalMode] = useState('add');
   const [editingAgentId, setEditingAgentId] = useState(null);
 
   const [form] = Form.useForm();
 
+  // ---------------- FETCH ----------------
   async function fetchAgents() {
     const res = await fetch('/api/agents');
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`Failed to fetch agents (${res.status}): ${text}`);
-    }
-    const agents = await res.json();
-    return Array.isArray(agents) ? agents : [];
+    if (!res.ok) throw new Error('Failed to fetch agents');
+    return res.json();
   }
 
   const refreshAgents = async () => {
@@ -50,7 +46,7 @@ export default function Agent() {
 
       setData(rows);
     } catch (err) {
-      message.error(err?.message || 'Failed to load agents');
+      message.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -60,9 +56,7 @@ export default function Agent() {
     refreshAgents();
   }, []);
 
-  const compareText = (a, b, field) =>
-    String(a?.[field] ?? '').localeCompare(String(b?.[field] ?? ''));
-
+  // ---------------- MODAL ----------------
   const openAddModal = () => {
     setModalMode('add');
     setEditingAgentId(null);
@@ -76,55 +70,12 @@ export default function Agent() {
 
     form.setFieldsValue({
       name: record.name,
-      mobileNumber: record.mobileNumber,
+      mobile: record.mobile,
       address: record.address,
-      aadharDetails: record.aadharDetails,
+      aadhar_Details: record.aadhar_Details,
     });
 
     setIsModalOpen(true);
-  };
-
-  const closeModal = () => setIsModalOpen(false);
-
-  const handleAdd = async (values) => {
-    const res = await fetch('/api/agents', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`Failed to create agent (${res.status}): ${text}`);
-    }
-
-    return res.json().catch(() => null);
-  };
-
-  const handleUpdate = async (agentId, values) => {
-    const res = await fetch(`/api/agents/${encodeURIComponent(agentId)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(values),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`Failed to update agent (${res.status}): ${text}`);
-    }
-
-    return res.json().catch(() => null);
-  };
-
-  const handleDelete = async (agentId) => {
-    const res = await fetch(`/api/agents/${encodeURIComponent(agentId)}`, {
-      method: 'DELETE',
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`Failed to delete agent (${res.status}): ${text}`);
-    }
   };
 
   const handleSubmitModal = async () => {
@@ -133,58 +84,66 @@ export default function Agent() {
       setLoading(true);
 
       if (modalMode === 'add') {
-        const created = await handleAdd(values);
-        message.success(
-          created?.agentId ? `Created ${created.agentId}` : 'Agent created',
-        );
+        await fetch('/api/agents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(values),
+        });
 
-        setIsModalOpen(false);
-        setPagination((p) => ({ ...p, current: 1 }));
-        await refreshAgents();
-        return;
+        message.success('Agent created');
+      } else {
+        await fetch(`/api/agents/${editingAgentId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(values),
+        });
+
+        message.success('Agent updated');
       }
 
-      if (modalMode === 'edit') {
-        if (!editingAgentId) throw new Error('Missing agentId for update.');
-
-        const updated = await handleUpdate(editingAgentId, values);
-        message.success(
-          updated?.agentId ? `Updated ${updated.agentId}` : 'Agent updated',
-        );
-
-        setIsModalOpen(false);
-        await refreshAgents();
-      }
+      setIsModalOpen(false);
+      await refreshAgents();
     } catch (err) {
-      if (err?.message) message.error(err.message);
+      message.error(err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleDelete = async (agentId) => {
+    try {
+      setLoading(true);
+      await fetch(`/api/agents/${agentId}`, { method: 'DELETE' });
+      message.success('Agent deleted');
+      await refreshAgents();
+    } catch (err) {
+      message.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---------------- TABLE ----------------
   const columns = [
     {
       title: 'Agent ID',
       dataIndex: 'agentId',
       key: 'agentId',
-      sorter: (a, b) => compareText(a, b, 'agentId'),
     },
     {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      sorter: (a, b) => compareText(a, b, 'name'),
     },
     {
       title: 'Mobile Number',
-      dataIndex: 'mobileNumber',
-      key: 'mobileNumber',
-      sorter: (a, b) => compareText(a, b, 'mobileNumber'),
+      dataIndex: 'mobile',
+      key: 'mobile',
     },
     {
       title: 'Aadhar Details',
-      dataIndex: 'aadharDetails',
-      key: 'aadharDetails',
+      dataIndex: 'aadhar_Details',
+      key: 'aadhar_Details',
     },
     {
       title: 'Address',
@@ -199,24 +158,11 @@ export default function Agent() {
           <Button size="small" onClick={() => openEditModal(record)}>
             Edit
           </Button>
-
           <Popconfirm
             title="Delete this agent?"
-            description={`Are you sure you want to delete ${record.agentId}?`}
+            onConfirm={() => handleDelete(record.agentId)}
             okText="Delete"
             okButtonProps={{ danger: true }}
-            onConfirm={async () => {
-              try {
-                setLoading(true);
-                await handleDelete(record.agentId);
-                message.success(`Deleted ${record.agentId}`);
-                await refreshAgents();
-              } catch (err) {
-                message.error(err?.message || 'Failed to delete agent');
-              } finally {
-                setLoading(false);
-              }
-            }}
           >
             <Button danger size="small">
               Delete
@@ -227,42 +173,40 @@ export default function Agent() {
     },
   ];
 
+  // ---------------- SEARCH ----------------
   const filteredData = useMemo(() => {
-    const q = searchText.trim().toLowerCase();
+    const q = searchText.toLowerCase();
     if (!q) return data;
 
-    return data.filter((row) => {
-      const id = String(row.agentId || '').toLowerCase();
-      const name = String(row.name || '').toLowerCase();
-      const mobile = String(row.mobileNumber || '').toLowerCase();
-      return id.includes(q) || name.includes(q) || mobile.includes(q);
-    });
+    return data.filter(
+      (row) =>
+        String(row.agentId).toLowerCase().includes(q) ||
+        String(row.name || '')
+          .toLowerCase()
+          .includes(q) ||
+        String(row.mobile || '')
+          .toLowerCase()
+          .includes(q),
+    );
   }, [data, searchText]);
 
-  const onSearchChange = (value) => {
-    setSearchText(value);
-    setPagination((p) => ({ ...p, current: 1 }));
-  };
-
   return (
-    <div style={{ width: '100%' }}>
+    <div>
       <Navbar />
 
-      <div style={{ maxWidth: 1100, margin: '20px auto', padding: '0 16px' }}>
-        <h1 style={{ textAlign: 'center', marginBottom: 16 }}>Agent</h1>
+      <div style={{ maxWidth: 1100, margin: '20px auto', padding: 16 }}>
+        <h1 style={{ textAlign: 'center' }}>Agent</h1>
 
-        <Space style={{ width: '100%', marginBottom: 12 }} direction="vertical">
+        <Space direction="vertical" style={{ width: '100%' }}>
           <Input.Search
-            allowClear
             placeholder="Search by Agent ID, Name, or Mobile"
+            allowClear
             value={searchText}
-            onChange={(e) => onSearchChange(e.target.value)}
+            onChange={(e) => setSearchText(e.target.value)}
           />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button onClick={refreshAgents} disabled={loading}>
-              Refresh
-            </Button>
+            <Button onClick={refreshAgents}>Refresh</Button>
             <Button type="primary" onClick={openAddModal}>
               Add Agent
             </Button>
@@ -273,69 +217,48 @@ export default function Agent() {
           loading={loading}
           columns={columns}
           dataSource={filteredData}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            showSizeChanger: true,
-            pageSizeOptions: [5, 10, 20, 50],
-          }}
-          onChange={(newPagination) => {
-            setPagination({
-              current: newPagination.current,
-              pageSize: newPagination.pageSize,
-            });
-          }}
+          pagination={pagination}
+          onChange={(p) => setPagination(p)}
         />
 
         <Modal
           title={modalMode === 'add' ? 'Add Agent' : 'Edit Agent'}
           open={isModalOpen}
-          onCancel={closeModal}
+          onCancel={() => setIsModalOpen(false)}
           onOk={handleSubmitModal}
-          okText={modalMode === 'add' ? 'Add' : 'Save'}
           confirmLoading={loading}
         >
           <Form form={form} layout="vertical">
-            <Form.Item
-              label="Name"
-              name="name"
-              rules={[{ required: true, message: 'Please enter name.' }]}
-            >
+            <Form.Item name="name" label="Name" rules={[{ required: true }]}>
               <Input />
             </Form.Item>
 
             <Form.Item
+              name="mobile"
               label="Mobile Number"
-              name="mobileNumber"
               rules={[
-                { required: true, message: 'Please enter mobile number.' },
-                {
-                  pattern: /^[0-9]{10}$/,
-                  message: 'Enter valid 10 digit mobile number.',
-                },
+                { required: true },
+                { pattern: /^[0-9]{10}$/, message: 'Enter 10 digit number' },
               ]}
             >
               <Input />
             </Form.Item>
 
             <Form.Item
+              name="aadhar_Details"
               label="Aadhar Details"
-              name="aadharDetails"
               rules={[
-                { required: true, message: 'Please enter Aadhar number.' },
-                {
-                  pattern: /^[0-9]{12}$/,
-                  message: 'Enter valid 12 digit Aadhar number.',
-                },
+                { required: true },
+                { pattern: /^[0-9]{12}$/, message: 'Enter 12 digit number' },
               ]}
             >
               <Input />
             </Form.Item>
 
             <Form.Item
-              label="Address"
               name="address"
-              rules={[{ required: true, message: 'Please enter address.' }]}
+              label="Address"
+              rules={[{ required: true }]}
             >
               <Input.TextArea rows={3} />
             </Form.Item>
