@@ -45,6 +45,7 @@ export default function Agent() {
       }));
 
       setData(rows);
+      setPagination((p) => ({ ...p, current: 1 }));
     } catch (err) {
       message.error(err.message);
     } finally {
@@ -89,7 +90,6 @@ export default function Agent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(values),
         });
-
         message.success('Agent created');
       } else {
         await fetch(`/api/agents/${editingAgentId}`, {
@@ -97,7 +97,6 @@ export default function Agent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(values),
         });
-
         message.success('Agent updated');
       }
 
@@ -123,56 +122,6 @@ export default function Agent() {
     }
   };
 
-  // ---------------- TABLE ----------------
-  const columns = [
-    {
-      title: 'Agent ID',
-      dataIndex: 'agentId',
-      key: 'agentId',
-    },
-    {
-      title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: 'Mobile Number',
-      dataIndex: 'mobile',
-      key: 'mobile',
-    },
-    {
-      title: 'Aadhar Details',
-      dataIndex: 'aadhar_Details',
-      key: 'aadhar_Details',
-    },
-    {
-      title: 'Address',
-      dataIndex: 'address',
-      key: 'address',
-    },
-    {
-      title: 'Action',
-      key: 'action',
-      render: (_, record) => (
-        <Space>
-          <Button size="small" onClick={() => openEditModal(record)}>
-            Edit
-          </Button>
-          <Popconfirm
-            title="Delete this agent?"
-            onConfirm={() => handleDelete(record.agentId)}
-            okText="Delete"
-            okButtonProps={{ danger: true }}
-          >
-            <Button danger size="small">
-              Delete
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
-
   // ---------------- SEARCH ----------------
   const filteredData = useMemo(() => {
     const q = searchText.toLowerCase();
@@ -190,19 +139,85 @@ export default function Agent() {
     );
   }, [data, searchText]);
 
+  const handleSearchChange = (value) => {
+    setSearchText(value);
+    setPagination((p) => ({ ...p, current: 1 }));
+  };
+
+  // ---------------- TABLE ----------------
+  const columns = [
+    {
+      title: 'Agent ID',
+      dataIndex: 'agentId',
+      key: 'agentId',
+      sorter: (a, b) => String(a.agentId).localeCompare(String(b.agentId)),
+    },
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      key: 'name',
+      sorter: (a, b) =>
+        String(a.name || '').localeCompare(String(b.name || '')),
+    },
+    {
+      title: 'Mobile Number',
+      dataIndex: 'mobile',
+      key: 'mobile',
+      sorter: (a, b) =>
+        String(a.mobile || '').localeCompare(String(b.mobile || '')),
+    },
+    {
+      title: 'Aadhar Details',
+      dataIndex: 'aadhar_Details',
+      key: 'aadhar_Details',
+      sorter: (a, b) =>
+        String(a.aadhar_Details || '').localeCompare(
+          String(b.aadhar_Details || ''),
+        ),
+    },
+    {
+      title: 'Address',
+      dataIndex: 'address',
+      key: 'address',
+      sorter: (a, b) =>
+        String(a.address || '').localeCompare(String(b.address || '')),
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      render: (_, record) => (
+        <Space>
+          <Button size="middle" onClick={() => openEditModal(record)}>
+            Edit
+          </Button>
+          <Popconfirm
+            title="Are you sure you want to delete this agent?"
+            onConfirm={() => handleDelete(record.agentId)}
+            okText="Delete"
+            okButtonProps={{ danger: true }}
+          >
+            <Button danger size="middle">
+              Delete
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
   return (
-    <div>
+    <div style={{ width: '100%' }}>
       <Navbar />
 
       <div style={{ maxWidth: 1100, margin: '20px auto', padding: 16 }}>
-        <h1 style={{ textAlign: 'center' }}>Agent</h1>
+        <h1 style={{ textAlign: 'center', marginBottom: 16 }}>Agent</h1>
 
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
           <Input.Search
             placeholder="Search by Agent ID, Name, or Mobile"
             allowClear
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
           />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -217,9 +232,33 @@ export default function Agent() {
           loading={loading}
           columns={columns}
           dataSource={filteredData}
-          pagination={pagination}
-          onChange={(p) => setPagination(p)}
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            showSizeChanger: true,
+            pageSizeOptions: ['5', '10', '20', '50'],
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} of ${total} agents`,
+          }}
+          onChange={(newPagination) => {
+            setPagination({
+              current: newPagination.current,
+              pageSize: newPagination.pageSize,
+            });
+          }}
         />
+
+        {/* Dark Header Styling (Same as Accounts) */}
+        <style>{`
+          .ant-table-thead > tr > th {
+            background: #1f2937 !important;
+            color: #ffffff !important;
+            font-weight: 600;
+          }
+          .ant-table-thead > tr > th .ant-table-column-sorter {
+            color: rgba(255, 255, 255, 0.95);
+          }
+        `}</style>
 
         <Modal
           title={modalMode === 'add' ? 'Add Agent' : 'Edit Agent'}
@@ -238,7 +277,10 @@ export default function Agent() {
               label="Mobile Number"
               rules={[
                 { required: true },
-                { pattern: /^[0-9]{10}$/, message: 'Enter 10 digit number' },
+                {
+                  pattern: /^[0-9]{10}$/,
+                  message: 'Mobile number should be of 10 digits',
+                },
               ]}
             >
               <Input />
@@ -249,7 +291,10 @@ export default function Agent() {
               label="Aadhar Details"
               rules={[
                 { required: true },
-                { pattern: /^[0-9]{12}$/, message: 'Enter 12 digit number' },
+                {
+                  pattern: /^[0-9]{12}$/,
+                  message: 'Aadhar Number should be of 12 digits',
+                },
               ]}
             >
               <Input />
