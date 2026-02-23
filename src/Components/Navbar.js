@@ -32,6 +32,7 @@ export default function Navbar() {
     if (path === '/accounts') return 'accounts';
     if (path === '/machinemaintenance') return 'machineMaintenance';
     if (path === '/product') return 'product';
+    if (path === '/agent') return 'agent';
     return '';
   })();
 
@@ -46,6 +47,7 @@ export default function Navbar() {
       label: <Link to="/MachineMaintenance">Machine Maintenance</Link>,
     },
     { key: 'product', label: <Link to="/Product">Product</Link> },
+    { key: 'agent', label: <Link to="/Agent">Agent</Link> },
   ];
 
   const ROLE_ALLOWED_KEYS = {
@@ -57,6 +59,7 @@ export default function Navbar() {
       'accounts',
       'machineMaintenance',
       'product',
+      'agent',
     ],
     inventory_admin: ['inventory'],
     accounts_admin: ['accounts'],
