@@ -11,6 +11,7 @@ import Order from './Components/Order';
 import MachineMaintenance from './Components/MachineMaintenance';
 import Inventory from './Components/Inventory';
 import Delivery from './Components/Delivery';
+import Agent from './Components/Agent';
 
 export default function App() {
   return (
@@ -73,12 +74,19 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/Delivery"
           element={
             <ProtectedRoute allowedRoles={['super_user', 'delivery_admin']}>
               <Delivery />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/Agent"
+          element={
+            <ProtectedRoute allowedRoles={['super_user', 'agent_admin']}>
+              <Agent />
             </ProtectedRoute>
           }
         />
