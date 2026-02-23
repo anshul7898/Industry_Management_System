@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Select } from 'antd';
 import { signIn, confirmSignIn } from 'aws-amplify/auth';

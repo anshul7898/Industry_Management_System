@@ -1,4 +1,3 @@
-import React from 'react';
 import Navbar from './Navbar';
 import FeatureCommingSoon from './FeatureCommingSoon';
 export default function Delivery() {

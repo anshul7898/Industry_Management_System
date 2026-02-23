@@ -1,4 +1,3 @@
-import React from 'react';
 import { Menu, Button } from 'antd';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { signOut } from 'aws-amplify/auth';
@@ -33,6 +32,7 @@ export default function Navbar() {
     if (path === '/machinemaintenance') return 'machineMaintenance';
     if (path === '/product') return 'product';
     if (path === '/agent') return 'agent';
+    if (path === '/party') return 'party';
     return '';
   })();
 
@@ -48,6 +48,7 @@ export default function Navbar() {
     },
     { key: 'product', label: <Link to="/Product">Product</Link> },
     { key: 'agent', label: <Link to="/Agent">Agent</Link> },
+    { key: 'party', label: <Link to="/Party">Party</Link> },
   ];
 
   const ROLE_ALLOWED_KEYS = {
@@ -60,6 +61,7 @@ export default function Navbar() {
       'machineMaintenance',
       'product',
       'agent',
+      'party',
     ],
     inventory_admin: ['inventory'],
     accounts_admin: ['accounts'],

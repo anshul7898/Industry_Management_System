@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import ProtectedRoute from './Components/ProtectedRoute';
@@ -12,6 +11,7 @@ import MachineMaintenance from './Components/MachineMaintenance';
 import Inventory from './Components/Inventory';
 import Delivery from './Components/Delivery';
 import Agent from './Components/Agent';
+import Party from './Components/Party';
 
 export default function App() {
   return (
@@ -87,6 +87,14 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={['super_user', 'agent_admin']}>
               <Agent />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/Party"
+          element={
+            <ProtectedRoute allowedRoles={['super_user', 'party_admin']}>
+              <Party />
             </ProtectedRoute>
           }
         />
