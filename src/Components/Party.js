@@ -29,7 +29,7 @@ export default function Party() {
 
   // ---------------- FETCH ----------------
   async function fetchParties() {
-    const res = await fetch('/api/parties');
+    const res = await fetch('/api/party');
     if (!res.ok) throw new Error('Failed to fetch parties');
     return res.json();
   }
@@ -91,14 +91,14 @@ export default function Party() {
       setLoading(true);
 
       if (modalMode === 'add') {
-        await fetch('/api/parties', {
+        await fetch('/api/party', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(values),
         });
         message.success('Party created');
       } else {
-        await fetch(`/api/parties/${editingPartyId}`, {
+        await fetch(`/api/party/${editingPartyId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(values),
@@ -118,7 +118,7 @@ export default function Party() {
   const handleDelete = async (partyId) => {
     try {
       setLoading(true);
-      await fetch(`/api/parties/${partyId}`, { method: 'DELETE' });
+      await fetch(`/api/party/${partyId}`, { method: 'DELETE' });
       message.success('Party deleted');
       await refreshParties();
     } catch (err) {
