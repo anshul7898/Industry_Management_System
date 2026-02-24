@@ -122,10 +122,8 @@ export default function Party() {
       const values = await form.validateFields();
       setLoading(true);
 
-      // Build payload exactly as the Party Pydantic model expects
+      // Build payload without partyId (auto-generated on backend)
       const payload = {
-        partyId:
-          modalMode === 'add' ? parseInt(values.partyId) : editingPartyId,
         partyName: values.partyName,
         aliasOrCompanyName: values.aliasOrCompanyName || null,
         address: values.address || null,
@@ -355,22 +353,6 @@ export default function Party() {
           confirmLoading={loading}
         >
           <Form form={form} layout="vertical">
-            {modalMode === 'add' && (
-              <Form.Item
-                name="partyId"
-                label="Party ID"
-                rules={[
-                  { required: true, message: 'Please enter party ID' },
-                  {
-                    pattern: /^[0-9]+$/,
-                    message: 'Party ID must be a number',
-                  },
-                ]}
-              >
-                <Input placeholder="Enter unique party ID" />
-              </Form.Item>
-            )}
-
             <Form.Item
               name="partyName"
               label="Party Name"
