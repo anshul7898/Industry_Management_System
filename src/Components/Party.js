@@ -11,6 +11,8 @@ import {
   Select,
 } from 'antd';
 import Navbar from './Navbar';
+import { getStateOptions } from '../data/states';
+import { getCityOptions } from '../data/cities';
 
 export default function Party() {
   const [searchText, setSearchText] = useState('');
@@ -28,6 +30,44 @@ export default function Party() {
   const [editingPartyId, setEditingPartyId] = useState(null);
 
   const [form] = Form.useForm();
+  const [selectedState, setSelectedState] = useState(null);
+
+  // Email validation regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  // Get state options from data file
+  const stateOptions = useMemo(() => getStateOptions(), []);
+
+  // Get city options based on selected state
+  const cityOptions = useMemo(
+    () => getCityOptions(selectedState),
+    [selectedState],
+  );
+
+  // Handle state change to clear city selection
+  const handleStateChange = (value) => {
+    setSelectedState(value);
+    form.setFieldValue('city', null);
+  };
+
+  // Handle city change
+  const handleCityChange = (value) => {
+    form.setFieldValue('city', value);
+  };
+
+  // Email validator function
+  const validateEmail = (_, value) => {
+    if (!value) {
+      // Email is optional, so empty is valid
+      return Promise.resolve();
+    }
+    if (emailRegex.test(value)) {
+      return Promise.resolve();
+    }
+    return Promise.reject(
+      new Error('Please enter a valid email address (e.g., user@example.com)'),
+    );
+  };
 
   // ---------------- FETCH ----------------
   const fetchParties = async () => {
@@ -74,10 +114,16 @@ export default function Party() {
     refreshParties();
   }, []);
 
+  // Watch form state changes
+  useEffect(() => {
+    const unsubscribe = form.getFieldInstance('state');
+  }, [form]);
+
   // ---------------- MODAL ----------------
   const openAddModal = async () => {
     setModalMode('add');
     setEditingPartyId(null);
+    setSelectedState(null);
     form.resetFields();
 
     try {
@@ -93,6 +139,7 @@ export default function Party() {
   const openEditModal = async (record) => {
     setModalMode('edit');
     setEditingPartyId(record.partyId);
+    setSelectedState(record.state || null);
 
     try {
       const agentsData = await fetchAgents();
@@ -109,6 +156,7 @@ export default function Party() {
       email: record.email,
       address: record.address,
       city: record.city,
+      state: record.state,
       pincode: record.pincode,
       agentId: record.agentId,
       orderId: record.orderId,
@@ -128,6 +176,7 @@ export default function Party() {
         aliasOrCompanyName: values.aliasOrCompanyName || null,
         address: values.address || null,
         city: values.city || null,
+        state: values.state || null,
         pincode: values.pincode || null,
         agentId: values.agentId ? parseInt(values.agentId) : null,
         contact_Person1: values.contact_Person1 || null,
@@ -165,6 +214,7 @@ export default function Party() {
       }
 
       setIsModalOpen(false);
+      setSelectedState(null);
       await refreshParties();
     } catch (err) {
       message.error(err.message);
@@ -191,6 +241,12 @@ export default function Party() {
     }
   };
 
+  // Close modal handler
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedState(null);
+  };
+
   // ---------------- SEARCH ----------------
   const filteredData = useMemo(() => {
     const q = searchText.toLowerCase();
@@ -207,6 +263,15 @@ export default function Party() {
           .includes(q) ||
         String(row.aliasOrCompanyName || '')
           .toLowerCase()
+          .includes(q) ||
+        String(row.email || '')
+          .toLowerCase()
+          .includes(q) ||
+        String(row.city || '')
+          .toLowerCase()
+          .includes(q) ||
+        String(row.state || '')
+          .toLowerCase()
           .includes(q),
     );
   }, [data, searchText]);
@@ -222,66 +287,148 @@ export default function Party() {
     value: agent.agentId,
   }));
 
+  // Helper function to truncate long text
+  const truncateText = (text, maxLength = 20) => {
+    if (!text) return '-';
+    return String(text).length > maxLength
+      ? String(text).substring(0, maxLength) + '...'
+      : String(text);
+  };
+
   // ---------------- TABLE ----------------
   const columns = [
     {
       title: 'Party ID',
       dataIndex: 'partyId',
       key: 'partyId',
+      width: 80,
       sorter: (a, b) => (a.partyId || 0) - (b.partyId || 0),
+      fixed: 'left',
     },
     {
       title: 'Party Name',
       dataIndex: 'partyName',
       key: 'partyName',
+      width: 150,
       sorter: (a, b) =>
         String(a.partyName || '').localeCompare(String(b.partyName || '')),
+      render: (text) => <span title={text}>{truncateText(text, 20)}</span>,
     },
     {
       title: 'Company',
       dataIndex: 'aliasOrCompanyName',
       key: 'aliasOrCompanyName',
+      width: 150,
       sorter: (a, b) =>
         String(a.aliasOrCompanyName || '').localeCompare(
           String(b.aliasOrCompanyName || ''),
         ),
+      render: (text) => <span title={text}>{truncateText(text, 20)}</span>,
+    },
+    {
+      title: 'Contact Person',
+      dataIndex: 'contact_Person1',
+      key: 'contact_Person1',
+      width: 150,
+      sorter: (a, b) =>
+        String(a.contact_Person1 || '').localeCompare(
+          String(b.contact_Person1 || ''),
+        ),
+      render: (text) => <span title={text}>{truncateText(text, 20)}</span>,
     },
     {
       title: 'Mobile',
       dataIndex: 'mobile1',
       key: 'mobile1',
+      width: 120,
       sorter: (a, b) =>
         String(a.mobile1 || '').localeCompare(String(b.mobile1 || '')),
+      render: (text) => <span title={text}>{truncateText(text, 15)}</span>,
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+      width: 160,
+      sorter: (a, b) =>
+        String(a.email || '').localeCompare(String(b.email || '')),
+      render: (text) => <span title={text}>{truncateText(text, 25)}</span>,
+    },
+    {
+      title: 'Address',
+      dataIndex: 'address',
+      key: 'address',
+      width: 180,
+      sorter: (a, b) =>
+        String(a.address || '').localeCompare(String(b.address || '')),
+      render: (text) => <span title={text}>{truncateText(text, 25)}</span>,
     },
     {
       title: 'City',
       dataIndex: 'city',
       key: 'city',
+      width: 120,
       sorter: (a, b) =>
         String(a.city || '').localeCompare(String(b.city || '')),
+      render: (text) => <span title={text}>{truncateText(text, 15)}</span>,
+    },
+    {
+      title: 'State',
+      dataIndex: 'state',
+      key: 'state',
+      width: 150,
+      sorter: (a, b) =>
+        String(a.state || '').localeCompare(String(b.state || '')),
+      render: (text) => <span title={text}>{truncateText(text, 20)}</span>,
+    },
+    {
+      title: 'Pincode',
+      dataIndex: 'pincode',
+      key: 'pincode',
+      width: 100,
+      sorter: (a, b) =>
+        String(a.pincode || '').localeCompare(String(b.pincode || '')),
+    },
+    {
+      title: 'Order ID',
+      dataIndex: 'orderId',
+      key: 'orderId',
+      width: 120,
+      sorter: (a, b) =>
+        String(a.orderId || '').localeCompare(String(b.orderId || '')),
+      render: (text) => <span title={text}>{truncateText(text, 15)}</span>,
     },
     {
       title: 'Agent',
       dataIndex: 'agentName',
       key: 'agentName',
+      width: 150,
       sorter: (a, b) =>
         String(a.agentName || '').localeCompare(String(b.agentName || '')),
+      render: (text) => <span title={text}>{truncateText(text, 20)}</span>,
     },
     {
       title: 'Action',
       key: 'action',
+      width: 150,
+      fixed: 'right',
       render: (_, record) => (
         <Space>
-          <Button size="middle" onClick={() => openEditModal(record)}>
+          <Button
+            size="small"
+            type="primary"
+            onClick={() => openEditModal(record)}
+          >
             Edit
           </Button>
           <Popconfirm
-            title="Are you sure you want to delete this party?"
+            title="Delete Party?"
+            description="Are you sure you want to delete this party?"
             onConfirm={() => handleDelete(record.partyId)}
-            okText="Delete"
-            okButtonProps={{ danger: true }}
+            okText="Yes"
+            cancelText="No"
           >
-            <Button danger size="middle">
+            <Button danger size="small">
               Delete
             </Button>
           </Popconfirm>
@@ -294,12 +441,12 @@ export default function Party() {
     <div style={{ width: '100%' }}>
       <Navbar />
 
-      <div style={{ maxWidth: 1100, margin: '20px auto', padding: 16 }}>
+      <div style={{ maxWidth: '100%', margin: '20px auto', padding: 16 }}>
         <h1 style={{ textAlign: 'center', marginBottom: 16 }}>Party</h1>
 
         <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
           <Input.Search
-            placeholder="Search by Party ID, Name, Company or Mobile"
+            placeholder="Search by Party ID, Name, Company, Email, City, State or Mobile"
             allowClear
             value={searchText}
             onChange={(e) => handleSearchChange(e.target.value)}
@@ -313,25 +460,36 @@ export default function Party() {
           </div>
         </Space>
 
-        <Table
-          loading={loading}
-          columns={columns}
-          dataSource={filteredData}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            showSizeChanger: true,
-            pageSizeOptions: ['5', '10', '20', '50'],
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} of ${total} parties`,
+        <div
+          style={{
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            border: '1px solid #e0e0e0',
+            borderRadius: '4px',
           }}
-          onChange={(newPagination) => {
-            setPagination({
-              current: newPagination.current,
-              pageSize: newPagination.pageSize,
-            });
-          }}
-        />
+        >
+          <Table
+            loading={loading}
+            columns={columns}
+            dataSource={filteredData}
+            pagination={{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              showSizeChanger: true,
+              pageSizeOptions: ['5', '10', '20', '50'],
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} of ${total} parties`,
+            }}
+            onChange={(newPagination) => {
+              setPagination({
+                current: newPagination.current,
+                pageSize: newPagination.pageSize,
+              });
+            }}
+            scroll={{ x: 1800 }}
+            size="small"
+          />
+        </div>
 
         {/* Dark Header Styling */}
         <style>{`
@@ -343,14 +501,18 @@ export default function Party() {
           .ant-table-thead > tr > th .ant-table-column-sorter {
             color: rgba(255, 255, 255, 0.95);
           }
+          .ant-table-body > tr:hover > td {
+            background: #f5f5f5 !important;
+          }
         `}</style>
 
         <Modal
           title={modalMode === 'add' ? 'Add Party' : 'Edit Party'}
           open={isModalOpen}
-          onCancel={() => setIsModalOpen(false)}
+          onCancel={handleCloseModal}
           onOk={handleSubmitModal}
           confirmLoading={loading}
+          width={700}
         >
           <Form form={form} layout="vertical">
             <Form.Item
@@ -358,15 +520,15 @@ export default function Party() {
               label="Party Name"
               rules={[{ required: true, message: 'Please enter party name' }]}
             >
-              <Input />
+              <Input placeholder="Enter party name" />
             </Form.Item>
 
             <Form.Item name="aliasOrCompanyName" label="Alias / Company Name">
-              <Input />
+              <Input placeholder="Enter alias or company name" />
             </Form.Item>
 
             <Form.Item name="contact_Person1" label="Contact Person">
-              <Input />
+              <Input placeholder="Enter contact person name" />
             </Form.Item>
 
             <Form.Item
@@ -380,23 +542,61 @@ export default function Party() {
                 },
               ]}
             >
-              <Input />
+              <Input placeholder="Enter 10 digit mobile number" />
             </Form.Item>
 
-            <Form.Item name="email" label="Email">
-              <Input type="email" />
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[
+                {
+                  validator: validateEmail,
+                },
+              ]}
+            >
+              <Input
+                type="email"
+                placeholder="Enter email address (e.g., user@example.com)"
+              />
             </Form.Item>
 
             <Form.Item name="address" label="Address">
-              <Input.TextArea rows={2} />
+              <Input.TextArea rows={2} placeholder="Enter complete address" />
+            </Form.Item>
+
+            <Form.Item name="state" label="State">
+              <Select
+                placeholder="Select State"
+                options={stateOptions}
+                showSearch
+                onChange={handleStateChange}
+                filterOption={(input, option) =>
+                  (option?.label ?? '')
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              />
             </Form.Item>
 
             <Form.Item name="city" label="City">
-              <Input />
+              <Select
+                placeholder={
+                  selectedState ? 'Select City' : 'Please select a state first'
+                }
+                options={cityOptions}
+                showSearch
+                onChange={handleCityChange}
+                disabled={!selectedState || cityOptions.length === 0}
+                filterOption={(input, option) =>
+                  (option?.label ?? '')
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              />
             </Form.Item>
 
             <Form.Item name="pincode" label="Pincode">
-              <Input />
+              <Input placeholder="Enter pincode" />
             </Form.Item>
 
             <Form.Item
@@ -408,11 +608,17 @@ export default function Party() {
                 placeholder="Select Agent"
                 options={agentOptions}
                 optionLabelProp="label"
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.label ?? '')
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
               />
             </Form.Item>
 
             <Form.Item name="orderId" label="Order ID">
-              <Input />
+              <Input placeholder="Enter order ID (optional)" />
             </Form.Item>
           </Form>
         </Modal>
