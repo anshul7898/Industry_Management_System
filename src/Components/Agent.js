@@ -84,20 +84,40 @@ export default function Agent() {
       const values = await form.validateFields();
       setLoading(true);
 
+      // Build payload without agentId (auto-generated on backend)
+      const payload = {
+        name: values.name,
+        mobile: values.mobile,
+        aadhar_Details: values.aadhar_Details,
+        address: values.address,
+      };
+
       if (modalMode === 'add') {
-        await fetch('/api/agents', {
+        const res = await fetch('/api/agents', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
+          body: JSON.stringify(payload),
         });
-        message.success('Agent created');
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.detail || 'Failed to create agent');
+        }
+
+        message.success('Agent created successfully');
       } else {
-        await fetch(`/api/agents/${editingAgentId}`, {
+        const res = await fetch(`/api/agents/${editingAgentId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
+          body: JSON.stringify(payload),
         });
-        message.success('Agent updated');
+
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.detail || 'Failed to update agent');
+        }
+
+        message.success('Agent updated successfully');
       }
 
       setIsModalOpen(false);
@@ -112,8 +132,14 @@ export default function Agent() {
   const handleDelete = async (agentId) => {
     try {
       setLoading(true);
-      await fetch(`/api/agents/${agentId}`, { method: 'DELETE' });
-      message.success('Agent deleted');
+      const res = await fetch(`/api/agents/${agentId}`, { method: 'DELETE' });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.detail || 'Failed to delete agent');
+      }
+
+      message.success('Agent deleted successfully');
       await refreshAgents();
     } catch (err) {
       message.error(err.message);
@@ -150,7 +176,7 @@ export default function Agent() {
       title: 'Agent ID',
       dataIndex: 'agentId',
       key: 'agentId',
-      sorter: (a, b) => String(a.agentId).localeCompare(String(b.agentId)),
+      sorter: (a, b) => (a.agentId || 0) - (b.agentId || 0),
     },
     {
       title: 'Name',
@@ -268,7 +294,11 @@ export default function Agent() {
           confirmLoading={loading}
         >
           <Form form={form} layout="vertical">
-            <Form.Item name="name" label="Name" rules={[{ required: true }]}>
+            <Form.Item
+              name="name"
+              label="Name"
+              rules={[{ required: true, message: 'Please enter agent name' }]}
+            >
               <Input />
             </Form.Item>
 
@@ -276,7 +306,7 @@ export default function Agent() {
               name="mobile"
               label="Mobile Number"
               rules={[
-                { required: true },
+                { required: true, message: 'Please enter mobile number' },
                 {
                   pattern: /^[0-9]{10}$/,
                   message: 'Mobile number should be of 10 digits',
@@ -290,7 +320,7 @@ export default function Agent() {
               name="aadhar_Details"
               label="Aadhar Details"
               rules={[
-                { required: true },
+                { required: true, message: 'Please enter Aadhar number' },
                 {
                   pattern: /^[0-9]{12}$/,
                   message: 'Aadhar Number should be of 12 digits',
@@ -303,7 +333,7 @@ export default function Agent() {
             <Form.Item
               name="address"
               label="Address"
-              rules={[{ required: true }]}
+              rules={[{ required: true, message: 'Please enter address' }]}
             >
               <Input.TextArea rows={3} />
             </Form.Item>
