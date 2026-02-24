@@ -30,17 +30,17 @@ export default function Party() {
   const [form] = Form.useForm();
 
   // ---------------- FETCH ----------------
-  async function fetchParties() {
+  const fetchParties = async () => {
     const res = await fetch('/api/party');
     if (!res.ok) throw new Error('Failed to fetch parties');
     return res.json();
-  }
+  };
 
-  async function fetchAgents() {
+  const fetchAgents = async () => {
     const res = await fetch('/api/agents/lightweight');
     if (!res.ok) throw new Error('Failed to fetch agents');
     return res.json();
-  }
+  };
 
   const refreshParties = async () => {
     setLoading(true);
@@ -54,7 +54,6 @@ export default function Party() {
 
       const rows = parties.map((p, idx) => {
         const agent = agentsData.find((a) => a.agentId === p.agentId);
-
         return {
           key: p.partyId ?? String(idx),
           ...p,
@@ -76,16 +75,31 @@ export default function Party() {
   }, []);
 
   // ---------------- MODAL ----------------
-  const openAddModal = () => {
+  const openAddModal = async () => {
     setModalMode('add');
     setEditingPartyId(null);
     form.resetFields();
+
+    try {
+      const agentsData = await fetchAgents();
+      setAgents(agentsData);
+    } catch (err) {
+      message.error(err.message);
+    }
+
     setIsModalOpen(true);
   };
 
-  const openEditModal = (record) => {
+  const openEditModal = async (record) => {
     setModalMode('edit');
     setEditingPartyId(record.partyId);
+
+    try {
+      const agentsData = await fetchAgents();
+      setAgents(agentsData);
+    } catch (err) {
+      message.error(err.message);
+    }
 
     form.setFieldsValue({
       partyName: record.partyName,
@@ -97,6 +111,7 @@ export default function Party() {
       city: record.city,
       pincode: record.pincode,
       agentId: record.agentId,
+      orderId: record.orderId,
     });
 
     setIsModalOpen(true);
@@ -107,20 +122,48 @@ export default function Party() {
       const values = await form.validateFields();
       setLoading(true);
 
+      // Build payload exactly as the Party Pydantic model expects
+      const payload = {
+        partyId:
+          modalMode === 'add' ? parseInt(values.partyId) : editingPartyId,
+        partyName: values.partyName,
+        aliasOrCompanyName: values.aliasOrCompanyName || null,
+        address: values.address || null,
+        city: values.city || null,
+        pincode: values.pincode || null,
+        agentId: values.agentId ? parseInt(values.agentId) : null,
+        contact_Person1: values.contact_Person1 || null,
+        email: values.email || null,
+        mobile1: values.mobile1 || null,
+        orderId: values.orderId || null,
+      };
+
       if (modalMode === 'add') {
-        await fetch('/api/party', {
+        const res = await fetch('/api/party', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
+          body: JSON.stringify(payload),
         });
-        message.success('Party created');
+
+        if (!res.ok) {
+          const errorData = await res.text();
+          throw new Error(errorData || 'Failed to create party');
+        }
+
+        message.success('Party created successfully');
       } else {
-        await fetch(`/api/party/${editingPartyId}`, {
+        const res = await fetch(`/api/party/${editingPartyId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
+          body: JSON.stringify(payload),
         });
-        message.success('Party updated');
+
+        if (!res.ok) {
+          const errorData = await res.text();
+          throw new Error(errorData || 'Failed to update party');
+        }
+
+        message.success('Party updated successfully');
       }
 
       setIsModalOpen(false);
@@ -135,8 +178,13 @@ export default function Party() {
   const handleDelete = async (partyId) => {
     try {
       setLoading(true);
-      await fetch(`/api/party/${partyId}`, { method: 'DELETE' });
-      message.success('Party deleted');
+      const res = await fetch(`/api/party/${partyId}`, { method: 'DELETE' });
+
+      if (!res.ok) {
+        throw new Error('Failed to delete party');
+      }
+
+      message.success('Party deleted successfully');
       await refreshParties();
     } catch (err) {
       message.error(err.message);
@@ -170,13 +218,19 @@ export default function Party() {
     setPagination((p) => ({ ...p, current: 1 }));
   };
 
+  // Build agent dropdown options
+  const agentOptions = agents.map((agent) => ({
+    label: agent.name,
+    value: agent.agentId,
+  }));
+
   // ---------------- TABLE ----------------
   const columns = [
     {
       title: 'Party ID',
       dataIndex: 'partyId',
       key: 'partyId',
-      sorter: (a, b) => String(a.partyId).localeCompare(String(b.partyId)),
+      sorter: (a, b) => (a.partyId || 0) - (b.partyId || 0),
     },
     {
       title: 'Party Name',
@@ -281,7 +335,7 @@ export default function Party() {
           }}
         />
 
-        {/* Dark Header Styling (Same as Agent) */}
+        {/* Dark Header Styling */}
         <style>{`
           .ant-table-thead > tr > th {
             background: #1f2937 !important;
@@ -301,6 +355,22 @@ export default function Party() {
           confirmLoading={loading}
         >
           <Form form={form} layout="vertical">
+            {modalMode === 'add' && (
+              <Form.Item
+                name="partyId"
+                label="Party ID"
+                rules={[
+                  { required: true, message: 'Please enter party ID' },
+                  {
+                    pattern: /^[0-9]+$/,
+                    message: 'Party ID must be a number',
+                  },
+                ]}
+              >
+                <Input placeholder="Enter unique party ID" />
+              </Form.Item>
+            )}
+
             <Form.Item
               name="partyName"
               label="Party Name"
@@ -324,7 +394,7 @@ export default function Party() {
                 { required: true, message: 'Please enter mobile number' },
                 {
                   pattern: /^[0-9]{10}$/,
-                  message: 'Mobile number should be of 10 digits',
+                  message: 'Mobile number should be 10 digits',
                 },
               ]}
             >
@@ -354,11 +424,13 @@ export default function Party() {
             >
               <Select
                 placeholder="Select Agent"
-                options={agents.map((agent) => ({
-                  label: agent.name,
-                  value: agent.agentId,
-                }))}
+                options={agentOptions}
+                optionLabelProp="label"
               />
+            </Form.Item>
+
+            <Form.Item name="orderId" label="Order ID">
+              <Input />
             </Form.Item>
           </Form>
         </Modal>
