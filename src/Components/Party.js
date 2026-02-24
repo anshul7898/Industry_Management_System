@@ -8,6 +8,7 @@ import {
   Modal,
   Form,
   message,
+  Select,
 } from 'antd';
 import Navbar from './Navbar';
 
@@ -19,6 +20,7 @@ export default function Party() {
   });
 
   const [data, setData] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,15 +36,31 @@ export default function Party() {
     return res.json();
   }
 
+  async function fetchAgents() {
+    const res = await fetch('/api/agents/lightweight');
+    if (!res.ok) throw new Error('Failed to fetch agents');
+    return res.json();
+  }
+
   const refreshParties = async () => {
     setLoading(true);
     try {
-      const parties = await fetchParties();
+      const [parties, agentsData] = await Promise.all([
+        fetchParties(),
+        fetchAgents(),
+      ]);
 
-      const rows = parties.map((p, idx) => ({
-        key: p.partyId ?? String(idx),
-        ...p,
-      }));
+      setAgents(agentsData);
+
+      const rows = parties.map((p, idx) => {
+        const agent = agentsData.find((a) => a.agentId === p.agentId);
+
+        return {
+          key: p.partyId ?? String(idx),
+          ...p,
+          agentName: agent ? agent.name : '',
+        };
+      });
 
       setData(rows);
       setPagination((p) => ({ ...p, current: 1 }));
@@ -77,7 +95,6 @@ export default function Party() {
       email: record.email,
       address: record.address,
       city: record.city,
-      state: record.state,
       pincode: record.pincode,
       agentId: record.agentId,
     });
@@ -178,15 +195,6 @@ export default function Party() {
         ),
     },
     {
-      title: 'Contact Person',
-      dataIndex: 'contact_Person1',
-      key: 'contact_Person1',
-      sorter: (a, b) =>
-        String(a.contact_Person1 || '').localeCompare(
-          String(b.contact_Person1 || ''),
-        ),
-    },
-    {
       title: 'Mobile',
       dataIndex: 'mobile1',
       key: 'mobile1',
@@ -199,6 +207,13 @@ export default function Party() {
       key: 'city',
       sorter: (a, b) =>
         String(a.city || '').localeCompare(String(b.city || '')),
+    },
+    {
+      title: 'Agent',
+      dataIndex: 'agentName',
+      key: 'agentName',
+      sorter: (a, b) =>
+        String(a.agentName || '').localeCompare(String(b.agentName || '')),
     },
     {
       title: 'Action',
@@ -227,7 +242,7 @@ export default function Party() {
     <div style={{ width: '100%' }}>
       <Navbar />
 
-      <div style={{ maxWidth: 1300, margin: '20px auto', padding: 16 }}>
+      <div style={{ maxWidth: 1100, margin: '20px auto', padding: 16 }}>
         <h1 style={{ textAlign: 'center', marginBottom: 16 }}>Party</h1>
 
         <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
@@ -266,7 +281,7 @@ export default function Party() {
           }}
         />
 
-        {/* Dark Header Styling */}
+        {/* Dark Header Styling (Same as Agent) */}
         <style>{`
           .ant-table-thead > tr > th {
             background: #1f2937 !important;
@@ -284,13 +299,12 @@ export default function Party() {
           onCancel={() => setIsModalOpen(false)}
           onOk={handleSubmitModal}
           confirmLoading={loading}
-          width={700}
         >
           <Form form={form} layout="vertical">
             <Form.Item
               name="partyName"
               label="Party Name"
-              rules={[{ required: true }]}
+              rules={[{ required: true, message: 'Please enter party name' }]}
             >
               <Input />
             </Form.Item>
@@ -307,10 +321,10 @@ export default function Party() {
               name="mobile1"
               label="Mobile"
               rules={[
-                { required: true },
+                { required: true, message: 'Please enter mobile number' },
                 {
                   pattern: /^[0-9]{10}$/,
-                  message: 'Enter valid 10 digit mobile',
+                  message: 'Mobile number should be of 10 digits',
                 },
               ]}
             >
@@ -329,16 +343,22 @@ export default function Party() {
               <Input />
             </Form.Item>
 
-            <Form.Item name="state" label="State">
-              <Input />
-            </Form.Item>
-
             <Form.Item name="pincode" label="Pincode">
               <Input />
             </Form.Item>
 
-            <Form.Item name="agentId" label="Agent ID">
-              <Input />
+            <Form.Item
+              name="agentId"
+              label="Agent"
+              rules={[{ required: true, message: 'Please select an agent' }]}
+            >
+              <Select
+                placeholder="Select Agent"
+                options={agents.map((agent) => ({
+                  label: agent.name,
+                  value: agent.agentId,
+                }))}
+              />
             </Form.Item>
           </Form>
         </Modal>
