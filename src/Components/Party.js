@@ -69,6 +69,18 @@ export default function Party() {
     );
   };
 
+  // Mobile validator function
+  const validateMobile = (_, value) => {
+    if (!value) {
+      // Mobile is optional, so empty is valid
+      return Promise.resolve();
+    }
+    if (/^[0-9]{10}$/.test(value)) {
+      return Promise.resolve();
+    }
+    return Promise.reject(new Error('Mobile number should be 10 digits'));
+  };
+
   // ---------------- FETCH ----------------
   const fetchParties = async () => {
     const res = await fetch('/api/party');
@@ -152,7 +164,9 @@ export default function Party() {
       partyName: record.partyName,
       aliasOrCompanyName: record.aliasOrCompanyName,
       contact_Person1: record.contact_Person1,
+      contact_Person2: record.contact_Person2,
       mobile1: record.mobile1,
+      mobile2: record.mobile2,
       email: record.email,
       address: record.address,
       city: record.city,
@@ -180,8 +194,10 @@ export default function Party() {
         pincode: values.pincode || null,
         agentId: values.agentId ? parseInt(values.agentId) : null,
         contact_Person1: values.contact_Person1 || null,
+        contact_Person2: values.contact_Person2 || null,
         email: values.email || null,
         mobile1: values.mobile1 || null,
+        mobile2: values.mobile2 || null,
         orderId: values.orderId || null,
       };
 
@@ -261,6 +277,9 @@ export default function Party() {
         String(row.mobile1 || '')
           .toLowerCase()
           .includes(q) ||
+        String(row.mobile2 || '')
+          .toLowerCase()
+          .includes(q) ||
         String(row.aliasOrCompanyName || '')
           .toLowerCase()
           .includes(q) ||
@@ -326,24 +345,44 @@ export default function Party() {
       render: (text) => <span title={text}>{truncateText(text, 20)}</span>,
     },
     {
-      title: 'Contact Person',
+      title: 'Contact Person 1',
       dataIndex: 'contact_Person1',
       key: 'contact_Person1',
-      width: 150,
+      width: 140,
       sorter: (a, b) =>
         String(a.contact_Person1 || '').localeCompare(
           String(b.contact_Person1 || ''),
         ),
-      render: (text) => <span title={text}>{truncateText(text, 20)}</span>,
+      render: (text) => <span title={text}>{truncateText(text, 18)}</span>,
     },
     {
-      title: 'Mobile',
+      title: 'Contact Person 2',
+      dataIndex: 'contact_Person2',
+      key: 'contact_Person2',
+      width: 140,
+      sorter: (a, b) =>
+        String(a.contact_Person2 || '').localeCompare(
+          String(b.contact_Person2 || ''),
+        ),
+      render: (text) => <span title={text}>{truncateText(text, 18)}</span>,
+    },
+    {
+      title: 'Mobile 1',
       dataIndex: 'mobile1',
       key: 'mobile1',
       width: 120,
       sorter: (a, b) =>
         String(a.mobile1 || '').localeCompare(String(b.mobile1 || '')),
-      render: (text) => <span title={text}>{truncateText(text, 15)}</span>,
+      render: (text) => <span title={text}>{truncateText(text, 12)}</span>,
+    },
+    {
+      title: 'Mobile 2',
+      dataIndex: 'mobile2',
+      key: 'mobile2',
+      width: 120,
+      sorter: (a, b) =>
+        String(a.mobile2 || '').localeCompare(String(b.mobile2 || '')),
+      render: (text) => <span title={text}>{truncateText(text, 12)}</span>,
     },
     {
       title: 'Email',
@@ -364,15 +403,6 @@ export default function Party() {
       render: (text) => <span title={text}>{truncateText(text, 25)}</span>,
     },
     {
-      title: 'City',
-      dataIndex: 'city',
-      key: 'city',
-      width: 120,
-      sorter: (a, b) =>
-        String(a.city || '').localeCompare(String(b.city || '')),
-      render: (text) => <span title={text}>{truncateText(text, 15)}</span>,
-    },
-    {
       title: 'State',
       dataIndex: 'state',
       key: 'state',
@@ -380,6 +410,15 @@ export default function Party() {
       sorter: (a, b) =>
         String(a.state || '').localeCompare(String(b.state || '')),
       render: (text) => <span title={text}>{truncateText(text, 20)}</span>,
+    },
+    {
+      title: 'City',
+      dataIndex: 'city',
+      key: 'city',
+      width: 120,
+      sorter: (a, b) =>
+        String(a.city || '').localeCompare(String(b.city || '')),
+      render: (text) => <span title={text}>{truncateText(text, 15)}</span>,
     },
     {
       title: 'Pincode',
@@ -446,7 +485,7 @@ export default function Party() {
 
         <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
           <Input.Search
-            placeholder="Search by Party ID, Name, Company, Email, City, State or Mobile"
+            placeholder="Search by Party ID, Name, Company, Email, City, State, Mobile 1 or Mobile 2"
             allowClear
             value={searchText}
             onChange={(e) => handleSearchChange(e.target.value)}
@@ -486,7 +525,7 @@ export default function Party() {
                 pageSize: newPagination.pageSize,
               });
             }}
-            scroll={{ x: 1800 }}
+            scroll={{ x: 2000 }}
             size="small"
           />
         </div>
@@ -527,13 +566,17 @@ export default function Party() {
               <Input placeholder="Enter alias or company name" />
             </Form.Item>
 
-            <Form.Item name="contact_Person1" label="Contact Person">
-              <Input placeholder="Enter contact person name" />
+            <Form.Item name="contact_Person1" label="Contact Person 1">
+              <Input placeholder="Enter first contact person name" />
+            </Form.Item>
+
+            <Form.Item name="contact_Person2" label="Contact Person 2">
+              <Input placeholder="Enter second contact person name (optional)" />
             </Form.Item>
 
             <Form.Item
               name="mobile1"
-              label="Mobile"
+              label="Mobile 1"
               rules={[
                 { required: true, message: 'Please enter mobile number' },
                 {
@@ -543,6 +586,18 @@ export default function Party() {
               ]}
             >
               <Input placeholder="Enter 10 digit mobile number" />
+            </Form.Item>
+
+            <Form.Item
+              name="mobile2"
+              label="Mobile 2"
+              rules={[
+                {
+                  validator: validateMobile,
+                },
+              ]}
+            >
+              <Input placeholder="Enter 10 digit mobile number (optional)" />
             </Form.Item>
 
             <Form.Item
