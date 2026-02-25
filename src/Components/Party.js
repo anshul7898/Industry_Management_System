@@ -562,14 +562,31 @@ export default function Party() {
               <Input placeholder="Enter party name" />
             </Form.Item>
 
-            <Form.Item name="aliasOrCompanyName" label="Alias / Company Name">
+            <Form.Item
+              name="aliasOrCompanyName"
+              label="Alias / Company Name"
+              rules={[
+                {
+                  required: true,
+                  message: 'Please enter alias or company name',
+                },
+              ]}
+            >
               <Input placeholder="Enter alias or company name" />
             </Form.Item>
 
-            <Form.Item name="contact_Person1" label="Contact Person 1">
+            <Form.Item
+              name="contact_Person1"
+              label="Contact Person 1"
+              rules={[
+                {
+                  required: true,
+                  message: 'Please enter first contact person name',
+                },
+              ]}
+            >
               <Input placeholder="Enter first contact person name" />
             </Form.Item>
-
             <Form.Item name="contact_Person2" label="Contact Person 2">
               <Input placeholder="Enter second contact person name (optional)" />
             </Form.Item>
