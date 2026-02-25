@@ -320,7 +320,7 @@ export default function Agent() {
               name="aadhar_Details"
               label="Aadhar Details"
               rules={[
-                { required: true, message: 'Please enter Aadhar number' },
+                { message: 'Please enter Aadhar number' },
                 {
                   pattern: /^[0-9]{12}$/,
                   message: 'Aadhar Number should be of 12 digits',
@@ -333,7 +333,7 @@ export default function Agent() {
             <Form.Item
               name="address"
               label="Address"
-              rules={[{ required: true, message: 'Please enter address' }]}
+              rules={[{ message: 'Please enter address' }]}
             >
               <Input.TextArea rows={3} />
             </Form.Item>
