@@ -26,7 +26,7 @@ export default function Party() {
   const [loading, setLoading] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('add');
+  const [modalMode, setModalMode] = useState('add'); // 'add', 'edit', 'view'
   const [editingPartyId, setEditingPartyId] = useState(null);
 
   const [form] = Form.useForm();
@@ -80,6 +80,9 @@ export default function Party() {
     }
     return Promise.reject(new Error('Mobile number should be 10 digits'));
   };
+
+  // Check if modal is in view mode (read-only)
+  const isViewMode = modalMode === 'view';
 
   // ---------------- FETCH ----------------
   const fetchParties = async () => {
@@ -144,6 +147,37 @@ export default function Party() {
     } catch (err) {
       message.error(err.message);
     }
+
+    setIsModalOpen(true);
+  };
+
+  const openViewModal = async (record) => {
+    setModalMode('view');
+    setEditingPartyId(record.partyId);
+    setSelectedState(record.state || null);
+
+    try {
+      const agentsData = await fetchAgents();
+      setAgents(agentsData);
+    } catch (err) {
+      message.error(err.message);
+    }
+
+    form.setFieldsValue({
+      partyName: record.partyName,
+      aliasOrCompanyName: record.aliasOrCompanyName,
+      contact_Person1: record.contact_Person1,
+      contact_Person2: record.contact_Person2,
+      mobile1: record.mobile1,
+      mobile2: record.mobile2,
+      email: record.email,
+      address: record.address,
+      city: record.city,
+      state: record.state,
+      pincode: record.pincode,
+      agentId: record.agentId,
+      orderId: record.orderId,
+    });
 
     setIsModalOpen(true);
   };
@@ -214,7 +248,7 @@ export default function Party() {
         }
 
         message.success('Party created successfully');
-      } else {
+      } else if (modalMode === 'edit') {
         const res = await fetch(`/api/party/${editingPartyId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -449,10 +483,13 @@ export default function Party() {
     {
       title: 'Action',
       key: 'action',
-      width: 150,
+      width: 200,
       fixed: 'right',
       render: (_, record) => (
         <Space>
+          <Button size="small" onClick={() => openViewModal(record)}>
+            View
+          </Button>
           <Button
             size="small"
             type="primary"
@@ -543,97 +580,168 @@ export default function Party() {
           .ant-table-body > tr:hover > td {
             background: #f5f5f5 !important;
           }
+          
+          /* Styling for disabled inputs in view mode */
+          .ant-input-disabled,
+          .ant-input-disabled:hover,
+          .ant-input-textarea-disabled {
+            background-color: #f5f5f5 !important;
+            color: #000000 !important;
+            cursor: default;
+          }
+          
+          .ant-input-disabled::placeholder {
+            color: #000000 !important;
+          }
+          
+          /* Styling for disabled select in view mode */
+          .ant-select-disabled .ant-select-selector {
+            background-color: #f5f5f5 !important;
+          }
+          
+          .ant-select-disabled .ant-select-selector .ant-select-selection-item {
+            color: #000000 !important;
+          }
+          
+          .ant-select-disabled .ant-select-selector .ant-select-selection-placeholder {
+            color: #000000 !important;
+          }
         `}</style>
 
         <Modal
-          title={modalMode === 'add' ? 'Add Party' : 'Edit Party'}
+          title={
+            isViewMode
+              ? 'View Party'
+              : modalMode === 'add'
+                ? 'Add Party'
+                : 'Edit Party'
+          }
           open={isModalOpen}
           onCancel={handleCloseModal}
-          onOk={handleSubmitModal}
+          onOk={isViewMode ? handleCloseModal : handleSubmitModal}
+          okText={isViewMode ? 'Close' : 'Save'}
           confirmLoading={loading}
           width={700}
+          footer={
+            isViewMode
+              ? [
+                  <Button key="close" type="primary" onClick={handleCloseModal}>
+                    Close
+                  </Button>,
+                ]
+              : undefined
+          }
         >
           <Form form={form} layout="vertical">
             <Form.Item
               name="partyName"
               label="Party Name"
-              rules={[{ required: true, message: 'Please enter party name' }]}
+              rules={
+                isViewMode
+                  ? []
+                  : [{ required: true, message: 'Please enter party name' }]
+              }
             >
-              <Input placeholder="Enter party name" />
+              <Input placeholder="Enter party name" disabled={isViewMode} />
             </Form.Item>
 
             <Form.Item
               name="aliasOrCompanyName"
               label="Alias / Company Name"
-              rules={[
-                {
-                  required: true,
-                  message: 'Please enter alias or company name',
-                },
-              ]}
+              rules={
+                isViewMode
+                  ? []
+                  : [
+                      {
+                        required: true,
+                        message: 'Please enter alias or company name',
+                      },
+                    ]
+              }
             >
-              <Input placeholder="Enter alias or company name" />
+              <Input
+                placeholder="Enter alias or company name"
+                disabled={isViewMode}
+              />
             </Form.Item>
 
             <Form.Item
               name="contact_Person1"
               label="Contact Person 1"
-              rules={[
-                {
-                  required: true,
-                  message: 'Please enter first contact person name',
-                },
-              ]}
+              rules={
+                isViewMode
+                  ? []
+                  : [
+                      {
+                        required: true,
+                        message: 'Please enter first contact person name',
+                      },
+                    ]
+              }
             >
-              <Input placeholder="Enter first contact person name" />
+              <Input
+                placeholder="Enter first contact person name"
+                disabled={isViewMode}
+              />
             </Form.Item>
+
             <Form.Item name="contact_Person2" label="Contact Person 2">
-              <Input placeholder="Enter second contact person name (optional)" />
+              <Input
+                placeholder="Enter second contact person name (optional)"
+                disabled={isViewMode}
+              />
             </Form.Item>
 
             <Form.Item
               name="mobile1"
               label="Mobile 1"
-              rules={[
-                { required: true, message: 'Please enter mobile number' },
-                {
-                  pattern: /^[0-9]{10}$/,
-                  message: 'Mobile number should be 10 digits',
-                },
-              ]}
+              rules={
+                isViewMode
+                  ? []
+                  : [
+                      { required: true, message: 'Please enter mobile number' },
+                      {
+                        pattern: /^[0-9]{10}$/,
+                        message: 'Mobile number should be 10 digits',
+                      },
+                    ]
+              }
             >
-              <Input placeholder="Enter 10 digit mobile number" />
+              <Input
+                placeholder="Enter 10 digit mobile number"
+                disabled={isViewMode}
+              />
             </Form.Item>
 
             <Form.Item
               name="mobile2"
               label="Mobile 2"
-              rules={[
-                {
-                  validator: validateMobile,
-                },
-              ]}
+              rules={isViewMode ? [] : [{ validator: validateMobile }]}
             >
-              <Input placeholder="Enter 10 digit mobile number (optional)" />
+              <Input
+                placeholder="Enter 10 digit mobile number (optional)"
+                disabled={isViewMode}
+              />
             </Form.Item>
 
             <Form.Item
               name="email"
               label="Email"
-              rules={[
-                {
-                  validator: validateEmail,
-                },
-              ]}
+              rules={isViewMode ? [] : [{ validator: validateEmail }]}
             >
               <Input
                 type="email"
                 placeholder="Enter email address (e.g., user@example.com)"
+                disabled={isViewMode}
               />
             </Form.Item>
 
             <Form.Item name="address" label="Address">
-              <Input.TextArea rows={2} placeholder="Enter complete address" />
+              <Input.TextArea
+                rows={2}
+                placeholder="Enter complete address"
+                disabled={isViewMode}
+              />
             </Form.Item>
 
             <Form.Item name="state" label="State">
@@ -642,6 +750,7 @@ export default function Party() {
                 options={stateOptions}
                 showSearch
                 onChange={handleStateChange}
+                disabled={isViewMode}
                 filterOption={(input, option) =>
                   (option?.label ?? '')
                     .toLowerCase()
@@ -658,7 +767,9 @@ export default function Party() {
                 options={cityOptions}
                 showSearch
                 onChange={handleCityChange}
-                disabled={!selectedState || cityOptions.length === 0}
+                disabled={
+                  isViewMode || !selectedState || cityOptions.length === 0
+                }
                 filterOption={(input, option) =>
                   (option?.label ?? '')
                     .toLowerCase()
@@ -668,19 +779,24 @@ export default function Party() {
             </Form.Item>
 
             <Form.Item name="pincode" label="Pincode">
-              <Input placeholder="Enter pincode" />
+              <Input placeholder="Enter pincode" disabled={isViewMode} />
             </Form.Item>
 
             <Form.Item
               name="agentId"
               label="Agent"
-              rules={[{ required: true, message: 'Please select an agent' }]}
+              rules={
+                isViewMode
+                  ? []
+                  : [{ required: true, message: 'Please select an agent' }]
+              }
             >
               <Select
                 placeholder="Select Agent"
                 options={agentOptions}
                 optionLabelProp="label"
                 showSearch
+                disabled={isViewMode}
                 filterOption={(input, option) =>
                   (option?.label ?? '')
                     .toLowerCase()
@@ -690,7 +806,10 @@ export default function Party() {
             </Form.Item>
 
             <Form.Item name="orderId" label="Order ID">
-              <Input placeholder="Enter order ID (optional)" />
+              <Input
+                placeholder="Enter order ID (optional)"
+                disabled={isViewMode}
+              />
             </Form.Item>
           </Form>
         </Modal>

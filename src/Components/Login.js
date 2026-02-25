@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Select } from 'antd';
-import { signIn, confirmSignIn } from 'aws-amplify/auth';
+import {
+  signIn,
+  confirmSignIn,
+  signOut,
+  getCurrentUser,
+} from 'aws-amplify/auth';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -124,9 +129,7 @@ export default function Login() {
   };
 
   const persistRole = () => {
-    // ✅ session-only login role
     sessionStorage.setItem('role', role);
-    // optional cleanup to avoid confusion
     localStorage.removeItem('role');
   };
 
@@ -137,6 +140,7 @@ export default function Login() {
     navigate(redirectTo, { replace: true });
   };
 
+  // --- This is the main Fix ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -149,6 +153,19 @@ export default function Login() {
       if (!role) throw new Error('Role is required.');
       if (!u) throw new Error('Username is required.');
       if (!p) throw new Error('Password is required.');
+
+      // Detect if user is already signed in, sign them out first
+      let currentUser = null;
+      try {
+        currentUser = await getCurrentUser();
+      } catch (err) {
+        // no user, ignore
+      }
+      if (currentUser) {
+        await signOut(); // clears session
+        // Optionally: small delay to allow signOut to fully clear session
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
 
       const result = await signIn({ username: u, password: p });
       const step = result?.nextStep?.signInStep;
