@@ -26,10 +26,10 @@ export default function Navbar() {
   const selectedKey = (() => {
     if (path === '/home') return 'home';
     if (path === '/order') return 'order';
-    if (path === '/inventory') return 'inventory';
-    if (path === '/delivery') return 'delivery';
-    if (path === '/accounts') return 'accounts';
-    if (path === '/machinemaintenance') return 'machineMaintenance';
+    // if (path === '/inventory') return 'inventory';
+    // if (path === '/delivery') return 'delivery';
+    // if (path === '/accounts') return 'accounts';
+    // if (path === '/machinemaintenance') return 'machineMaintenance';
     if (path === '/product') return 'product';
     if (path === '/agent') return 'agent';
     if (path === '/party') return 'party';
@@ -39,13 +39,13 @@ export default function Navbar() {
   const ALL_ITEMS = [
     { key: 'home', label: <Link to="/Home">Home</Link> },
     { key: 'order', label: <Link to="/Order">Order</Link> },
-    { key: 'inventory', label: <Link to="/Inventory">Inventory</Link> },
-    { key: 'delivery', label: <Link to="/Delivery">Delivery</Link> },
-    { key: 'accounts', label: <Link to="/Accounts">Accounts</Link> },
-    {
-      key: 'machineMaintenance',
-      label: <Link to="/MachineMaintenance">Machine Maintenance</Link>,
-    },
+    // { key: 'inventory', label: <Link to="/Inventory">Inventory</Link> },
+    // { key: 'delivery', label: <Link to="/Delivery">Delivery</Link> },
+    // { key: 'accounts', label: <Link to="/Accounts">Accounts</Link> },
+    // {
+    //   key: 'machineMaintenance',
+    //   label: <Link to="/MachineMaintenance">Machine Maintenance</Link>,
+    // },
     { key: 'product', label: <Link to="/Product">Product</Link> },
     { key: 'agent', label: <Link to="/Agent">Agent</Link> },
     { key: 'party', label: <Link to="/Party">Party</Link> },
@@ -55,10 +55,10 @@ export default function Navbar() {
     super_user: [
       'home',
       'order',
-      'inventory',
-      'delivery',
-      'accounts',
-      'machineMaintenance',
+      // 'inventory',
+      // 'delivery',
+      // 'accounts',
+      // 'machineMaintenance',
       'product',
       'agent',
       'party',

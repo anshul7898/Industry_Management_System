@@ -12,11 +12,110 @@ import {
   Checkbox,
   Spin,
   Empty,
+  Select,
 } from 'antd';
 import { EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import Navbar from './Navbar';
 
 const API_BASE_URL = 'http://localhost:8000/api';
+
+// Dropdown options
+const DROPDOWN_OPTIONS = {
+  bagMaterial: [
+    { label: 'Cotton Canvas', value: 'Cotton Canvas' },
+    { label: 'Jute', value: 'Jute' },
+    { label: 'Organic Cotton', value: 'Organic Cotton' },
+    { label: 'Recycled Polyester', value: 'Recycled Polyester' },
+    { label: 'Linen', value: 'Linen' },
+  ],
+  sheetGSM: [
+    { label: '200', value: '200' },
+    { label: '250', value: '250' },
+    { label: '300', value: '300' },
+    { label: '350', value: '350' },
+    { label: '400', value: '400' },
+    { label: '450', value: '450' },
+    { label: '500', value: '500' },
+  ],
+  sheetColor: [
+    { label: 'Natural White', value: 'Natural White' },
+    { label: 'Off White', value: 'Off White' },
+    { label: 'Cream', value: 'Cream' },
+    { label: 'Brown', value: 'Brown' },
+    { label: 'Kraft', value: 'Kraft' },
+  ],
+  borderGSM: [
+    { label: '50', value: '50' },
+    { label: '75', value: '75' },
+    { label: '90', value: '90' },
+    { label: '100', value: '100' },
+    { label: '120', value: '120' },
+    { label: '150', value: '150' },
+  ],
+  borderColor: [
+    { label: 'Black', value: 'Black' },
+    { label: 'Brown', value: 'Brown' },
+    { label: 'Navy Blue', value: 'Navy Blue' },
+    { label: 'White', value: 'White' },
+    { label: 'Gray', value: 'Gray' },
+    { label: 'Red', value: 'Red' },
+  ],
+  handleType: [
+    {
+      label: 'Double Stitched Cotton Rope',
+      value: 'Double Stitched Cotton Rope',
+    },
+    {
+      label: 'Single Stitched Cotton Rope',
+      value: 'Single Stitched Cotton Rope',
+    },
+    { label: 'Web Handle', value: 'Web Handle' },
+    { label: 'Twisted Handle', value: 'Twisted Handle' },
+    { label: 'Braided Handle', value: 'Braided Handle' },
+  ],
+  handleColor: [
+    { label: 'Beige', value: 'Beige' },
+    { label: 'Black', value: 'Black' },
+    { label: 'Brown', value: 'Brown' },
+    { label: 'White', value: 'White' },
+    { label: 'Navy Blue', value: 'Navy Blue' },
+    { label: 'Red', value: 'Red' },
+  ],
+  handleGSM: [
+    { label: '100', value: '100' },
+    { label: '120', value: '120' },
+    { label: '150', value: '150' },
+    { label: '180', value: '180' },
+    { label: '200', value: '200' },
+  ],
+  color: [
+    { label: 'White', value: 'White' },
+    { label: 'Black', value: 'Black' },
+    { label: 'Cream', value: 'Cream' },
+    { label: 'Brown', value: 'Brown' },
+    { label: 'Navy Blue', value: 'Navy Blue' },
+    { label: 'Red', value: 'Red' },
+    { label: 'Green', value: 'Green' },
+    { label: 'Gray', value: 'Gray' },
+  ],
+  printingType: [
+    { label: 'Screen Printing', value: 'Screen Printing' },
+    { label: 'Digital Printing', value: 'Digital Printing' },
+    { label: 'Flexography', value: 'Flexography' },
+    { label: 'Offset Printing', value: 'Offset Printing' },
+    { label: 'Embroidery', value: 'Embroidery' },
+  ],
+  printColor: [
+    { label: 'Navy Blue', value: 'Navy Blue' },
+    { label: 'Black', value: 'Black' },
+    { label: 'White', value: 'White' },
+    { label: 'Red', value: 'Red' },
+    { label: 'Gold', value: 'Gold' },
+    { label: 'Silver', value: 'Silver' },
+    { label: 'Green', value: 'Green' },
+    { label: 'Brown', value: 'Brown' },
+  ],
+};
 
 export default function Products() {
   const [searchText, setSearchText] = useState('');
@@ -92,13 +191,13 @@ export default function Products() {
       productSize: 0,
       bagMaterial: '',
       quantity: 0,
-      sheetGSM: 0,
+      sheetGSM: '',
       sheetColor: '',
-      borderGSM: 0,
+      borderGSM: '',
       borderColor: '',
       handleType: '',
       handleColor: '',
-      handleGSM: 0,
+      handleGSM: '',
       printingType: '',
       printColor: '',
       color: '',
@@ -121,13 +220,13 @@ export default function Products() {
       productSize: Number(record.productSize ?? 0),
       bagMaterial: record.bagMaterial || '',
       quantity: Number(record.quantity ?? 0),
-      sheetGSM: Number(record.sheetGSM ?? 0),
+      sheetGSM: record.sheetGSM || '',
       sheetColor: record.sheetColor || '',
-      borderGSM: Number(record.borderGSM ?? 0),
+      borderGSM: record.borderGSM || '',
       borderColor: record.borderColor || '',
       handleType: record.handleType || '',
       handleColor: record.handleColor || '',
-      handleGSM: Number(record.handleGSM ?? 0),
+      handleGSM: record.handleGSM || '',
       printingType: record.printingType || '',
       printColor: record.printColor || '',
       color: record.color || '',
@@ -150,13 +249,13 @@ export default function Products() {
       productSize: Number(record.productSize ?? 0),
       bagMaterial: record.bagMaterial || '',
       quantity: Number(record.quantity ?? 0),
-      sheetGSM: Number(record.sheetGSM ?? 0),
+      sheetGSM: record.sheetGSM || '',
       sheetColor: record.sheetColor || '',
-      borderGSM: Number(record.borderGSM ?? 0),
+      borderGSM: record.borderGSM || '',
       borderColor: record.borderColor || '',
       handleType: record.handleType || '',
       handleColor: record.handleColor || '',
-      handleGSM: Number(record.handleGSM ?? 0),
+      handleGSM: record.handleGSM || '',
       printingType: record.printingType || '',
       printColor: record.printColor || '',
       color: record.color || '',
@@ -507,12 +606,13 @@ export default function Products() {
                 label="Bag Material"
                 name="bagMaterial"
                 rules={[
-                  { required: true, message: 'Please enter bag material.' },
+                  { required: true, message: 'Please select bag material.' },
                 ]}
               >
-                <Input
-                  placeholder="e.g., Cotton Canvas"
+                <Select
+                  placeholder="Select bag material"
                   disabled={modalMode === 'view'}
+                  options={DROPDOWN_OPTIONS.bagMaterial}
                 />
               </Form.Item>
 
@@ -541,13 +641,14 @@ export default function Products() {
               <Form.Item
                 label="Sheet GSM"
                 name="sheetGSM"
-                rules={[{ required: true, message: 'Please enter sheet GSM.' }]}
+                rules={[
+                  { required: true, message: 'Please select sheet GSM.' },
+                ]}
               >
-                <InputNumber
-                  min={0}
-                  placeholder="e.g., 350"
+                <Select
+                  placeholder="Select sheet GSM"
                   disabled={modalMode === 'view'}
-                  style={{ width: '100%' }}
+                  options={DROPDOWN_OPTIONS.sheetGSM}
                 />
               </Form.Item>
 
@@ -555,12 +656,13 @@ export default function Products() {
                 label="Sheet Color"
                 name="sheetColor"
                 rules={[
-                  { required: true, message: 'Please enter sheet color.' },
+                  { required: true, message: 'Please select sheet color.' },
                 ]}
               >
-                <Input
-                  placeholder="e.g., Natural White"
+                <Select
+                  placeholder="Select sheet color"
                   disabled={modalMode === 'view'}
+                  options={DROPDOWN_OPTIONS.sheetColor}
                 />
               </Form.Item>
             </div>
@@ -577,14 +679,13 @@ export default function Products() {
                 label="Border GSM"
                 name="borderGSM"
                 rules={[
-                  { required: true, message: 'Please enter border GSM.' },
+                  { required: true, message: 'Please select border GSM.' },
                 ]}
               >
-                <InputNumber
-                  min={0}
-                  placeholder="e.g., 90"
+                <Select
+                  placeholder="Select border GSM"
                   disabled={modalMode === 'view'}
-                  style={{ width: '100%' }}
+                  options={DROPDOWN_OPTIONS.borderGSM}
                 />
               </Form.Item>
 
@@ -592,12 +693,13 @@ export default function Products() {
                 label="Border Color"
                 name="borderColor"
                 rules={[
-                  { required: true, message: 'Please enter border color.' },
+                  { required: true, message: 'Please select border color.' },
                 ]}
               >
-                <Input
-                  placeholder="e.g., Black"
+                <Select
+                  placeholder="Select border color"
                   disabled={modalMode === 'view'}
+                  options={DROPDOWN_OPTIONS.borderColor}
                 />
               </Form.Item>
             </div>
@@ -614,12 +716,13 @@ export default function Products() {
                 label="Handle Type"
                 name="handleType"
                 rules={[
-                  { required: true, message: 'Please enter handle type.' },
+                  { required: true, message: 'Please select handle type.' },
                 ]}
               >
-                <Input
-                  placeholder="e.g., Double Stitched Cotton Rope"
+                <Select
+                  placeholder="Select handle type"
                   disabled={modalMode === 'view'}
+                  options={DROPDOWN_OPTIONS.handleType}
                 />
               </Form.Item>
 
@@ -627,12 +730,13 @@ export default function Products() {
                 label="Handle Color"
                 name="handleColor"
                 rules={[
-                  { required: true, message: 'Please enter handle color.' },
+                  { required: true, message: 'Please select handle color.' },
                 ]}
               >
-                <Input
-                  placeholder="e.g., Beige"
+                <Select
+                  placeholder="Select handle color"
                   disabled={modalMode === 'view'}
+                  options={DROPDOWN_OPTIONS.handleColor}
                 />
               </Form.Item>
             </div>
@@ -649,25 +753,25 @@ export default function Products() {
                 label="Handle GSM"
                 name="handleGSM"
                 rules={[
-                  { required: true, message: 'Please enter handle GSM.' },
+                  { required: true, message: 'Please select handle GSM.' },
                 ]}
               >
-                <InputNumber
-                  min={0}
-                  placeholder="e.g., 120"
+                <Select
+                  placeholder="Select handle GSM"
                   disabled={modalMode === 'view'}
-                  style={{ width: '100%' }}
+                  options={DROPDOWN_OPTIONS.handleGSM}
                 />
               </Form.Item>
 
               <Form.Item
                 label="Color"
                 name="color"
-                rules={[{ required: true, message: 'Please enter color.' }]}
+                rules={[{ required: true, message: 'Please select color.' }]}
               >
-                <Input
-                  placeholder="e.g., White"
+                <Select
+                  placeholder="Select color"
                   disabled={modalMode === 'view'}
+                  options={DROPDOWN_OPTIONS.color}
                 />
               </Form.Item>
             </div>
@@ -684,12 +788,13 @@ export default function Products() {
                 label="Printing Type"
                 name="printingType"
                 rules={[
-                  { required: true, message: 'Please enter printing type.' },
+                  { required: true, message: 'Please select printing type.' },
                 ]}
               >
-                <Input
-                  placeholder="e.g., Screen Printing"
+                <Select
+                  placeholder="Select printing type"
                   disabled={modalMode === 'view'}
+                  options={DROPDOWN_OPTIONS.printingType}
                 />
               </Form.Item>
 
@@ -697,12 +802,13 @@ export default function Products() {
                 label="Print Color"
                 name="printColor"
                 rules={[
-                  { required: true, message: 'Please enter print color.' },
+                  { required: true, message: 'Please select print color.' },
                 ]}
               >
-                <Input
-                  placeholder="e.g., Navy Blue"
+                <Select
+                  placeholder="Select print color"
                   disabled={modalMode === 'view'}
+                  options={DROPDOWN_OPTIONS.printColor}
                 />
               </Form.Item>
             </div>
