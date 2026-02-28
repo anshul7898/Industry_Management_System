@@ -19,42 +19,47 @@ import Navbar from './Navbar';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
-// Dropdown options
+// Dropdown options - MUST match EXACTLY with backend VALID_* sets
 const DROPDOWN_OPTIONS = {
   bagMaterial: [
     { label: 'Cotton Canvas', value: 'Cotton Canvas' },
+    { label: 'Cotton Blend', value: 'Cotton Blend' },
     { label: 'Jute', value: 'Jute' },
     { label: 'Organic Cotton', value: 'Organic Cotton' },
     { label: 'Recycled Polyester', value: 'Recycled Polyester' },
     { label: 'Linen', value: 'Linen' },
   ],
   sheetGSM: [
-    { label: '200', value: '200' },
-    { label: '250', value: '250' },
-    { label: '300', value: '300' },
-    { label: '350', value: '350' },
-    { label: '400', value: '400' },
-    { label: '450', value: '450' },
-    { label: '500', value: '500' },
+    { label: '200', value: 200 },
+    { label: '250', value: 250 },
+    { label: '300', value: 300 },
+    { label: '350', value: 350 },
+    { label: '400', value: 400 },
+    { label: '450', value: 450 },
+    { label: '500', value: 500 },
   ],
   sheetColor: [
     { label: 'Natural White', value: 'Natural White' },
     { label: 'Off White', value: 'Off White' },
+    { label: 'Beige', value: 'Beige' },
     { label: 'Cream', value: 'Cream' },
     { label: 'Brown', value: 'Brown' },
+    { label: 'Maroon', value: 'Maroon' },
     { label: 'Kraft', value: 'Kraft' },
   ],
   borderGSM: [
-    { label: '50', value: '50' },
-    { label: '75', value: '75' },
-    { label: '90', value: '90' },
-    { label: '100', value: '100' },
-    { label: '120', value: '120' },
-    { label: '150', value: '150' },
+    { label: '50', value: 50 },
+    { label: '75', value: 75 },
+    { label: '90', value: 90 },
+    { label: '100', value: 100 },
+    { label: '120', value: 120 },
+    { label: '150', value: 150 },
   ],
   borderColor: [
     { label: 'Black', value: 'Black' },
     { label: 'Brown', value: 'Brown' },
+    { label: 'Gold', value: 'Gold' },
+    { label: 'Maroon', value: 'Maroon' },
     { label: 'Navy Blue', value: 'Navy Blue' },
     { label: 'White', value: 'White' },
     { label: 'Gray', value: 'Gray' },
@@ -72,27 +77,33 @@ const DROPDOWN_OPTIONS = {
     { label: 'Web Handle', value: 'Web Handle' },
     { label: 'Twisted Handle', value: 'Twisted Handle' },
     { label: 'Braided Handle', value: 'Braided Handle' },
+    { label: 'Ribbon Handle', value: 'Ribbon Handle' },
   ],
   handleColor: [
-    { label: 'Beige', value: 'Beige' },
     { label: 'Black', value: 'Black' },
     { label: 'Brown', value: 'Brown' },
-    { label: 'White', value: 'White' },
+    { label: 'Cream', value: 'Cream' },
+    { label: 'Gold', value: 'Gold' },
+    { label: 'Maroon', value: 'Maroon' },
     { label: 'Navy Blue', value: 'Navy Blue' },
     { label: 'Red', value: 'Red' },
+    { label: 'White', value: 'White' },
   ],
   handleGSM: [
-    { label: '100', value: '100' },
-    { label: '120', value: '120' },
-    { label: '150', value: '150' },
-    { label: '180', value: '180' },
-    { label: '200', value: '200' },
+    { label: '100', value: 100 },
+    { label: '120', value: 120 },
+    { label: '150', value: 150 },
+    { label: '180', value: 180 },
+    { label: '200', value: 200 },
   ],
   color: [
     { label: 'White', value: 'White' },
     { label: 'Black', value: 'Black' },
+    { label: 'Beige', value: 'Beige' },
     { label: 'Cream', value: 'Cream' },
     { label: 'Brown', value: 'Brown' },
+    { label: 'Gold', value: 'Gold' },
+    { label: 'Maroon', value: 'Maroon' },
     { label: 'Navy Blue', value: 'Navy Blue' },
     { label: 'Red', value: 'Red' },
     { label: 'Green', value: 'Green' },
@@ -104,6 +115,7 @@ const DROPDOWN_OPTIONS = {
     { label: 'Flexography', value: 'Flexography' },
     { label: 'Offset Printing', value: 'Offset Printing' },
     { label: 'Embroidery', value: 'Embroidery' },
+    { label: 'Stamping', value: 'Stamping' },
   ],
   printColor: [
     { label: 'Navy Blue', value: 'Navy Blue' },
@@ -114,6 +126,7 @@ const DROPDOWN_OPTIONS = {
     { label: 'Silver', value: 'Silver' },
     { label: 'Green', value: 'Green' },
     { label: 'Brown', value: 'Brown' },
+    { label: 'Maroon', value: 'Maroon' },
   ],
 };
 
@@ -188,23 +201,23 @@ export default function Products() {
     form.resetFields();
     form.setFieldsValue({
       productType: '',
-      productSize: 0,
+      productSize: null,
       bagMaterial: '',
-      quantity: 0,
-      sheetGSM: '',
+      quantity: null,
+      sheetGSM: null,
       sheetColor: '',
-      borderGSM: '',
+      borderGSM: null,
       borderColor: '',
       handleType: '',
       handleColor: '',
-      handleGSM: '',
+      handleGSM: null,
       printingType: '',
       printColor: '',
       color: '',
       design: false,
-      plateBlockNumber: 0,
+      plateBlockNumber: null,
       plateAvailable: false,
-      rate: 0,
+      rate: null,
     });
 
     setIsModalOpen(true);
@@ -217,23 +230,25 @@ export default function Products() {
     form.resetFields();
     form.setFieldsValue({
       productType: record.productType || '',
-      productSize: Number(record.productSize ?? 0),
+      productSize: record.productSize ? Number(record.productSize) : null,
       bagMaterial: record.bagMaterial || '',
-      quantity: Number(record.quantity ?? 0),
-      sheetGSM: record.sheetGSM || '',
+      quantity: record.quantity ? Number(record.quantity) : null,
+      sheetGSM: record.sheetGSM ? Number(record.sheetGSM) : null,
       sheetColor: record.sheetColor || '',
-      borderGSM: record.borderGSM || '',
+      borderGSM: record.borderGSM ? Number(record.borderGSM) : null,
       borderColor: record.borderColor || '',
       handleType: record.handleType || '',
       handleColor: record.handleColor || '',
-      handleGSM: record.handleGSM || '',
+      handleGSM: record.handleGSM ? Number(record.handleGSM) : null,
       printingType: record.printingType || '',
       printColor: record.printColor || '',
       color: record.color || '',
-      design: record.design || false,
-      plateBlockNumber: Number(record.plateBlockNumber ?? 0),
-      plateAvailable: record.plateAvailable || false,
-      rate: Number(record.rate ?? 0),
+      design: Boolean(record.design),
+      plateBlockNumber: record.plateBlockNumber
+        ? Number(record.plateBlockNumber)
+        : null,
+      plateAvailable: Boolean(record.plateAvailable),
+      rate: record.rate ? Number(record.rate) : null,
     });
 
     setIsModalOpen(true);
@@ -246,23 +261,25 @@ export default function Products() {
     form.resetFields();
     form.setFieldsValue({
       productType: record.productType || '',
-      productSize: Number(record.productSize ?? 0),
+      productSize: record.productSize ? Number(record.productSize) : null,
       bagMaterial: record.bagMaterial || '',
-      quantity: Number(record.quantity ?? 0),
-      sheetGSM: record.sheetGSM || '',
+      quantity: record.quantity ? Number(record.quantity) : null,
+      sheetGSM: record.sheetGSM ? Number(record.sheetGSM) : null,
       sheetColor: record.sheetColor || '',
-      borderGSM: record.borderGSM || '',
+      borderGSM: record.borderGSM ? Number(record.borderGSM) : null,
       borderColor: record.borderColor || '',
       handleType: record.handleType || '',
       handleColor: record.handleColor || '',
-      handleGSM: record.handleGSM || '',
+      handleGSM: record.handleGSM ? Number(record.handleGSM) : null,
       printingType: record.printingType || '',
       printColor: record.printColor || '',
       color: record.color || '',
-      design: record.design || false,
-      plateBlockNumber: Number(record.plateBlockNumber ?? 0),
-      plateAvailable: record.plateAvailable || false,
-      rate: Number(record.rate ?? 0),
+      design: Boolean(record.design),
+      plateBlockNumber: record.plateBlockNumber
+        ? Number(record.plateBlockNumber)
+        : null,
+      plateAvailable: Boolean(record.plateAvailable),
+      rate: record.rate ? Number(record.rate) : null,
     });
 
     setIsModalOpen(true);
@@ -274,16 +291,30 @@ export default function Products() {
     try {
       const values = await form.validateFields();
 
+      // Convert numeric fields that come from Select dropdowns
+      const payload = {
+        ...values,
+        sheetGSM: Number(values.sheetGSM),
+        borderGSM: Number(values.borderGSM),
+        handleGSM: Number(values.handleGSM),
+        productSize: Number(values.productSize),
+        quantity: Number(values.quantity),
+        plateBlockNumber: Number(values.plateBlockNumber) || 0,
+        rate: Number(values.rate),
+      };
+
       if (modalMode === 'add') {
         try {
           const response = await fetch(`${API_BASE_URL}/products`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(values),
+            body: JSON.stringify(payload),
           });
 
           if (!response.ok) {
-            throw new Error('Failed to create product');
+            const errorData = await response.json().catch(() => ({}));
+            const errorMsg = errorData.detail || 'Failed to create product';
+            throw new Error(errorMsg);
           }
 
           const newProduct = await response.json();
@@ -295,7 +326,7 @@ export default function Products() {
           setIsModalOpen(false);
           message.success(`Added Product ID: ${newProduct.productId}`);
         } catch (error) {
-          message.error('Failed to create product');
+          message.error(error.message || 'Failed to create product');
           console.error(error);
         }
         return;
@@ -310,12 +341,14 @@ export default function Products() {
             {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(values),
+              body: JSON.stringify(payload),
             },
           );
 
           if (!response.ok) {
-            throw new Error('Failed to update product');
+            const errorData = await response.json().catch(() => ({}));
+            const errorMsg = errorData.detail || 'Failed to update product';
+            throw new Error(errorMsg);
           }
 
           const updatedProduct = await response.json();
@@ -330,7 +363,7 @@ export default function Products() {
           setIsModalOpen(false);
           message.success(`Updated Product ID: ${editingProductId}`);
         } catch (error) {
-          message.error('Failed to update product');
+          message.error(error.message || 'Failed to update product');
           console.error(error);
         }
       }
@@ -826,7 +859,7 @@ export default function Products() {
                 name="plateBlockNumber"
                 rules={[
                   {
-                    required: true,
+                    required: false,
                     message: 'Please enter plate block number.',
                   },
                 ]}
