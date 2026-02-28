@@ -16,7 +16,6 @@ import dayjs from 'dayjs';
 export default function Order() {
   const [searchText, setSearchText] = useState('');
 
-  // ✅ control pagination so page-size changer always works reliably
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 5,
@@ -24,8 +23,6 @@ export default function Order() {
 
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  // modal + form state for BOTH add and edit
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
   const [editingOrderId, setEditingOrderId] = useState(null);
@@ -60,7 +57,6 @@ export default function Order() {
     }
   };
 
-  // ✅ load on mount
   useEffect(() => {
     let cancelled = false;
 
@@ -93,7 +89,6 @@ export default function Order() {
     String(a?.[field] ?? '').localeCompare(String(b?.[field] ?? ''));
 
   const nextOrderIdNumber = useMemo(() => {
-    // only for UI hint. backend generates id if not provided.
     let max = 1000;
     for (const row of data) {
       const match = String(row.orderId || '').match(/^ORD-(\d+)$/i);
@@ -217,7 +212,6 @@ export default function Order() {
       }
     } catch (err) {
       if (err?.message) message.error(err.message);
-      // otherwise, antd shows validation errors
     } finally {
       setLoading(false);
     }
@@ -307,7 +301,6 @@ export default function Order() {
     });
   }, [data, searchText]);
 
-  // ✅ when search text changes, go back to page 1 (prevents empty pages)
   const onSearchChange = (value) => {
     setSearchText(value);
     setPagination((p) => ({ ...p, current: 1 }));
