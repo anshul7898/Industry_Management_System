@@ -1006,7 +1006,7 @@ export default function Order() {
                 </Descriptions>
               </div>
 
-              {/* Printing Information */}
+              {/* Printing Informations */}
               <div style={{ marginBottom: 24 }}>
                 <h3 style={{ marginBottom: 12, fontWeight: 600, fontSize: 16 }}>
                   Printing Information
