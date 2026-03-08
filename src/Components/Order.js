@@ -141,6 +141,7 @@ export default function Order() {
   });
 
   const [data, setData] = useState([]);
+  const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -149,6 +150,35 @@ export default function Order() {
   const [viewingOrder, setViewingOrder] = useState(null);
 
   const [form] = Form.useForm();
+
+  // Email validation regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  // Email validator function
+  const validateEmail = (_, value) => {
+    if (!value) {
+      // Email is optional, so empty is valid
+      return Promise.resolve();
+    }
+    if (emailRegex.test(value)) {
+      return Promise.resolve();
+    }
+    return Promise.reject(
+      new Error('Please enter a valid email address (e.g., user@example.com)'),
+    );
+  };
+
+  // Mobile validator function
+  const validateMobile = (_, value) => {
+    if (!value) {
+      // Mobile is optional, so empty is valid
+      return Promise.resolve();
+    }
+    if (/^[0-9]{10}$/.test(value)) {
+      return Promise.resolve();
+    }
+    return Promise.reject(new Error('Mobile number should be 10 digits'));
+  };
 
   async function fetchOrders() {
     const res = await fetch('/api/orders');
@@ -160,15 +190,33 @@ export default function Order() {
     return Array.isArray(orders) ? orders : [];
   }
 
+  async function fetchAgents() {
+    const res = await fetch('/api/agents/lightweight');
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Failed to fetch agents (${res.status}): ${text}`);
+    }
+    return res.json();
+  }
+
   const refreshOrders = async () => {
     setLoading(true);
     try {
-      const orders = await fetchOrders();
+      const [orders, agentsData] = await Promise.all([
+        fetchOrders(),
+        fetchAgents(),
+      ]);
 
-      const rows = orders.map((o, idx) => ({
-        key: o.OrderId ?? String(idx),
-        ...o,
-      }));
+      setAgents(agentsData);
+
+      const rows = orders.map((o, idx) => {
+        const agent = agentsData.find((a) => a.agentId === o.AgentId);
+        return {
+          key: o.OrderId ?? String(idx),
+          ...o,
+          agentName: agent ? agent.name : '',
+        };
+      });
 
       setData(rows);
     } catch (err) {
@@ -184,13 +232,23 @@ export default function Order() {
     async function load() {
       setLoading(true);
       try {
-        const orders = await fetchOrders();
+        const [orders, agentsData] = await Promise.all([
+          fetchOrders(),
+          fetchAgents(),
+        ]);
+
         if (cancelled) return;
 
-        const rows = orders.map((o, idx) => ({
-          key: o.OrderId ?? String(idx),
-          ...o,
-        }));
+        setAgents(agentsData);
+
+        const rows = orders.map((o, idx) => {
+          const agent = agentsData.find((a) => a.agentId === o.AgentId);
+          return {
+            key: o.OrderId ?? String(idx),
+            ...o,
+            agentName: agent ? agent.name : '',
+          };
+        });
 
         setData(rows);
       } catch (err) {
@@ -215,16 +273,31 @@ export default function Order() {
     return aVal - bVal;
   };
 
-  const openAddModal = () => {
+  const openAddModal = async () => {
     setModalMode('add');
     setEditingOrderId(null);
     form.resetFields();
+
+    try {
+      const agentsData = await fetchAgents();
+      setAgents(agentsData);
+    } catch (err) {
+      message.error(err.message);
+    }
+
     setIsModalOpen(true);
   };
 
-  const openEditModal = (record) => {
+  const openEditModal = async (record) => {
     setModalMode('edit');
     setEditingOrderId(record.OrderId);
+
+    try {
+      const agentsData = await fetchAgents();
+      setAgents(agentsData);
+    } catch (err) {
+      message.error(err.message);
+    }
 
     form.setFieldsValue({
       AgentId: record.AgentId,
@@ -278,7 +351,7 @@ export default function Order() {
 
   const handleAdd = async (values) => {
     const payload = {
-      AgentId: values.AgentId,
+      AgentId: values.AgentId ? parseInt(values.AgentId) : null,
       Party_Name: values.Party_Name,
       AliasOrCompanyName: values.AliasOrCompanyName,
       Address: values.Address,
@@ -328,7 +401,7 @@ export default function Order() {
 
   const handleUpdate = async (orderId, values) => {
     const payload = {
-      AgentId: values.AgentId,
+      AgentId: values.AgentId ? parseInt(values.AgentId) : null,
       Party_Name: values.Party_Name,
       AliasOrCompanyName: values.AliasOrCompanyName,
       Address: values.Address,
@@ -422,6 +495,12 @@ export default function Order() {
     }
   };
 
+  // Build agent dropdown options
+  const agentOptions = agents.map((agent) => ({
+    label: agent.name,
+    value: agent.agentId,
+  }));
+
   const columns = [
     {
       title: 'Order ID',
@@ -432,11 +511,11 @@ export default function Order() {
       sortDirections: ['ascend', 'descend'],
     },
     {
-      title: 'Agent ID',
-      dataIndex: 'AgentId',
-      key: 'AgentId',
-      width: 100,
-      sorter: (a, b) => compareNumber(a, b, 'AgentId'),
+      title: 'Agent',
+      dataIndex: 'agentName',
+      key: 'agentName',
+      width: 150,
+      sorter: (a, b) => compareText(a, b, 'agentName'),
       sortDirections: ['ascend', 'descend'],
     },
     {
@@ -560,11 +639,13 @@ export default function Order() {
       const party = String(row.Party_Name || '').toLowerCase();
       const contact = String(row.Contact_Person1 || '').toLowerCase();
       const email = String(row.Email || '').toLowerCase();
+      const agentName = String(row.agentName || '').toLowerCase();
       return (
         orderId.includes(q) ||
         party.includes(q) ||
         contact.includes(q) ||
-        email.includes(q)
+        email.includes(q) ||
+        agentName.includes(q)
       );
     });
   }, [data, searchText]);
@@ -584,7 +665,7 @@ export default function Order() {
         <Space style={{ width: '100%', marginBottom: 12 }} direction="vertical">
           <Input.Search
             allowClear
-            placeholder="Search by Order ID, Party Name, Contact Person, or Email"
+            placeholder="Search by Order ID, Party Name, Contact Person, Email, or Agent"
             value={searchText}
             onChange={(e) => onSearchChange(e.target.value)}
             onSearch={(value) => onSearchChange(value)}
@@ -657,8 +738,8 @@ export default function Order() {
                   Party Information
                 </h3>
                 <Descriptions bordered size="small" column={2}>
-                  <Descriptions.Item label="Agent ID">
-                    {viewingOrder.AgentId}
+                  <Descriptions.Item label="Agent">
+                    {viewingOrder.agentName || '-'}
                   </Descriptions.Item>
                   <Descriptions.Item label="Party Name">
                     {viewingOrder.Party_Name}
@@ -837,13 +918,20 @@ export default function Order() {
               <h3 style={{ margin: '0 0 12px 0' }}>Party Information</h3>
 
               <Form.Item
-                label="Agent ID"
+                label="Agent"
                 name="AgentId"
-                rules={[{ required: true, message: 'Please enter Agent ID.' }]}
+                rules={[{ required: true, message: 'Please select an Agent.' }]}
               >
-                <InputNumber
-                  placeholder="e.g., 101"
-                  style={{ width: '100%' }}
+                <Select
+                  placeholder="Select Agent"
+                  options={agentOptions}
+                  optionLabelProp="label"
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label ?? '')
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
                 />
               </Form.Item>
 
@@ -979,8 +1067,7 @@ export default function Order() {
                   name="Mobile2"
                   rules={[
                     {
-                      pattern: /^(\d{10})?$/,
-                      message: 'Mobile must be 10 digits.',
+                      validator: validateMobile,
                     },
                   ]}
                 >
@@ -997,7 +1084,7 @@ export default function Order() {
                 name="Email"
                 rules={[
                   { required: true, message: 'Please enter Email.' },
-                  { type: 'email', message: 'Please enter a valid email.' },
+                  { validator: validateEmail },
                 ]}
               >
                 <Input placeholder="e.g., rajesh@abcpack.com" />
