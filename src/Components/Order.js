@@ -130,6 +130,11 @@ const DROPDOWN_OPTIONS = {
     { label: '180', value: 180 },
     { label: '200', value: 200 },
   ],
+  orderTypes: [
+    { label: 'New Order', value: 'new' },
+    { label: 'Repeat Order', value: 'repeat' },
+    { label: 'Old Order', value: 'old' },
+  ],
 };
 
 export default function Order() {
@@ -145,11 +150,14 @@ export default function Order() {
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [orderTypeModalOpen, setOrderTypeModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
   const [editingOrderId, setEditingOrderId] = useState(null);
   const [viewingOrder, setViewingOrder] = useState(null);
+  const [selectedOrderType, setSelectedOrderType] = useState(null);
 
   const [form] = Form.useForm();
+  const [orderTypeForm] = Form.useForm();
 
   // Email validation regex
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -273,7 +281,43 @@ export default function Order() {
     return aVal - bVal;
   };
 
-  const openAddModal = async () => {
+  // Handle order type selection
+  const handleOrderTypeSelect = async (values) => {
+    try {
+      const orderType = values.orderType;
+      setSelectedOrderType(orderType);
+
+      if (orderType === 'new') {
+        // Close order type modal and open add order modal
+        setOrderTypeModalOpen(false);
+        openAddOrderModal();
+      } else if (orderType === 'repeat') {
+        // Close order type modal - show repeat order handling
+        setOrderTypeModalOpen(false);
+        message.info('Repeat Order feature coming soon');
+      } else if (orderType === 'old') {
+        // Close order type modal - show old order handling
+        setOrderTypeModalOpen(false);
+        message.info('Old Order feature coming soon');
+      }
+    } catch (err) {
+      message.error('Please select an order type');
+    }
+  };
+
+  const openOrderTypeModal = () => {
+    orderTypeForm.resetFields();
+    setSelectedOrderType(null);
+    setOrderTypeModalOpen(true);
+  };
+
+  const closeOrderTypeModal = () => {
+    setOrderTypeModalOpen(false);
+    orderTypeForm.resetFields();
+    setSelectedOrderType(null);
+  };
+
+  const openAddOrderModal = async () => {
     setModalMode('add');
     setEditingOrderId(null);
     form.resetFields();
@@ -675,7 +719,7 @@ export default function Order() {
             <Button onClick={refreshOrders} disabled={loading}>
               Refresh
             </Button>
-            <Button type="primary" onClick={openAddModal}>
+            <Button type="primary" onClick={openOrderTypeModal}>
               Add Order
             </Button>
           </div>
@@ -716,6 +760,40 @@ export default function Order() {
             color: rgba(255, 255, 255, 0.95);
           }
         `}</style>
+
+        {/* Order Type Selection Modal */}
+        <Modal
+          title="Create New Order"
+          open={orderTypeModalOpen}
+          onCancel={closeOrderTypeModal}
+          width={500}
+          footer={null}
+        >
+          <Form
+            form={orderTypeForm}
+            layout="vertical"
+            onFinish={handleOrderTypeSelect}
+          >
+            <Form.Item
+              label="Select Order Type"
+              name="orderType"
+              rules={[
+                { required: true, message: 'Please select an order type' },
+              ]}
+            >
+              <Select
+                placeholder="Choose order type"
+                options={DROPDOWN_OPTIONS.orderTypes}
+              />
+            </Form.Item>
+
+            <Form.Item>
+              <Button type="primary" htmlType="submit" block>
+                Continue
+              </Button>
+            </Form.Item>
+          </Form>
+        </Modal>
 
         {/* View Order Modal */}
         <Modal
@@ -894,9 +972,9 @@ export default function Order() {
           )}
         </Modal>
 
-        {/* Edit Order Modal */}
+        {/* Add/Edit Order Modal */}
         <Modal
-          title={modalMode === 'add' ? 'Add Order' : 'Edit Order'}
+          title={modalMode === 'add' ? 'Add New Order' : 'Edit Order'}
           open={isModalOpen}
           onCancel={closeModal}
           onOk={handleSubmitModal}
