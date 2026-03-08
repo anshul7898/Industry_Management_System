@@ -188,7 +188,6 @@ export default function Order() {
   // Email validator function
   const validateEmail = (_, value) => {
     if (!value) {
-      // Email is optional, so empty is valid
       return Promise.resolve();
     }
     if (emailRegex.test(value)) {
@@ -202,7 +201,6 @@ export default function Order() {
   // Mobile validator function
   const validateMobile = (_, value) => {
     if (!value) {
-      // Mobile is optional, so empty is valid
       return Promise.resolve();
     }
     if (/^[0-9]{10}$/.test(value)) {
@@ -311,15 +309,12 @@ export default function Order() {
       setSelectedOrderType(orderType);
 
       if (orderType === 'new') {
-        // Close order type modal and open add order modal
         setOrderTypeModalOpen(false);
         openAddOrderModal();
       } else if (orderType === 'repeat') {
-        // Close order type modal - show repeat order handling
         setOrderTypeModalOpen(false);
         message.info('Repeat Order feature coming soon');
       } else if (orderType === 'old') {
-        // Close order type modal - show old order handling
         setOrderTypeModalOpen(false);
         message.info('Old Order feature coming soon');
       }
@@ -421,6 +416,55 @@ export default function Order() {
     setViewingOrder(null);
   };
 
+  const addPartyFromOrder = async (values) => {
+    try {
+      const partyPayload = {
+        partyName: values.Party_Name,
+        aliasOrCompanyName: values.AliasOrCompanyName,
+        address: values.Address,
+        city: values.City,
+        state: values.State,
+        pincode: String(values.Pincode),
+        agentId: values.AgentId ? parseInt(values.AgentId) : null,
+        contact_Person1: values.Contact_Person1,
+        contact_Person2: values.Contact_Person2 || null,
+        email: values.Email,
+        mobile1: String(values.Mobile1),
+        mobile2: values.Mobile2 ? String(values.Mobile2) : null,
+        orderId: null,
+      };
+
+      console.log('Party Payload being sent:', partyPayload);
+
+      const res = await fetch('/api/party', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(partyPayload),
+      });
+
+      const responseText = await res.text();
+      console.log('Party API Response Status:', res.status);
+      console.log('Party API Response:', responseText);
+
+      if (!res.ok) {
+        console.error('Party creation failed:', responseText);
+        message.warning(
+          'Order created successfully, but party could not be added. Please add party manually if needed.',
+        );
+        return false;
+      }
+
+      message.success('Order and Party created successfully!');
+      return true;
+    } catch (err) {
+      console.error('Error adding party from order:', err);
+      message.warning(
+        'Order created, but party could not be added automatically. Please add the party manually if needed.',
+      );
+      return false;
+    }
+  };
+
   const handleAdd = async (values) => {
     const payload = {
       AgentId: values.AgentId ? parseInt(values.AgentId) : null,
@@ -468,7 +512,12 @@ export default function Order() {
       throw new Error(`Failed to create order (${res.status}): ${text}`);
     }
 
-    return res.json().catch(() => null);
+    const orderResult = await res.json().catch(() => null);
+
+    // Add party details after order is created
+    await addPartyFromOrder(values);
+
+    return orderResult;
   };
 
   const handleUpdate = async (orderId, values) => {
