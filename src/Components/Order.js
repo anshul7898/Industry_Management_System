@@ -14,6 +14,8 @@ import {
   Descriptions,
 } from 'antd';
 import Navbar from './Navbar';
+import { getStateOptions } from '../data/states';
+import { getCityOptions } from '../data/cities';
 
 // DROPDOWN OPTIONS - MUST match backend VALID_* sets exactly
 const DROPDOWN_OPTIONS = {
@@ -155,12 +157,33 @@ export default function Order() {
   const [editingOrderId, setEditingOrderId] = useState(null);
   const [viewingOrder, setViewingOrder] = useState(null);
   const [selectedOrderType, setSelectedOrderType] = useState(null);
+  const [selectedState, setSelectedState] = useState(null);
 
   const [form] = Form.useForm();
   const [orderTypeForm] = Form.useForm();
 
   // Email validation regex
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  // Get state options from data file
+  const stateOptions = useMemo(() => getStateOptions(), []);
+
+  // Get city options based on selected state
+  const cityOptions = useMemo(
+    () => getCityOptions(selectedState),
+    [selectedState],
+  );
+
+  // Handle state change to clear city selection
+  const handleStateChange = (value) => {
+    setSelectedState(value);
+    form.setFieldValue('City', null);
+  };
+
+  // Handle city change
+  const handleCityChange = (value) => {
+    form.setFieldValue('City', value);
+  };
 
   // Email validator function
   const validateEmail = (_, value) => {
@@ -320,6 +343,7 @@ export default function Order() {
   const openAddOrderModal = async () => {
     setModalMode('add');
     setEditingOrderId(null);
+    setSelectedState(null);
     form.resetFields();
 
     try {
@@ -335,6 +359,7 @@ export default function Order() {
   const openEditModal = async (record) => {
     setModalMode('edit');
     setEditingOrderId(record.OrderId);
+    setSelectedState(record.State || null);
 
     try {
       const agentsData = await fetchAgents();
@@ -386,7 +411,10 @@ export default function Order() {
     setViewModalOpen(true);
   };
 
-  const closeModal = () => setIsModalOpen(false);
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedState(null);
+  };
 
   const closeViewModal = () => {
     setViewModalOpen(false);
@@ -516,6 +544,7 @@ export default function Order() {
         );
 
         setIsModalOpen(false);
+        setSelectedState(null);
         setPagination((p) => ({ ...p, current: 1 }));
         await refreshOrders();
         return;
@@ -530,6 +559,7 @@ export default function Order() {
         );
 
         setIsModalOpen(false);
+        setSelectedState(null);
         await refreshOrders();
       }
     } catch (err) {
@@ -828,11 +858,11 @@ export default function Order() {
                   <Descriptions.Item label="Address">
                     {viewingOrder.Address}
                   </Descriptions.Item>
-                  <Descriptions.Item label="City">
-                    {viewingOrder.City}
-                  </Descriptions.Item>
                   <Descriptions.Item label="State">
                     {viewingOrder.State}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="City">
+                    {viewingOrder.City}
                   </Descriptions.Item>
                   <Descriptions.Item label="Pincode">
                     {viewingOrder.Pincode}
@@ -1052,19 +1082,39 @@ export default function Order() {
                 }}
               >
                 <Form.Item
-                  label="City"
-                  name="City"
-                  rules={[{ required: true, message: 'Please enter City.' }]}
-                >
-                  <Input placeholder="e.g., Mumbai" />
-                </Form.Item>
-
-                <Form.Item
                   label="State"
                   name="State"
                   rules={[{ required: true, message: 'Please enter State.' }]}
                 >
-                  <Input placeholder="e.g., Maharashtra" />
+                  <Select
+                    placeholder="Select State"
+                    options={stateOptions}
+                    showSearch
+                    onChange={handleStateChange}
+                    filterOption={(input, option) =>
+                      (option?.label ?? '')
+                        .toLowerCase()
+                        .includes(input.toLowerCase())
+                    }
+                  />
+                </Form.Item>
+                <Form.Item
+                  label="City"
+                  name="City"
+                  rules={[{ required: true, message: 'Please enter City.' }]}
+                >
+                  <Select
+                    placeholder="Select City"
+                    options={cityOptions}
+                    showSearch
+                    onChange={handleCityChange}
+                    disabled={!selectedState || cityOptions.length === 0}
+                    filterOption={(input, option) =>
+                      (option?.label ?? '')
+                        .toLowerCase()
+                        .includes(input.toLowerCase())
+                    }
+                  />
                 </Form.Item>
 
                 <Form.Item
