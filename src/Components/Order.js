@@ -15,6 +15,9 @@ import {
   Card,
   Divider,
   Empty,
+  Row,
+  Col,
+  Statistic,
 } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import Navbar from './Navbar';
@@ -358,9 +361,10 @@ export default function Order() {
         PlateBlockNumber: undefined,
         PlateAvailable: false,
         Rate: undefined,
-        TotalAmount: undefined,
+        ProductAmount: undefined,
       },
     ]);
+    form.setFieldValue('TotalAmount', 0);
 
     try {
       const agentsData = await fetchAgents();
@@ -418,9 +422,10 @@ export default function Order() {
           PlateBlockNumber: undefined,
           PlateAvailable: false,
           Rate: undefined,
-          TotalAmount: undefined,
+          ProductAmount: undefined,
         },
       ],
+      TotalAmount: record.TotalAmount || 0,
     });
 
     setIsModalOpen(true);
@@ -495,6 +500,12 @@ export default function Order() {
       throw new Error('Please add at least one product');
     }
 
+    // Ensure TotalAmount is a valid number
+    const totalAmount = values.TotalAmount || 0;
+    if (isNaN(totalAmount) || totalAmount < 0) {
+      throw new Error('Total Amount must be a valid non-negative number');
+    }
+
     const payload = {
       AgentId: values.AgentId ? parseInt(values.AgentId) : null,
       Party_Name: values.Party_Name,
@@ -508,6 +519,7 @@ export default function Order() {
       Mobile1: values.Mobile1,
       Mobile2: values.Mobile2 || null,
       Email: values.Email,
+      TotalAmount: parseFloat(totalAmount),
       Products: (values.Products || []).map((product) => ({
         ProductType: product.ProductType,
         ProductId: product.ProductId,
@@ -528,7 +540,7 @@ export default function Order() {
         PlateBlockNumber: product.PlateBlockNumber || null,
         PlateAvailable: product.PlateAvailable || false,
         Rate: product.Rate,
-        TotalAmount: product.TotalAmount,
+        ProductAmount: product.ProductAmount || 0,
       })),
     };
 
@@ -560,6 +572,12 @@ export default function Order() {
       throw new Error('Please add at least one product');
     }
 
+    // Ensure TotalAmount is a valid number
+    const totalAmount = values.TotalAmount || 0;
+    if (isNaN(totalAmount) || totalAmount < 0) {
+      throw new Error('Total Amount must be a valid non-negative number');
+    }
+
     const payload = {
       AgentId: values.AgentId ? parseInt(values.AgentId) : null,
       Party_Name: values.Party_Name,
@@ -573,6 +591,7 @@ export default function Order() {
       Mobile1: values.Mobile1,
       Mobile2: values.Mobile2 || null,
       Email: values.Email,
+      TotalAmount: parseFloat(totalAmount),
       Products: (values.Products || []).map((product) => ({
         ProductType: product.ProductType,
         ProductId: product.ProductId,
@@ -593,7 +612,7 @@ export default function Order() {
         PlateBlockNumber: product.PlateBlockNumber || null,
         PlateAvailable: product.PlateAvailable || false,
         Rate: product.Rate,
-        TotalAmount: product.TotalAmount,
+        ProductAmount: product.ProductAmount || 0,
       })),
     };
 
@@ -623,6 +642,40 @@ export default function Order() {
       const text = await res.text().catch(() => '');
       throw new Error(`Failed to delete order (${res.status}): ${text}`);
     }
+  };
+
+  // Calculate ProductAmount when Rate or Quantity changes
+  const handleRateOrQuantityChange = (fieldName) => {
+    const products = form.getFieldValue('Products') || [];
+    const parts = fieldName.split('_');
+    const productIndex = parseInt(parts[0]);
+
+    if (productIndex >= 0 && productIndex < products.length) {
+      const product = products[productIndex];
+      const rate = product.Rate || 0;
+      const quantity = product.Quantity || 0;
+      const productAmount = parseFloat((rate * quantity).toFixed(2));
+
+      // Update ProductAmount
+      const updatedProducts = [...products];
+      updatedProducts[productIndex].ProductAmount = productAmount;
+      form.setFieldValue('Products', updatedProducts);
+
+      // Recalculate TotalAmount
+      const totalAmount = updatedProducts.reduce((sum, p) => {
+        return sum + (p.ProductAmount || 0);
+      }, 0);
+      form.setFieldValue('TotalAmount', parseFloat(totalAmount.toFixed(2)));
+    }
+  };
+
+  // Handle manual ProductAmount change
+  const handleProductAmountChange = (fieldName) => {
+    const products = form.getFieldValue('Products') || [];
+    const totalAmount = products.reduce((sum, p) => {
+      return sum + (p.ProductAmount || 0);
+    }, 0);
+    form.setFieldValue('TotalAmount', parseFloat(totalAmount.toFixed(2)));
   };
 
   const handleSubmitModal = async () => {
@@ -732,6 +785,14 @@ export default function Order() {
       key: 'ProductCount',
       width: 130,
       render: (products) => (products ? products.length : 0),
+    },
+    {
+      title: 'Total Amount',
+      dataIndex: 'TotalAmount',
+      key: 'TotalAmount',
+      width: 130,
+      render: (amount) => `₹${Number(amount || 0).toFixed(2)}`,
+      sorter: (a, b) => compareNumber(a, b, 'TotalAmount'),
     },
     {
       title: 'Action',
@@ -849,7 +910,7 @@ export default function Order() {
               pageSize: newPagination.pageSize,
             });
           }}
-          scroll={{ x: 1500 }}
+          scroll={{ x: 1600 }}
         />
 
         <style>{`
@@ -1042,12 +1103,23 @@ export default function Order() {
                           <Descriptions.Item label="Plate Block Number">
                             {product.PlateBlockNumber || '-'}
                           </Descriptions.Item>
-                          <Descriptions.Item label="Total Amount" span={3}>
-                            ₹{Number(product.TotalAmount || 0).toFixed(2)}
+                          <Descriptions.Item label="Product Amount" span={3}>
+                            ₹{Number(product.ProductAmount || 0).toFixed(2)}
                           </Descriptions.Item>
                         </Descriptions>
                       </Card>
                     ))}
+                    <Divider />
+                    <Row justify="end">
+                      <Col>
+                        <Statistic
+                          title="Total Amount"
+                          value={viewingOrder.TotalAmount || 0}
+                          prefix="₹"
+                          precision={2}
+                        />
+                      </Col>
+                    </Row>
                   </div>
                 ) : (
                   <Empty description="No products" />
@@ -1062,7 +1134,7 @@ export default function Order() {
           title={
             modalMode === 'add'
               ? 'Add New Order (Multiple Products)'
-              : 'Edit Order'
+              : `Edit Order - ${editingOrderId || ''}`
           }
           open={isModalOpen}
           onCancel={closeModal}
@@ -1085,8 +1157,9 @@ export default function Order() {
             >
               <p style={{ margin: 0, color: '#0050b3', fontSize: '14px' }}>
                 <strong>ℹ️ Note:</strong> Each order can contain multiple
-                products. Add as many products as needed using the "Add Product"
-                button.
+                products. ProductAmount = Rate × Quantity (auto-calculated, but
+                editable). TotalAmount = Sum of all ProductAmounts
+                (auto-calculated, but editable).
               </p>
             </div>
 
@@ -1423,6 +1496,9 @@ export default function Order() {
                               <InputNumber
                                 placeholder="e.g., 5000"
                                 style={{ width: '100%' }}
+                                onChange={() =>
+                                  handleRateOrQuantityChange(`${idx}_Quantity`)
+                                }
                               />
                             </Form.Item>
                           </div>
@@ -1669,7 +1745,7 @@ export default function Order() {
                             }}
                           >
                             <Form.Item
-                              label="Rate"
+                              label="Rate (Per Unit)"
                               name={[field.name, 'Rate']}
                               rules={[
                                 {
@@ -1683,24 +1759,34 @@ export default function Order() {
                                 step={0.01}
                                 style={{ width: '100%' }}
                                 precision={2}
+                                onChange={() =>
+                                  handleRateOrQuantityChange(`${idx}_Rate`)
+                                }
+                                prefix="₹"
                               />
                             </Form.Item>
 
                             <Form.Item
-                              label="Total Amount"
-                              name={[field.name, 'TotalAmount']}
+                              label="Product Amount (Editable)"
+                              name={[field.name, 'ProductAmount']}
                               rules={[
                                 {
                                   required: true,
-                                  message: 'Please enter Total Amount.',
+                                  message: 'Product Amount is required.',
                                 },
                               ]}
                             >
                               <InputNumber
-                                placeholder="e.g., 227500"
+                                placeholder="Rate × Quantity"
                                 step={0.01}
                                 style={{ width: '100%' }}
                                 precision={2}
+                                onChange={() =>
+                                  handleProductAmountChange(
+                                    `${idx}_ProductAmount`,
+                                  )
+                                }
+                                prefix="₹"
                               />
                             </Form.Item>
                           </div>
@@ -1720,6 +1806,34 @@ export default function Order() {
                   </>
                 )}
               </Form.List>
+            </div>
+
+            {/* Total Amount Section */}
+            <div
+              style={{
+                marginBottom: 16,
+                padding: '12px',
+                backgroundColor: '#f0f5ff',
+                borderRadius: 4,
+                border: '2px solid #b7eb8f',
+              }}
+            >
+              <h3 style={{ margin: '0 0 12px 0' }}>Order Total</h3>
+              <Form.Item
+                label="Total Amount (Auto-calculated, but Editable)"
+                name="TotalAmount"
+                rules={[
+                  { required: true, message: 'Total Amount is required.' },
+                ]}
+              >
+                <InputNumber
+                  placeholder="Sum of all Product Amounts"
+                  step={0.01}
+                  style={{ width: '100%' }}
+                  precision={2}
+                  prefix="₹"
+                />
+              </Form.Item>
             </div>
           </Form>
         </Modal>
