@@ -12,7 +12,11 @@ import {
   Select,
   Checkbox,
   Descriptions,
+  Card,
+  Divider,
+  Empty,
 } from 'antd';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import Navbar from './Navbar';
 import { getStateOptions } from '../data/states';
 import { getCityOptions } from '../data/cities';
@@ -153,7 +157,7 @@ export default function Order() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [orderTypeModalOpen, setOrderTypeModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
+  const [modalMode, setModalMode] = useState('add');
   const [editingOrderId, setEditingOrderId] = useState(null);
   const [viewingOrder, setViewingOrder] = useState(null);
   const [selectedOrderType, setSelectedOrderType] = useState(null);
@@ -162,30 +166,24 @@ export default function Order() {
   const [form] = Form.useForm();
   const [orderTypeForm] = Form.useForm();
 
-  // Email validation regex
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  // Get state options from data file
   const stateOptions = useMemo(() => getStateOptions(), []);
 
-  // Get city options based on selected state
   const cityOptions = useMemo(
     () => getCityOptions(selectedState),
     [selectedState],
   );
 
-  // Handle state change to clear city selection
   const handleStateChange = (value) => {
     setSelectedState(value);
     form.setFieldValue('City', null);
   };
 
-  // Handle city change
   const handleCityChange = (value) => {
     form.setFieldValue('City', value);
   };
 
-  // Email validator function
   const validateEmail = (_, value) => {
     if (!value) {
       return Promise.resolve();
@@ -198,7 +196,6 @@ export default function Order() {
     );
   };
 
-  // Mobile validator function
   const validateMobile = (_, value) => {
     if (!value) {
       return Promise.resolve();
@@ -302,7 +299,6 @@ export default function Order() {
     return aVal - bVal;
   };
 
-  // Handle order type selection
   const handleOrderTypeSelect = async (values) => {
     try {
       const orderType = values.orderType;
@@ -340,6 +336,31 @@ export default function Order() {
     setEditingOrderId(null);
     setSelectedState(null);
     form.resetFields();
+    // Initialize with empty products array
+    form.setFieldValue('Products', [
+      {
+        ProductType: undefined,
+        ProductId: undefined,
+        ProductSize: undefined,
+        BagMaterial: undefined,
+        Quantity: undefined,
+        SheetGSM: undefined,
+        SheetColor: undefined,
+        BorderGSM: undefined,
+        BorderColor: undefined,
+        HandleType: undefined,
+        HandleColor: undefined,
+        HandleGSM: undefined,
+        PrintingType: undefined,
+        PrintColor: undefined,
+        Color: undefined,
+        Design: false,
+        PlateBlockNumber: undefined,
+        PlateAvailable: false,
+        Rate: undefined,
+        TotalAmount: undefined,
+      },
+    ]);
 
     try {
       const agentsData = await fetchAgents();
@@ -376,26 +397,30 @@ export default function Order() {
       Mobile1: record.Mobile1,
       Mobile2: record.Mobile2,
       Email: record.Email,
-      ProductType: record.ProductType,
-      ProductId: record.ProductId,
-      ProductSize: record.ProductSize,
-      BagMaterial: record.BagMaterial,
-      Quantity: record.Quantity,
-      SheetGSM: record.SheetGSM,
-      SheetColor: record.SheetColor,
-      BorderGSM: record.BorderGSM,
-      BorderColor: record.BorderColor,
-      HandleType: record.HandleType,
-      HandleColor: record.HandleColor,
-      HandleGSM: record.HandleGSM,
-      PrintingType: record.PrintingType,
-      PrintColor: record.PrintColor,
-      Color: record.Color,
-      Design: record.Design,
-      PlateBlockNumber: record.PlateBlockNumber,
-      PlateAvailable: record.PlateAvailable,
-      Rate: record.Rate,
-      TotalAmount: record.TotalAmount,
+      Products: record.Products || [
+        {
+          ProductType: undefined,
+          ProductId: undefined,
+          ProductSize: undefined,
+          BagMaterial: undefined,
+          Quantity: undefined,
+          SheetGSM: undefined,
+          SheetColor: undefined,
+          BorderGSM: undefined,
+          BorderColor: undefined,
+          HandleType: undefined,
+          HandleColor: undefined,
+          HandleGSM: undefined,
+          PrintingType: undefined,
+          PrintColor: undefined,
+          Color: undefined,
+          Design: false,
+          PlateBlockNumber: undefined,
+          PlateAvailable: false,
+          Rate: undefined,
+          TotalAmount: undefined,
+        },
+      ],
     });
 
     setIsModalOpen(true);
@@ -454,7 +479,6 @@ export default function Order() {
         return false;
       }
 
-      message.success('Order and Party created successfully!');
       return true;
     } catch (err) {
       console.error('Error adding party from order:', err);
@@ -466,6 +490,11 @@ export default function Order() {
   };
 
   const handleAdd = async (values) => {
+    // Validate that at least one product is present
+    if (!values.Products || values.Products.length === 0) {
+      throw new Error('Please add at least one product');
+    }
+
     const payload = {
       AgentId: values.AgentId ? parseInt(values.AgentId) : null,
       Party_Name: values.Party_Name,
@@ -479,27 +508,31 @@ export default function Order() {
       Mobile1: values.Mobile1,
       Mobile2: values.Mobile2 || null,
       Email: values.Email,
-      ProductType: values.ProductType,
-      ProductId: values.ProductId,
-      ProductSize: values.ProductSize,
-      BagMaterial: values.BagMaterial,
-      Quantity: values.Quantity,
-      SheetGSM: Number(values.SheetGSM),
-      SheetColor: values.SheetColor,
-      BorderGSM: Number(values.BorderGSM),
-      BorderColor: values.BorderColor,
-      HandleType: values.HandleType,
-      HandleColor: values.HandleColor,
-      HandleGSM: Number(values.HandleGSM),
-      PrintingType: values.PrintingType,
-      PrintColor: values.PrintColor,
-      Color: values.Color,
-      Design: values.Design || false,
-      PlateBlockNumber: values.PlateBlockNumber || null,
-      PlateAvailable: values.PlateAvailable || false,
-      Rate: values.Rate,
-      TotalAmount: values.TotalAmount,
+      Products: (values.Products || []).map((product) => ({
+        ProductType: product.ProductType,
+        ProductId: product.ProductId,
+        ProductSize: product.ProductSize,
+        BagMaterial: product.BagMaterial,
+        Quantity: product.Quantity,
+        SheetGSM: Number(product.SheetGSM),
+        SheetColor: product.SheetColor,
+        BorderGSM: Number(product.BorderGSM),
+        BorderColor: product.BorderColor,
+        HandleType: product.HandleType,
+        HandleColor: product.HandleColor,
+        HandleGSM: Number(product.HandleGSM),
+        PrintingType: product.PrintingType,
+        PrintColor: product.PrintColor,
+        Color: product.Color,
+        Design: product.Design || false,
+        PlateBlockNumber: product.PlateBlockNumber || null,
+        PlateAvailable: product.PlateAvailable || false,
+        Rate: product.Rate,
+        TotalAmount: product.TotalAmount,
+      })),
     };
+
+    console.log('Order Payload being sent:', JSON.stringify(payload, null, 2));
 
     const res = await fetch('/api/orders', {
       method: 'POST',
@@ -509,6 +542,7 @@ export default function Order() {
 
     if (!res.ok) {
       const text = await res.text().catch(() => '');
+      console.error('Order creation error:', text);
       throw new Error(`Failed to create order (${res.status}): ${text}`);
     }
 
@@ -521,6 +555,11 @@ export default function Order() {
   };
 
   const handleUpdate = async (orderId, values) => {
+    // Validate that at least one product is present
+    if (!values.Products || values.Products.length === 0) {
+      throw new Error('Please add at least one product');
+    }
+
     const payload = {
       AgentId: values.AgentId ? parseInt(values.AgentId) : null,
       Party_Name: values.Party_Name,
@@ -534,27 +573,31 @@ export default function Order() {
       Mobile1: values.Mobile1,
       Mobile2: values.Mobile2 || null,
       Email: values.Email,
-      ProductType: values.ProductType,
-      ProductId: values.ProductId,
-      ProductSize: values.ProductSize,
-      BagMaterial: values.BagMaterial,
-      Quantity: values.Quantity,
-      SheetGSM: Number(values.SheetGSM),
-      SheetColor: values.SheetColor,
-      BorderGSM: Number(values.BorderGSM),
-      BorderColor: values.BorderColor,
-      HandleType: values.HandleType,
-      HandleColor: values.HandleColor,
-      HandleGSM: Number(values.HandleGSM),
-      PrintingType: values.PrintingType,
-      PrintColor: values.PrintColor,
-      Color: values.Color,
-      Design: values.Design || false,
-      PlateBlockNumber: values.PlateBlockNumber || null,
-      PlateAvailable: values.PlateAvailable || false,
-      Rate: values.Rate,
-      TotalAmount: values.TotalAmount,
+      Products: (values.Products || []).map((product) => ({
+        ProductType: product.ProductType,
+        ProductId: product.ProductId,
+        ProductSize: product.ProductSize,
+        BagMaterial: product.BagMaterial,
+        Quantity: product.Quantity,
+        SheetGSM: Number(product.SheetGSM),
+        SheetColor: product.SheetColor,
+        BorderGSM: Number(product.BorderGSM),
+        BorderColor: product.BorderColor,
+        HandleType: product.HandleType,
+        HandleColor: product.HandleColor,
+        HandleGSM: Number(product.HandleGSM),
+        PrintingType: product.PrintingType,
+        PrintColor: product.PrintColor,
+        Color: product.Color,
+        Design: product.Design || false,
+        PlateBlockNumber: product.PlateBlockNumber || null,
+        PlateAvailable: product.PlateAvailable || false,
+        Rate: product.Rate,
+        TotalAmount: product.TotalAmount,
+      })),
     };
+
+    console.log('Update Payload being sent:', JSON.stringify(payload, null, 2));
 
     const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
       method: 'PUT',
@@ -564,6 +607,7 @@ export default function Order() {
 
     if (!res.ok) {
       const text = await res.text().catch(() => '');
+      console.error('Order update error:', text);
       throw new Error(`Failed to update order (${res.status}): ${text}`);
     }
 
@@ -586,10 +630,18 @@ export default function Order() {
       const values = await form.validateFields();
       setLoading(true);
 
+      if (!values.Products || values.Products.length === 0) {
+        message.error('Please add at least one product');
+        setLoading(false);
+        return;
+      }
+
       if (modalMode === 'add') {
         const created = await handleAdd(values);
         message.success(
-          created?.OrderId ? `Created ${created.OrderId}` : 'Order created',
+          created?.OrderId
+            ? `Created order ${created.OrderId} with ${values.Products.length} product(s)`
+            : 'Order created successfully',
         );
 
         setIsModalOpen(false);
@@ -604,7 +656,9 @@ export default function Order() {
 
         const updated = await handleUpdate(editingOrderId, values);
         message.success(
-          updated?.OrderId ? `Updated ${updated.OrderId}` : 'Order updated',
+          updated?.OrderId
+            ? `Updated order ${updated.OrderId} with ${values.Products.length} product(s)`
+            : 'Order updated successfully',
         );
 
         setIsModalOpen(false);
@@ -618,7 +672,6 @@ export default function Order() {
     }
   };
 
-  // Build agent dropdown options
   const agentOptions = agents.map((agent) => ({
     label: agent.name,
     value: agent.agentId,
@@ -674,37 +727,11 @@ export default function Order() {
       sortDirections: ['ascend', 'descend'],
     },
     {
-      title: 'Product Type',
-      dataIndex: 'ProductType',
-      key: 'ProductType',
+      title: 'No of Products',
+      dataIndex: 'Products',
+      key: 'ProductCount',
       width: 130,
-      sorter: (a, b) => compareText(a, b, 'ProductType'),
-      sortDirections: ['ascend', 'descend'],
-    },
-    {
-      title: 'Quantity',
-      dataIndex: 'Quantity',
-      key: 'Quantity',
-      width: 100,
-      sorter: (a, b) => compareNumber(a, b, 'Quantity'),
-      sortDirections: ['ascend', 'descend'],
-    },
-    {
-      title: 'Rate',
-      dataIndex: 'Rate',
-      key: 'Rate',
-      width: 100,
-      sorter: (a, b) => compareNumber(a, b, 'Rate'),
-      sortDirections: ['ascend', 'descend'],
-    },
-    {
-      title: 'Total Amount',
-      dataIndex: 'TotalAmount',
-      key: 'TotalAmount',
-      width: 120,
-      sorter: (a, b) => compareNumber(a, b, 'TotalAmount'),
-      sortDirections: ['ascend', 'descend'],
-      render: (text) => `₹${Number(text || 0).toFixed(2)}`,
+      render: (products) => (products ? products.length : 0),
     },
     {
       title: 'Action',
@@ -943,109 +970,88 @@ export default function Order() {
                 </Descriptions>
               </div>
 
-              {/* Product Information */}
+              {/* Products Information */}
               <div style={{ marginBottom: 24 }}>
                 <h3 style={{ marginBottom: 12, fontWeight: 600, fontSize: 16 }}>
-                  Product Information
+                  Products ({viewingOrder.Products?.length || 0})
                 </h3>
-                <Descriptions bordered size="small" column={3}>
-                  <Descriptions.Item label="Product Type">
-                    {viewingOrder.ProductType}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Product ID">
-                    {viewingOrder.ProductId}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Product Size">
-                    {viewingOrder.ProductSize}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Bag Material">
-                    {viewingOrder.BagMaterial}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Quantity">
-                    {viewingOrder.Quantity}
-                  </Descriptions.Item>
-                </Descriptions>
-              </div>
-
-              {/* Sheet Information */}
-              <div style={{ marginBottom: 24 }}>
-                <h3 style={{ marginBottom: 12, fontWeight: 600, fontSize: 16 }}>
-                  Sheet Information
-                </h3>
-                <Descriptions bordered size="small" column={2}>
-                  <Descriptions.Item label="Sheet GSM">
-                    {viewingOrder.SheetGSM}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Sheet Color">
-                    {viewingOrder.SheetColor}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Border GSM">
-                    {viewingOrder.BorderGSM}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Border Color">
-                    {viewingOrder.BorderColor}
-                  </Descriptions.Item>
-                </Descriptions>
-              </div>
-
-              {/* Handle Information */}
-              <div style={{ marginBottom: 24 }}>
-                <h3 style={{ marginBottom: 12, fontWeight: 600, fontSize: 16 }}>
-                  Handle Information
-                </h3>
-                <Descriptions bordered size="small" column={3}>
-                  <Descriptions.Item label="Handle Type">
-                    {viewingOrder.HandleType}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Handle Color">
-                    {viewingOrder.HandleColor}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Handle GSM">
-                    {viewingOrder.HandleGSM}
-                  </Descriptions.Item>
-                </Descriptions>
-              </div>
-
-              {/* Printing Informations */}
-              <div style={{ marginBottom: 24 }}>
-                <h3 style={{ marginBottom: 12, fontWeight: 600, fontSize: 16 }}>
-                  Printing Information
-                </h3>
-                <Descriptions bordered size="small" column={2}>
-                  <Descriptions.Item label="Printing Type">
-                    {viewingOrder.PrintingType}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Print Color">
-                    {viewingOrder.PrintColor}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Color">
-                    {viewingOrder.Color}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Design">
-                    {viewingOrder.Design ? 'Yes' : 'No'}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Plate Available">
-                    {viewingOrder.PlateAvailable ? 'Yes' : 'No'}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Plate Block Number">
-                    {viewingOrder.PlateBlockNumber || '-'}
-                  </Descriptions.Item>
-                </Descriptions>
-              </div>
-
-              {/* Pricing Information */}
-              <div style={{ marginBottom: 24 }}>
-                <h3 style={{ marginBottom: 12, fontWeight: 600, fontSize: 16 }}>
-                  Pricing Information
-                </h3>
-                <Descriptions bordered size="small" column={2}>
-                  <Descriptions.Item label="Rate">
-                    ₹{Number(viewingOrder.Rate || 0).toFixed(2)}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Total Amount">
-                    ₹{Number(viewingOrder.TotalAmount || 0).toFixed(2)}
-                  </Descriptions.Item>
-                </Descriptions>
+                {viewingOrder.Products && viewingOrder.Products.length > 0 ? (
+                  <div>
+                    {viewingOrder.Products.map((product, idx) => (
+                      <Card
+                        key={idx}
+                        style={{ marginBottom: 12 }}
+                        title={`Product ${idx + 1}`}
+                        size="small"
+                      >
+                        <Descriptions bordered size="small" column={3}>
+                          <Descriptions.Item label="Product Type">
+                            {product.ProductType}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Product ID">
+                            {product.ProductId}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Product Size">
+                            {product.ProductSize}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Bag Material">
+                            {product.BagMaterial}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Quantity">
+                            {product.Quantity}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Rate">
+                            ₹{Number(product.Rate || 0).toFixed(2)}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Sheet GSM">
+                            {product.SheetGSM}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Sheet Color">
+                            {product.SheetColor}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Border GSM">
+                            {product.BorderGSM}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Border Color">
+                            {product.BorderColor}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Handle Type">
+                            {product.HandleType}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Handle Color">
+                            {product.HandleColor}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Handle GSM">
+                            {product.HandleGSM}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Printing Type">
+                            {product.PrintingType}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Print Color">
+                            {product.PrintColor}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Color">
+                            {product.Color}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Design">
+                            {product.Design ? 'Yes' : 'No'}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Plate Available">
+                            {product.PlateAvailable ? 'Yes' : 'No'}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Plate Block Number">
+                            {product.PlateBlockNumber || '-'}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Total Amount" span={3}>
+                            ₹{Number(product.TotalAmount || 0).toFixed(2)}
+                          </Descriptions.Item>
+                        </Descriptions>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <Empty description="No products" />
+                )}
               </div>
             </div>
           )}
@@ -1053,16 +1059,37 @@ export default function Order() {
 
         {/* Add/Edit Order Modal */}
         <Modal
-          title={modalMode === 'add' ? 'Add New Order' : 'Edit Order'}
+          title={
+            modalMode === 'add'
+              ? 'Add New Order (Multiple Products)'
+              : 'Edit Order'
+          }
           open={isModalOpen}
           onCancel={closeModal}
           onOk={handleSubmitModal}
-          okText={modalMode === 'add' ? 'Add' : 'Save'}
+          okText={modalMode === 'add' ? 'Create Order' : 'Save Changes'}
           confirmLoading={loading}
-          width={900}
-          bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
+          width={1000}
+          bodyStyle={{ maxHeight: '80vh', overflowY: 'auto' }}
         >
           <Form form={form} layout="vertical">
+            {/* Info Message */}
+            <div
+              style={{
+                marginBottom: 16,
+                padding: 12,
+                backgroundColor: '#e6f7ff',
+                borderRadius: 4,
+                border: '1px solid #91d5ff',
+              }}
+            >
+              <p style={{ margin: 0, color: '#0050b3', fontSize: '14px' }}>
+                <strong>ℹ️ Note:</strong> Each order can contain multiple
+                products. Add as many products as needed using the "Add Product"
+                button.
+              </p>
+            </div>
+
             {/* Party Information */}
             <div
               style={{
@@ -1268,7 +1295,7 @@ export default function Order() {
               </Form.Item>
             </div>
 
-            {/* Product Information */}
+            {/* Products Section */}
             <div
               style={{
                 marginBottom: 16,
@@ -1277,359 +1304,422 @@ export default function Order() {
                 borderRadius: 4,
               }}
             >
-              <h3 style={{ margin: '0 0 12px 0' }}>Product Information</h3>
+              <h3 style={{ margin: '0 0 12px 0' }}>Products</h3>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr',
-                  gap: 12,
-                }}
-              >
-                <Form.Item
-                  label="Product Type"
-                  name="ProductType"
-                  rules={[
-                    { required: true, message: 'Please select Product Type.' },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select Product Type"
-                    options={DROPDOWN_OPTIONS.productTypes}
-                  />
-                </Form.Item>
+              <Form.List name="Products">
+                {(fields, { add, remove }) => (
+                  <>
+                    {fields.length === 0 ? (
+                      <Empty
+                        description="No products added"
+                        style={{ marginBottom: 12 }}
+                      />
+                    ) : (
+                      fields.map((field, idx) => (
+                        <Card
+                          key={field.key}
+                          style={{ marginBottom: 12 }}
+                          title={`Product ${idx + 1}`}
+                          extra={
+                            <Button
+                              danger
+                              size="small"
+                              icon={<DeleteOutlined />}
+                              onClick={() => remove(field.name)}
+                            >
+                              Remove
+                            </Button>
+                          }
+                        >
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '1fr 1fr 1fr',
+                              gap: 12,
+                            }}
+                          >
+                            <Form.Item
+                              label="Product Type"
+                              name={[field.name, 'ProductType']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please select Product Type.',
+                                },
+                              ]}
+                            >
+                              <Select
+                                placeholder="Select Product Type"
+                                options={DROPDOWN_OPTIONS.productTypes}
+                              />
+                            </Form.Item>
 
-                <Form.Item
-                  label="Product ID"
-                  name="ProductId"
-                  rules={[
-                    { required: true, message: 'Please enter Product ID.' },
-                  ]}
-                >
-                  <InputNumber
-                    placeholder="e.g., 1001"
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
+                            <Form.Item
+                              label="Product ID"
+                              name={[field.name, 'ProductId']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please enter Product ID.',
+                                },
+                              ]}
+                            >
+                              <InputNumber
+                                placeholder="e.g., 1001"
+                                style={{ width: '100%' }}
+                              />
+                            </Form.Item>
 
-                <Form.Item
-                  label="Product Size"
-                  name="ProductSize"
-                  rules={[
-                    { required: true, message: 'Please enter Product Size.' },
-                  ]}
-                >
-                  <InputNumber
-                    placeholder="e.g., 14"
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
-              </div>
+                            <Form.Item
+                              label="Product Size"
+                              name={[field.name, 'ProductSize']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please enter Product Size.',
+                                },
+                              ]}
+                            >
+                              <InputNumber
+                                placeholder="e.g., 14"
+                                style={{ width: '100%' }}
+                              />
+                            </Form.Item>
+                          </div>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 12,
-                }}
-              >
-                <Form.Item
-                  label="Bag Material"
-                  name="BagMaterial"
-                  rules={[
-                    { required: true, message: 'Please select Bag Material.' },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select Bag Material"
-                    options={DROPDOWN_OPTIONS.bagMaterials}
-                  />
-                </Form.Item>
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '1fr 1fr',
+                              gap: 12,
+                            }}
+                          >
+                            <Form.Item
+                              label="Bag Material"
+                              name={[field.name, 'BagMaterial']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please select Bag Material.',
+                                },
+                              ]}
+                            >
+                              <Select
+                                placeholder="Select Bag Material"
+                                options={DROPDOWN_OPTIONS.bagMaterials}
+                              />
+                            </Form.Item>
 
-                <Form.Item
-                  label="Quantity"
-                  name="Quantity"
-                  rules={[
-                    { required: true, message: 'Please enter Quantity.' },
-                  ]}
-                >
-                  <InputNumber
-                    placeholder="e.g., 5000"
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
-              </div>
-            </div>
+                            <Form.Item
+                              label="Quantity"
+                              name={[field.name, 'Quantity']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please enter Quantity.',
+                                },
+                              ]}
+                            >
+                              <InputNumber
+                                placeholder="e.g., 5000"
+                                style={{ width: '100%' }}
+                              />
+                            </Form.Item>
+                          </div>
 
-            {/* Sheet Information */}
-            <div
-              style={{
-                marginBottom: 16,
-                padding: '12px',
-                backgroundColor: '#f5f5f5',
-                borderRadius: 4,
-              }}
-            >
-              <h3 style={{ margin: '0 0 12px 0' }}>Sheet Information</h3>
+                          {/* Sheet Information */}
+                          <Divider style={{ margin: '12px 0' }}>
+                            Sheet Information
+                          </Divider>
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '1fr 1fr',
+                              gap: 12,
+                            }}
+                          >
+                            <Form.Item
+                              label="Sheet GSM"
+                              name={[field.name, 'SheetGSM']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please select Sheet GSM.',
+                                },
+                              ]}
+                            >
+                              <Select
+                                placeholder="Select Sheet GSM"
+                                options={DROPDOWN_OPTIONS.sheetGSMs}
+                              />
+                            </Form.Item>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 12,
-                }}
-              >
-                <Form.Item
-                  label="Sheet GSM"
-                  name="SheetGSM"
-                  rules={[
-                    { required: true, message: 'Please select Sheet GSM.' },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select Sheet GSM"
-                    options={DROPDOWN_OPTIONS.sheetGSMs}
-                  />
-                </Form.Item>
+                            <Form.Item
+                              label="Sheet Color"
+                              name={[field.name, 'SheetColor']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please select Sheet Color.',
+                                },
+                              ]}
+                            >
+                              <Select
+                                placeholder="Select Sheet Color"
+                                options={DROPDOWN_OPTIONS.sheetColors}
+                              />
+                            </Form.Item>
 
-                <Form.Item
-                  label="Sheet Color"
-                  name="SheetColor"
-                  rules={[
-                    { required: true, message: 'Please select Sheet Color.' },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select Sheet Color"
-                    options={DROPDOWN_OPTIONS.sheetColors}
-                  />
-                </Form.Item>
-              </div>
+                            <Form.Item
+                              label="Border GSM"
+                              name={[field.name, 'BorderGSM']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please select Border GSM.',
+                                },
+                              ]}
+                            >
+                              <Select
+                                placeholder="Select Border GSM"
+                                options={DROPDOWN_OPTIONS.borderGSMs}
+                              />
+                            </Form.Item>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 12,
-                }}
-              >
-                <Form.Item
-                  label="Border GSM"
-                  name="BorderGSM"
-                  rules={[
-                    { required: true, message: 'Please select Border GSM.' },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select Border GSM"
-                    options={DROPDOWN_OPTIONS.borderGSMs}
-                  />
-                </Form.Item>
+                            <Form.Item
+                              label="Border Color"
+                              name={[field.name, 'BorderColor']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please select Border Color.',
+                                },
+                              ]}
+                            >
+                              <Select
+                                placeholder="Select Border Color"
+                                options={DROPDOWN_OPTIONS.borderColors}
+                              />
+                            </Form.Item>
+                          </div>
 
-                <Form.Item
-                  label="Border Color"
-                  name="BorderColor"
-                  rules={[
-                    { required: true, message: 'Please select Border Color.' },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select Border Color"
-                    options={DROPDOWN_OPTIONS.borderColors}
-                  />
-                </Form.Item>
-              </div>
-            </div>
+                          {/* Handle Information */}
+                          <Divider style={{ margin: '12px 0' }}>
+                            Handle Information
+                          </Divider>
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '1fr 1fr 1fr',
+                              gap: 12,
+                            }}
+                          >
+                            <Form.Item
+                              label="Handle Type"
+                              name={[field.name, 'HandleType']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please select Handle Type.',
+                                },
+                              ]}
+                            >
+                              <Select
+                                placeholder="Select Handle Type"
+                                options={DROPDOWN_OPTIONS.handleTypes}
+                              />
+                            </Form.Item>
 
-            {/* Handle Information */}
-            <div
-              style={{
-                marginBottom: 16,
-                padding: '12px',
-                backgroundColor: '#f5f5f5',
-                borderRadius: 4,
-              }}
-            >
-              <h3 style={{ margin: '0 0 12px 0' }}>Handle Information</h3>
+                            <Form.Item
+                              label="Handle Color"
+                              name={[field.name, 'HandleColor']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please select Handle Color.',
+                                },
+                              ]}
+                            >
+                              <Select
+                                placeholder="Select Handle Color"
+                                options={DROPDOWN_OPTIONS.handleColors}
+                              />
+                            </Form.Item>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr',
-                  gap: 12,
-                }}
-              >
-                <Form.Item
-                  label="Handle Type"
-                  name="HandleType"
-                  rules={[
-                    { required: true, message: 'Please select Handle Type.' },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select Handle Type"
-                    options={DROPDOWN_OPTIONS.handleTypes}
-                  />
-                </Form.Item>
+                            <Form.Item
+                              label="Handle GSM"
+                              name={[field.name, 'HandleGSM']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please select Handle GSM.',
+                                },
+                              ]}
+                            >
+                              <Select
+                                placeholder="Select Handle GSM"
+                                options={DROPDOWN_OPTIONS.handleGSMs}
+                              />
+                            </Form.Item>
+                          </div>
 
-                <Form.Item
-                  label="Handle Color"
-                  name="HandleColor"
-                  rules={[
-                    { required: true, message: 'Please select Handle Color.' },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select Handle Color"
-                    options={DROPDOWN_OPTIONS.handleColors}
-                  />
-                </Form.Item>
+                          {/* Printing Information */}
+                          <Divider style={{ margin: '12px 0' }}>
+                            Printing Information
+                          </Divider>
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '1fr 1fr 1fr',
+                              gap: 12,
+                            }}
+                          >
+                            <Form.Item
+                              label="Printing Type"
+                              name={[field.name, 'PrintingType']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please select Printing Type.',
+                                },
+                              ]}
+                            >
+                              <Select
+                                placeholder="Select Printing Type"
+                                options={DROPDOWN_OPTIONS.printingTypes}
+                              />
+                            </Form.Item>
 
-                <Form.Item
-                  label="Handle GSM"
-                  name="HandleGSM"
-                  rules={[
-                    { required: true, message: 'Please select Handle GSM.' },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select Handle GSM"
-                    options={DROPDOWN_OPTIONS.handleGSMs}
-                  />
-                </Form.Item>
-              </div>
-            </div>
+                            <Form.Item
+                              label="Print Color"
+                              name={[field.name, 'PrintColor']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please select Print Color.',
+                                },
+                              ]}
+                            >
+                              <Select
+                                placeholder="Select Print Color"
+                                options={DROPDOWN_OPTIONS.printColors}
+                              />
+                            </Form.Item>
 
-            {/* Printing Information */}
-            <div
-              style={{
-                marginBottom: 16,
-                padding: '12px',
-                backgroundColor: '#f5f5f5',
-                borderRadius: 4,
-              }}
-            >
-              <h3 style={{ margin: '0 0 12px 0' }}>Printing Information</h3>
+                            <Form.Item
+                              label="Color"
+                              name={[field.name, 'Color']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please select Color.',
+                                },
+                              ]}
+                            >
+                              <Select
+                                placeholder="Select Color"
+                                options={DROPDOWN_OPTIONS.colors}
+                              />
+                            </Form.Item>
+                          </div>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr',
-                  gap: 12,
-                }}
-              >
-                <Form.Item
-                  label="Printing Type"
-                  name="PrintingType"
-                  rules={[
-                    { required: true, message: 'Please select Printing Type.' },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select Printing Type"
-                    options={DROPDOWN_OPTIONS.printingTypes}
-                  />
-                </Form.Item>
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '1fr 1fr',
+                              gap: 12,
+                            }}
+                          >
+                            <Form.Item
+                              label="Design"
+                              name={[field.name, 'Design']}
+                              valuePropName="checked"
+                            >
+                              <Checkbox>Has Custom Design</Checkbox>
+                            </Form.Item>
 
-                <Form.Item
-                  label="Print Color"
-                  name="PrintColor"
-                  rules={[
-                    { required: true, message: 'Please select Print Color.' },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select Print Color"
-                    options={DROPDOWN_OPTIONS.printColors}
-                  />
-                </Form.Item>
+                            <Form.Item
+                              label="Plate Available"
+                              name={[field.name, 'PlateAvailable']}
+                              valuePropName="checked"
+                            >
+                              <Checkbox>Plate Available</Checkbox>
+                            </Form.Item>
+                          </div>
 
-                <Form.Item
-                  label="Color"
-                  name="Color"
-                  rules={[{ required: true, message: 'Please select Color.' }]}
-                >
-                  <Select
-                    placeholder="Select Color"
-                    options={DROPDOWN_OPTIONS.colors}
-                  />
-                </Form.Item>
-              </div>
+                          <Form.Item
+                            label="Plate Block Number"
+                            name={[field.name, 'PlateBlockNumber']}
+                          >
+                            <InputNumber
+                              placeholder="e.g., 2001"
+                              style={{ width: '100%' }}
+                            />
+                          </Form.Item>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 12,
-                }}
-              >
-                <Form.Item label="Design" name="Design" valuePropName="checked">
-                  <Checkbox>Has Custom Design</Checkbox>
-                </Form.Item>
+                          {/* Pricing Information */}
+                          <Divider style={{ margin: '12px 0' }}>
+                            Pricing
+                          </Divider>
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '1fr 1fr',
+                              gap: 12,
+                            }}
+                          >
+                            <Form.Item
+                              label="Rate"
+                              name={[field.name, 'Rate']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please enter Rate.',
+                                },
+                              ]}
+                            >
+                              <InputNumber
+                                placeholder="e.g., 45.50"
+                                step={0.01}
+                                style={{ width: '100%' }}
+                                precision={2}
+                              />
+                            </Form.Item>
 
-                <Form.Item
-                  label="Plate Available"
-                  name="PlateAvailable"
-                  valuePropName="checked"
-                >
-                  <Checkbox>Plate Available</Checkbox>
-                </Form.Item>
-              </div>
+                            <Form.Item
+                              label="Total Amount"
+                              name={[field.name, 'TotalAmount']}
+                              rules={[
+                                {
+                                  required: true,
+                                  message: 'Please enter Total Amount.',
+                                },
+                              ]}
+                            >
+                              <InputNumber
+                                placeholder="e.g., 227500"
+                                step={0.01}
+                                style={{ width: '100%' }}
+                                precision={2}
+                              />
+                            </Form.Item>
+                          </div>
+                        </Card>
+                      ))
+                    )}
 
-              <Form.Item label="Plate Block Number" name="PlateBlockNumber">
-                <InputNumber
-                  placeholder="e.g., 2001"
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-            </div>
-
-            {/* Pricing Information */}
-            <div
-              style={{
-                marginBottom: 16,
-                padding: '12px',
-                backgroundColor: '#f5f5f5',
-                borderRadius: 4,
-              }}
-            >
-              <h3 style={{ margin: '0 0 12px 0' }}>Pricing Information</h3>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 12,
-                }}
-              >
-                <Form.Item
-                  label="Rate"
-                  name="Rate"
-                  rules={[{ required: true, message: 'Please enter Rate.' }]}
-                >
-                  <InputNumber
-                    placeholder="e.g., 45.50"
-                    step={0.01}
-                    style={{ width: '100%' }}
-                    precision={2}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="Total Amount"
-                  name="TotalAmount"
-                  rules={[
-                    { required: true, message: 'Please enter Total Amount.' },
-                  ]}
-                >
-                  <InputNumber
-                    placeholder="e.g., 227500"
-                    step={0.01}
-                    style={{ width: '100%' }}
-                    precision={2}
-                  />
-                </Form.Item>
-              </div>
+                    <Button
+                      type="dashed"
+                      onClick={() => add()}
+                      block
+                      icon={<PlusOutlined />}
+                      style={{ marginTop: 12 }}
+                    >
+                      Add Product
+                    </Button>
+                  </>
+                )}
+              </Form.List>
             </div>
           </Form>
         </Modal>
