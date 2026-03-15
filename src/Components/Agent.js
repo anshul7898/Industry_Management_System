@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   Table,
   Input,
@@ -34,7 +34,7 @@ export default function Agent() {
     return res.json();
   }
 
-  const refreshAgents = async () => {
+  const refreshAgents = useCallback(async () => {
     setLoading(true);
     try {
       const agents = await fetchAgents();
@@ -47,15 +47,120 @@ export default function Agent() {
       setData(rows);
       setPagination((p) => ({ ...p, current: 1 }));
     } catch (err) {
-      message.error(err.message);
+      message.error(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refreshAgents();
-  }, []);
+  }, [refreshAgents]);
+
+  // ---------------- INPUT VALIDATORS ----------------
+  const handleNameChange = (e) => {
+    // Allow only letters and spaces
+    const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+    form.setFieldValue('name', value);
+  };
+
+  const handleMobileChange = (e) => {
+    // Allow only numbers, max 10 digits
+    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+    form.setFieldValue('mobile', value);
+  };
+
+  const handleAadharChange = (e) => {
+    // Allow only numbers, max 12 digits
+    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 12);
+    form.setFieldValue('aadhar_Details', value);
+  };
+
+  // Prevent special character keys
+  const handleNameKeyDown = (e) => {
+    const key = e.key;
+
+    // Allow: Backspace, Delete, Tab, Escape, Enter, Arrow keys
+    if (
+      [
+        'Backspace',
+        'Delete',
+        'Tab',
+        'Escape',
+        'Enter',
+        'ArrowLeft',
+        'ArrowRight',
+        'Home',
+        'End',
+      ].includes(key)
+    ) {
+      return;
+    }
+
+    // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+Z
+    if (
+      (e.ctrlKey || e.metaKey) &&
+      ['a', 'c', 'v', 'x', 'z'].includes(key.toLowerCase())
+    ) {
+      return;
+    }
+
+    // For name field, only allow letters and spaces
+    if (!/[a-zA-Z\s]/.test(key)) {
+      e.preventDefault();
+    }
+  };
+
+  const handleNumberKeyDown = (e) => {
+    const key = e.key;
+
+    // Allow: Backspace, Delete, Tab, Escape, Enter, Arrow keys
+    if (
+      [
+        'Backspace',
+        'Delete',
+        'Tab',
+        'Escape',
+        'Enter',
+        'ArrowLeft',
+        'ArrowRight',
+        'Home',
+        'End',
+      ].includes(key)
+    ) {
+      return;
+    }
+
+    // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+Z
+    if (
+      (e.ctrlKey || e.metaKey) &&
+      ['a', 'c', 'v', 'x', 'z'].includes(key.toLowerCase())
+    ) {
+      return;
+    }
+
+    // For number fields, only allow numbers
+    if (!/[0-9]/.test(key)) {
+      e.preventDefault();
+    }
+  };
+
+  // Prevent paste of invalid characters
+  const handleNamePaste = (e) => {
+    const pastedText = e.clipboardData.getData('text');
+    const cleanedText = pastedText.replace(/[^a-zA-Z\s]/g, '');
+    if (pastedText !== cleanedText) {
+      e.preventDefault();
+    }
+  };
+
+  const handleNumberPaste = (e) => {
+    const pastedText = e.clipboardData.getData('text');
+    const cleanedText = pastedText.replace(/[^0-9]/g, '');
+    if (pastedText !== cleanedText) {
+      e.preventDefault();
+    }
+  };
 
   // ---------------- MODAL ----------------
   const openAddModal = () => {
@@ -123,7 +228,7 @@ export default function Agent() {
       setIsModalOpen(false);
       await refreshAgents();
     } catch (err) {
-      message.error(err.message);
+      message.error(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -142,7 +247,7 @@ export default function Agent() {
       message.success('Agent deleted successfully');
       await refreshAgents();
     } catch (err) {
-      message.error(err.message);
+      message.error(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -299,7 +404,12 @@ export default function Agent() {
               label="Name"
               rules={[{ required: true, message: 'Please enter agent name' }]}
             >
-              <Input />
+              <Input
+                placeholder="Enter name (letters and spaces only)"
+                onChange={handleNameChange}
+                onKeyDown={handleNameKeyDown}
+                onPaste={handleNamePaste}
+              />
             </Form.Item>
 
             <Form.Item
@@ -313,21 +423,32 @@ export default function Agent() {
                 },
               ]}
             >
-              <Input />
+              <Input
+                placeholder="Enter 10-digit mobile number"
+                onChange={handleMobileChange}
+                onKeyDown={handleNumberKeyDown}
+                onPaste={handleNumberPaste}
+                maxLength={10}
+              />
             </Form.Item>
 
             <Form.Item
               name="aadhar_Details"
               label="Aadhar Details"
               rules={[
-                { message: 'Please enter Aadhar number' },
                 {
                   pattern: /^[0-9]{12}$/,
                   message: 'Aadhar Number should be of 12 digits',
                 },
               ]}
             >
-              <Input />
+              <Input
+                placeholder="Enter 12-digit Aadhar number"
+                onChange={handleAadharChange}
+                onKeyDown={handleNumberKeyDown}
+                onPaste={handleNumberPaste}
+                maxLength={12}
+              />
             </Form.Item>
 
             <Form.Item
