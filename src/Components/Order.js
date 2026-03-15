@@ -8,7 +8,6 @@ import {
   Modal,
   Form,
   message,
-  InputNumber,
   Select,
   Checkbox,
   Descriptions,
@@ -185,6 +184,45 @@ export default function Order() {
 
   const handleCityChange = (value) => {
     form.setFieldValue('City', value);
+  };
+
+  // Input handlers to allow only specific character types
+  const handleAlphabetsOnlyInput = (e) => {
+    const value = e.target.value;
+    const filteredValue = value.replace(/[^a-zA-Z\s]/g, '');
+    e.target.value = filteredValue;
+  };
+
+  const handleNumbersOnlyInput = (e) => {
+    const value = e.target.value;
+    const filteredValue = value.replace(/[^0-9]/g, '');
+    e.target.value = filteredValue;
+  };
+
+  const handlePincodeInput = (e) => {
+    const value = e.target.value;
+    const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 6);
+    e.target.value = filteredValue;
+  };
+
+  const handleMobileInput = (e) => {
+    const value = e.target.value;
+    const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 10);
+    e.target.value = filteredValue;
+  };
+
+  // Handle decimal numbers (for Rate, Product Amount, Total Amount)
+  const handleDecimalInput = (e) => {
+    const value = e.target.value;
+    // Allow only numbers and one decimal point
+    const filteredValue = value.replace(/[^0-9.]/g, '');
+    // Prevent multiple decimal points
+    const parts = filteredValue.split('.');
+    if (parts.length > 2) {
+      e.target.value = parts[0] + '.' + parts.slice(1).join('');
+    } else {
+      e.target.value = filteredValue;
+    }
   };
 
   const validateEmail = (_, value) => {
@@ -652,8 +690,8 @@ export default function Order() {
 
     if (productIndex >= 0 && productIndex < products.length) {
       const product = products[productIndex];
-      const rate = product.Rate || 0;
-      const quantity = product.Quantity || 0;
+      const rate = parseFloat(product.Rate) || 0;
+      const quantity = parseFloat(product.Quantity) || 0;
       const productAmount = parseFloat((rate * quantity).toFixed(2));
 
       // Update ProductAmount
@@ -663,7 +701,8 @@ export default function Order() {
 
       // Recalculate TotalAmount
       const totalAmount = updatedProducts.reduce((sum, p) => {
-        return sum + (p.ProductAmount || 0);
+        const pAmount = parseFloat(p.ProductAmount) || 0;
+        return sum + pAmount;
       }, 0);
       form.setFieldValue('TotalAmount', parseFloat(totalAmount.toFixed(2)));
     }
@@ -673,7 +712,8 @@ export default function Order() {
   const handleProductAmountChange = (fieldName) => {
     const products = form.getFieldValue('Products') || [];
     const totalAmount = products.reduce((sum, p) => {
-      return sum + (p.ProductAmount || 0);
+      const productAmount = parseFloat(p.ProductAmount) || 0;
+      return sum + productAmount;
     }, 0);
     form.setFieldValue('TotalAmount', parseFloat(totalAmount.toFixed(2)));
   };
@@ -1199,7 +1239,10 @@ export default function Order() {
                   { required: true, message: 'Please enter Party Name.' },
                 ]}
               >
-                <Input placeholder="e.g., ABC Packaging Solutions" />
+                <Input
+                  placeholder="e.g., ABC Packaging Solutions"
+                  onInput={handleAlphabetsOnlyInput}
+                />
               </Form.Item>
 
               <Form.Item
@@ -1212,7 +1255,10 @@ export default function Order() {
                   },
                 ]}
               >
-                <Input placeholder="e.g., ABC Pack" />
+                <Input
+                  placeholder="e.g., ABC Pack"
+                  onInput={handleAlphabetsOnlyInput}
+                />
               </Form.Item>
 
               <Form.Item
@@ -1277,10 +1323,10 @@ export default function Order() {
                     },
                   ]}
                 >
-                  <InputNumber
+                  <Input
                     placeholder="e.g., 400001"
                     maxLength={6}
-                    style={{ width: '100%' }}
+                    onInput={handlePincodeInput}
                   />
                 </Form.Item>
               </div>
@@ -1304,14 +1350,20 @@ export default function Order() {
                   { required: true, message: 'Please enter Contact Person 1.' },
                 ]}
               >
-                <Input placeholder="e.g., Rajesh Kumar" />
+                <Input
+                  placeholder="e.g., Rajesh Kumar"
+                  onInput={handleAlphabetsOnlyInput}
+                />
               </Form.Item>
 
               <Form.Item
                 label="Contact Person 2 (Optional)"
                 name="Contact_Person2"
               >
-                <Input placeholder="e.g., Priya Sharma" />
+                <Input
+                  placeholder="e.g., Priya Sharma"
+                  onInput={handleAlphabetsOnlyInput}
+                />
               </Form.Item>
 
               <div
@@ -1332,10 +1384,10 @@ export default function Order() {
                     },
                   ]}
                 >
-                  <InputNumber
+                  <Input
                     placeholder="e.g., 9876543210"
                     maxLength={10}
-                    style={{ width: '100%' }}
+                    onInput={handleMobileInput}
                   />
                 </Form.Item>
 
@@ -1348,10 +1400,10 @@ export default function Order() {
                     },
                   ]}
                 >
-                  <InputNumber
+                  <Input
                     placeholder="e.g., 9876543211"
                     maxLength={10}
-                    style={{ width: '100%' }}
+                    onInput={handleMobileInput}
                   />
                 </Form.Item>
               </div>
@@ -1437,9 +1489,9 @@ export default function Order() {
                                 },
                               ]}
                             >
-                              <InputNumber
+                              <Input
                                 placeholder="e.g., 1001"
-                                style={{ width: '100%' }}
+                                onInput={handleNumbersOnlyInput}
                               />
                             </Form.Item>
 
@@ -1453,9 +1505,9 @@ export default function Order() {
                                 },
                               ]}
                             >
-                              <InputNumber
+                              <Input
                                 placeholder="e.g., 14"
-                                style={{ width: '100%' }}
+                                onInput={handleNumbersOnlyInput}
                               />
                             </Form.Item>
                           </div>
@@ -1493,9 +1545,9 @@ export default function Order() {
                                 },
                               ]}
                             >
-                              <InputNumber
+                              <Input
                                 placeholder="e.g., 5000"
-                                style={{ width: '100%' }}
+                                onInput={handleNumbersOnlyInput}
                                 onChange={() =>
                                   handleRateOrQuantityChange(`${idx}_Quantity`)
                                 }
@@ -1727,9 +1779,9 @@ export default function Order() {
                             label="Plate Block Number"
                             name={[field.name, 'PlateBlockNumber']}
                           >
-                            <InputNumber
+                            <Input
                               placeholder="e.g., 2001"
-                              style={{ width: '100%' }}
+                              onInput={handleNumbersOnlyInput}
                             />
                           </Form.Item>
 
@@ -1754,11 +1806,9 @@ export default function Order() {
                                 },
                               ]}
                             >
-                              <InputNumber
+                              <Input
                                 placeholder="e.g., 45.50"
-                                step={0.01}
-                                style={{ width: '100%' }}
-                                precision={2}
+                                onInput={handleDecimalInput}
                                 onChange={() =>
                                   handleRateOrQuantityChange(`${idx}_Rate`)
                                 }
@@ -1776,11 +1826,9 @@ export default function Order() {
                                 },
                               ]}
                             >
-                              <InputNumber
+                              <Input
                                 placeholder="Rate × Quantity"
-                                step={0.01}
-                                style={{ width: '100%' }}
-                                precision={2}
+                                onInput={handleDecimalInput}
                                 onChange={() =>
                                   handleProductAmountChange(
                                     `${idx}_ProductAmount`,
@@ -1826,11 +1874,9 @@ export default function Order() {
                   { required: true, message: 'Total Amount is required.' },
                 ]}
               >
-                <InputNumber
+                <Input
                   placeholder="Sum of all Product Amounts"
-                  step={0.01}
-                  style={{ width: '100%' }}
-                  precision={2}
+                  onInput={handleDecimalInput}
                   prefix="₹"
                 />
               </Form.Item>
