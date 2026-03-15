@@ -55,6 +55,70 @@ export default function Party() {
     form.setFieldValue('city', value);
   };
 
+  // Input handler to allow only alphabets and spaces
+  const handleAlphabetsOnlyInput = (e) => {
+    const value = e.target.value;
+    const filteredValue = value.replace(/[^a-zA-Z\s]/g, '');
+    e.target.value = filteredValue;
+  };
+
+  // Input handler to allow only numbers
+  const handleNumbersOnlyInput = (e) => {
+    const value = e.target.value;
+    const filteredValue = value.replace(/[^0-9]/g, '');
+    e.target.value = filteredValue;
+  };
+
+  // Input handler for pincode (only numbers, max 6 digits)
+  const handlePincodeInput = (e) => {
+    const value = e.target.value;
+    const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 6);
+    e.target.value = filteredValue;
+  };
+
+  // Input handler for mobile (only numbers, max 10 digits)
+  const handleMobileInput = (e) => {
+    const value = e.target.value;
+    const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 10);
+    e.target.value = filteredValue;
+  };
+
+  // Alphabets only validator function
+  const validateAlphabetsOnly = (_, value) => {
+    if (!value) {
+      // Field is optional, so empty is valid
+      return Promise.resolve();
+    }
+    if (/^[a-zA-Z\s]*$/.test(value)) {
+      return Promise.resolve();
+    }
+    return Promise.reject(new Error('Only alphabets and spaces are allowed'));
+  };
+
+  // Numbers only validator function
+  const validateNumbersOnly = (_, value) => {
+    if (!value) {
+      // Field is optional, so empty is valid
+      return Promise.resolve();
+    }
+    if (/^[0-9]*$/.test(value)) {
+      return Promise.resolve();
+    }
+    return Promise.reject(new Error('Only numbers are allowed'));
+  };
+
+  // Pincode validator function (6 digits only)
+  const validatePincode = (_, value) => {
+    if (!value) {
+      // Pincode is optional, so empty is valid
+      return Promise.resolve();
+    }
+    if (/^[0-9]{6}$/.test(value)) {
+      return Promise.resolve();
+    }
+    return Promise.reject(new Error('Pincode should be exactly 6 digits'));
+  };
+
   // Email validator function
   const validateEmail = (_, value) => {
     if (!value) {
@@ -639,10 +703,19 @@ export default function Party() {
               rules={
                 isViewMode
                   ? []
-                  : [{ required: true, message: 'Please enter party name' }]
+                  : [
+                      {
+                        required: true,
+                        message: 'Please enter party name',
+                      },
+                    ]
               }
             >
-              <Input placeholder="Enter party name" disabled={isViewMode} />
+              <Input
+                placeholder="Enter party name"
+                disabled={isViewMode}
+                onInput={handleAlphabetsOnlyInput}
+              />
             </Form.Item>
 
             <Form.Item
@@ -662,6 +735,7 @@ export default function Party() {
               <Input
                 placeholder="Enter alias or company name"
                 disabled={isViewMode}
+                onInput={handleAlphabetsOnlyInput}
               />
             </Form.Item>
 
@@ -682,6 +756,7 @@ export default function Party() {
               <Input
                 placeholder="Enter first contact person name"
                 disabled={isViewMode}
+                onInput={handleAlphabetsOnlyInput}
               />
             </Form.Item>
 
@@ -689,6 +764,7 @@ export default function Party() {
               <Input
                 placeholder="Enter second contact person name (optional)"
                 disabled={isViewMode}
+                onInput={handleAlphabetsOnlyInput}
               />
             </Form.Item>
 
@@ -699,7 +775,10 @@ export default function Party() {
                 isViewMode
                   ? []
                   : [
-                      { required: true, message: 'Please enter mobile number' },
+                      {
+                        required: true,
+                        message: 'Please enter mobile number',
+                      },
                       {
                         pattern: /^[0-9]{10}$/,
                         message: 'Mobile number should be 10 digits',
@@ -710,17 +789,29 @@ export default function Party() {
               <Input
                 placeholder="Enter 10 digit mobile number"
                 disabled={isViewMode}
+                onInput={handleMobileInput}
+                maxLength={10}
               />
             </Form.Item>
 
             <Form.Item
               name="mobile2"
               label="Mobile 2"
-              rules={isViewMode ? [] : [{ validator: validateMobile }]}
+              rules={
+                isViewMode
+                  ? []
+                  : [
+                      {
+                        validator: validateMobile,
+                      },
+                    ]
+              }
             >
               <Input
                 placeholder="Enter 10 digit mobile number (optional)"
                 disabled={isViewMode}
+                onInput={handleMobileInput}
+                maxLength={10}
               />
             </Form.Item>
 
@@ -778,8 +869,25 @@ export default function Party() {
               />
             </Form.Item>
 
-            <Form.Item name="pincode" label="Pincode">
-              <Input placeholder="Enter pincode" disabled={isViewMode} />
+            <Form.Item
+              name="pincode"
+              label="Pincode"
+              rules={
+                isViewMode
+                  ? []
+                  : [
+                      {
+                        validator: validatePincode,
+                      },
+                    ]
+              }
+            >
+              <Input
+                placeholder="Enter pincode (6 digits)"
+                disabled={isViewMode}
+                onInput={handlePincodeInput}
+                maxLength={6}
+              />
             </Form.Item>
 
             <Form.Item
