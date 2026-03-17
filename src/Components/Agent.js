@@ -377,9 +377,12 @@ export default function Agent() {
               pageSize: newPagination.pageSize,
             });
           }}
+          rowClassName={(_, index) =>
+            index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
+          }
         />
 
-        {/* Dark Header Styling (Same as Accounts) */}
+        {/* Dark Header Styling and Alternating Row Colors */}
         <style>{`
           .ant-table-thead > tr > th {
             background: #1f2937 !important;
@@ -388,6 +391,22 @@ export default function Agent() {
           }
           .ant-table-thead > tr > th .ant-table-column-sorter {
             color: rgba(255, 255, 255, 0.95);
+          }
+          .ant-table-thead > tr > th .ant-table-column-sorter-up,
+          .ant-table-thead > tr > th .ant-table-column-sorter-down {
+            color: rgba(255, 255, 255, 0.95);
+          }
+          .table-row-light {
+            background-color: #ffffff !important;
+          }
+          .table-row-dark {
+            background-color: #f5f5f5 !important;
+          }
+          .table-row-light:hover {
+            background-color: #fafafa !important;
+          }
+          .table-row-dark:hover {
+            background-color: #efefef !important;
           }
         `}</style>
 
