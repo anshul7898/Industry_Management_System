@@ -49,12 +49,8 @@ const DROPDOWN_OPTIONS = {
     },
   ],
   printingTypes: [
-    { label: 'Screen Printing', value: 'Screen Printing' },
-    { label: 'Digital Printing', value: 'Digital Printing' },
-    { label: 'Flexography', value: 'Flexography' },
-    { label: 'Offset Printing', value: 'Offset Printing' },
-    { label: 'Embroidery', value: 'Embroidery' },
-    { label: 'Stamping', value: 'Stamping' },
+    { label: 'Flex', value: 'Flex' },
+    { label: 'Machine', value: 'Machine' },
   ],
   sheetColors: [
     { label: 'White', value: 'White' },
@@ -99,15 +95,12 @@ const DROPDOWN_OPTIONS = {
     { label: 'Gray', value: 'Gray' },
   ],
   printColors: [
-    { label: 'Navy Blue', value: 'Navy Blue' },
     { label: 'Black', value: 'Black' },
-    { label: 'White', value: 'White' },
     { label: 'Red', value: 'Red' },
     { label: 'Gold', value: 'Gold' },
     { label: 'Silver', value: 'Silver' },
-    { label: 'Green', value: 'Green' },
     { label: 'Brown', value: 'Brown' },
-    { label: 'Maroon', value: 'Maroon' },
+    { label: 'Pink', value: 'Pink' },
   ],
   sheetGSMs: [
     { label: '55', value: 55 },
