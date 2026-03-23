@@ -17,8 +17,17 @@ import {
   Row,
   Col,
   Statistic,
+  List,
+  Avatar,
+  Tag,
+  Spin,
 } from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import {
+  DeleteOutlined,
+  PlusOutlined,
+  SearchOutlined,
+  FileTextOutlined,
+} from '@ant-design/icons';
 import Navbar from './Navbar';
 import { getStateOptions } from '../data/states';
 import { getCityOptions } from '../data/cities';
@@ -39,14 +48,8 @@ const DROPDOWN_OPTIONS = {
     { label: 'Linen', value: 'Linen' },
   ],
   handleTypes: [
-    {
-      label: 'Single Colour',
-      value: 'Single Colour',
-    },
-    {
-      label: 'Double Colour',
-      value: 'Double Colour',
-    },
+    { label: 'Single Colour', value: 'Single Colour' },
+    { label: 'Double Colour', value: 'Double Colour' },
   ],
   printingTypes: [
     { label: 'Flex', value: 'Flex' },
@@ -138,14 +141,33 @@ const DROPDOWN_OPTIONS = {
   ],
 };
 
+// Empty product template
+const emptyProduct = {
+  ProductType: undefined,
+  ProductId: undefined,
+  ProductSize: undefined,
+  BagMaterial: undefined,
+  Quantity: undefined,
+  SheetGSM: undefined,
+  SheetColor: undefined,
+  BorderGSM: undefined,
+  BorderColor: undefined,
+  HandleType: undefined,
+  HandleColor: undefined,
+  HandleGSM: undefined,
+  PrintingType: undefined,
+  PrintColor: undefined,
+  Color: undefined,
+  Design: false,
+  PlateBlockNumber: undefined,
+  PlateAvailable: false,
+  Rate: undefined,
+  ProductAmount: undefined,
+};
+
 export default function Order() {
   const [searchText, setSearchText] = useState('');
-
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 5,
-  });
-
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 5 });
   const [data, setData] = useState([]);
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -158,13 +180,21 @@ export default function Order() {
   const [selectedOrderType, setSelectedOrderType] = useState(null);
   const [selectedState, setSelectedState] = useState(null);
 
+  // ── Old Order State ────────────────────────────────────────────
+  const [oldOrderAgentModalOpen, setOldOrderAgentModalOpen] = useState(false);
+  const [oldOrderListModalOpen, setOldOrderListModalOpen] = useState(false);
+  const [selectedOldAgent, setSelectedOldAgent] = useState(null);
+  const [oldOrdersForAgent, setOldOrdersForAgent] = useState([]);
+  const [oldOrdersLoading, setOldOrdersLoading] = useState(false);
+  const [oldOrderSearch, setOldOrderSearch] = useState('');
+  const [oldOrderAgentForm] = Form.useForm();
+  // ──────────────────────────────────────────────────────────────
+
   const [form] = Form.useForm();
   const [orderTypeForm] = Form.useForm();
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
   const stateOptions = useMemo(() => getStateOptions(), []);
-
   const cityOptions = useMemo(
     () => getCityOptions(selectedState),
     [selectedState],
@@ -179,64 +209,40 @@ export default function Order() {
     form.setFieldValue('City', value);
   };
 
-  // Input handlers to allow only specific character types
   const handleAlphabetsOnlyInput = (e) => {
-    const value = e.target.value;
-    const filteredValue = value.replace(/[^a-zA-Z\s]/g, '');
-    e.target.value = filteredValue;
+    e.target.value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
   };
 
   const handleNumbersOnlyInput = (e) => {
-    const value = e.target.value;
-    const filteredValue = value.replace(/[^0-9]/g, '');
-    e.target.value = filteredValue;
+    e.target.value = e.target.value.replace(/[^0-9]/g, '');
   };
 
   const handlePincodeInput = (e) => {
-    const value = e.target.value;
-    const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 6);
-    e.target.value = filteredValue;
+    e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
   };
 
   const handleMobileInput = (e) => {
-    const value = e.target.value;
-    const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 10);
-    e.target.value = filteredValue;
+    e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
   };
 
-  // Handle decimal numbers (for Rate, Product Amount, Total Amount)
   const handleDecimalInput = (e) => {
-    const value = e.target.value;
-    // Allow only numbers and one decimal point
-    const filteredValue = value.replace(/[^0-9.]/g, '');
-    // Prevent multiple decimal points
-    const parts = filteredValue.split('.');
-    if (parts.length > 2) {
-      e.target.value = parts[0] + '.' + parts.slice(1).join('');
-    } else {
-      e.target.value = filteredValue;
-    }
+    const filtered = e.target.value.replace(/[^0-9.]/g, '');
+    const parts = filtered.split('.');
+    e.target.value =
+      parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : filtered;
   };
 
   const validateEmail = (_, value) => {
-    if (!value) {
-      return Promise.resolve();
-    }
-    if (emailRegex.test(value)) {
-      return Promise.resolve();
-    }
+    if (!value) return Promise.resolve();
+    if (emailRegex.test(value)) return Promise.resolve();
     return Promise.reject(
       new Error('Please enter a valid email address (e.g., user@example.com)'),
     );
   };
 
   const validateMobile = (_, value) => {
-    if (!value) {
-      return Promise.resolve();
-    }
-    if (/^[0-9]{10}$/.test(value)) {
-      return Promise.resolve();
-    }
+    if (!value) return Promise.resolve();
+    if (/^[0-9]{10}$/.test(value)) return Promise.resolve();
     return Promise.reject(new Error('Mobile number should be 10 digits'));
   };
 
@@ -259,6 +265,20 @@ export default function Order() {
     return res.json();
   }
 
+  // ── Fetch party data by party name from the Party table ────────
+  async function fetchPartyByName(partyName) {
+    try {
+      const res = await fetch(
+        `/api/party/by-name/${encodeURIComponent(partyName)}`,
+      );
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
+  }
+  // ──────────────────────────────────────────────────────────────
+
   const refreshOrders = async () => {
     setLoading(true);
     try {
@@ -266,9 +286,7 @@ export default function Order() {
         fetchOrders(),
         fetchAgents(),
       ]);
-
       setAgents(agentsData);
-
       const rows = orders.map((o, idx) => {
         const agent = agentsData.find((a) => a.agentId === o.AgentId);
         return {
@@ -277,7 +295,6 @@ export default function Order() {
           agentName: agent ? agent.name : '',
         };
       });
-
       setData(rows);
     } catch (err) {
       message.error(err?.message || 'Failed to load orders');
@@ -288,7 +305,6 @@ export default function Order() {
 
   useEffect(() => {
     let cancelled = false;
-
     async function load() {
       setLoading(true);
       try {
@@ -296,11 +312,8 @@ export default function Order() {
           fetchOrders(),
           fetchAgents(),
         ]);
-
         if (cancelled) return;
-
         setAgents(agentsData);
-
         const rows = orders.map((o, idx) => {
           const agent = agentsData.find((a) => a.agentId === o.AgentId);
           return {
@@ -309,7 +322,6 @@ export default function Order() {
             agentName: agent ? agent.name : '',
           };
         });
-
         setData(rows);
       } catch (err) {
         if (!cancelled) message.error(err?.message || 'Failed to load orders');
@@ -317,7 +329,6 @@ export default function Order() {
         if (!cancelled) setLoading(false);
       }
     }
-
     load();
     return () => {
       cancelled = true;
@@ -333,20 +344,178 @@ export default function Order() {
     return aVal - bVal;
   };
 
+  // ── Old Order Handlers ─────────────────────────────────────────
+
+  const openOldOrderAgentModal = async () => {
+    oldOrderAgentForm.resetFields();
+    setSelectedOldAgent(null);
+    setOldOrdersForAgent([]);
+    setOldOrderSearch('');
+    try {
+      const agentsData = await fetchAgents();
+      setAgents(agentsData);
+    } catch (err) {
+      message.error(err.message);
+    }
+    setOldOrderAgentModalOpen(true);
+  };
+
+  const handleOldOrderAgentSelect = async (values) => {
+    const agentId = values.agentId;
+    const agent = agents.find((a) => a.agentId === agentId);
+    setSelectedOldAgent(agent);
+    setOldOrderAgentModalOpen(false);
+    setOldOrderListModalOpen(true);
+    setOldOrderSearch('');
+    setOldOrdersLoading(true);
+    try {
+      const allOrders = await fetchOrders();
+      setOldOrdersForAgent(allOrders.filter((o) => o.AgentId === agentId));
+    } catch {
+      message.error('Failed to load orders for this agent');
+      setOldOrdersForAgent([]);
+    } finally {
+      setOldOrdersLoading(false);
+    }
+  };
+
+  /**
+   * When an old order is selected:
+   * 1. Fetch the party record from the Party table using the order's Party_Name
+   * 2. Open the NEW ORDER modal (modalMode = 'add') with:
+   *    - Party & Contact info auto-filled from the party table record
+   *    - Products list empty (fresh new order)
+   *    - AgentId pre-set to the selected old agent
+   */
+  const handleOldOrderSelect = async (order) => {
+    setOldOrderListModalOpen(false);
+
+    // Show loading while fetching party data
+    const loadingKey = 'party-lookup';
+    message.loading({
+      content: 'Loading party details...',
+      key: loadingKey,
+      duration: 0,
+    });
+
+    try {
+      const agentsData = await fetchAgents();
+      setAgents(agentsData);
+
+      // Try to fetch party details from the Party table
+      const partyData = await fetchPartyByName(order.Party_Name);
+
+      // Switch to NEW ORDER mode — products are blank, party info pre-filled
+      setModalMode('add');
+      setEditingOrderId(null);
+
+      // Use party table data if found, otherwise fall back to order fields
+      const state = partyData?.state || partyData?.State || order.State || null;
+      setSelectedState(state);
+
+      form.resetFields();
+
+      form.setFieldsValue({
+        // Pre-fill agent from the selected old order
+        AgentId: order.AgentId,
+
+        // Party Information — from party table (preferred) or order
+        Party_Name:
+          partyData?.partyName ||
+          partyData?.PartyName ||
+          order.Party_Name ||
+          '',
+        AliasOrCompanyName:
+          partyData?.aliasOrCompanyName ||
+          partyData?.AliasOrCompanyName ||
+          order.AliasOrCompanyName ||
+          '',
+        Address:
+          partyData?.address || partyData?.Address || order.Address || '',
+        State: state,
+        City: partyData?.city || partyData?.City || order.City || '',
+        Pincode:
+          partyData?.pincode || partyData?.Pincode || order.Pincode || '',
+
+        // Contact Information — from party table (preferred) or order
+        Contact_Person1:
+          partyData?.contact_Person1 ||
+          partyData?.Contact_Person1 ||
+          order.Contact_Person1 ||
+          '',
+        Contact_Person2:
+          partyData?.contact_Person2 ||
+          partyData?.Contact_Person2 ||
+          order.Contact_Person2 ||
+          '',
+        Mobile1:
+          partyData?.mobile1 || partyData?.Mobile1 || order.Mobile1 || '',
+        Mobile2:
+          partyData?.mobile2 || partyData?.Mobile2 || order.Mobile2 || '',
+        Email: partyData?.email || partyData?.Email || order.Email || '',
+
+        // Products are blank — this is a new order
+        Products: [{ ...emptyProduct }],
+        TotalAmount: 0,
+      });
+
+      message.success({
+        content: partyData
+          ? `Party details loaded from database for "${order.Party_Name}"`
+          : `Party details filled from order (no party record found for "${order.Party_Name}")`,
+        key: loadingKey,
+        duration: 3,
+      });
+
+      setIsModalOpen(true);
+    } catch (err) {
+      message.error({
+        content: 'Failed to load party details',
+        key: loadingKey,
+      });
+      console.error('handleOldOrderSelect error:', err);
+    }
+  };
+
+  const closeOldOrderAgentModal = () => {
+    setOldOrderAgentModalOpen(false);
+    oldOrderAgentForm.resetFields();
+    setSelectedOldAgent(null);
+  };
+
+  const closeOldOrderListModal = () => {
+    setOldOrderListModalOpen(false);
+    setOldOrdersForAgent([]);
+    setSelectedOldAgent(null);
+    setOldOrderSearch('');
+  };
+
+  const filteredOldOrders = useMemo(() => {
+    if (!oldOrderSearch.trim()) return oldOrdersForAgent;
+    const q = oldOrderSearch.trim().toLowerCase();
+    return oldOrdersForAgent.filter((o) =>
+      [o.OrderId, o.Party_Name, o.Contact_Person1].some((v) =>
+        String(v || '')
+          .toLowerCase()
+          .includes(q),
+      ),
+    );
+  }, [oldOrdersForAgent, oldOrderSearch]);
+
+  // ──────────────────────────────────────────────────────────────
+
   const handleOrderTypeSelect = async (values) => {
     try {
       const orderType = values.orderType;
       setSelectedOrderType(orderType);
+      setOrderTypeModalOpen(false);
 
       if (orderType === 'new') {
-        setOrderTypeModalOpen(false);
         openAddOrderModal();
       } else if (orderType === 'repeat') {
-        setOrderTypeModalOpen(false);
         message.info('Repeat Order feature coming soon');
       } else if (orderType === 'old') {
-        setOrderTypeModalOpen(false);
-        message.info('Old Order feature coming soon');
+        openOldOrderAgentModal();
       }
     } catch (err) {
       message.error('Please select an order type');
@@ -370,40 +539,14 @@ export default function Order() {
     setEditingOrderId(null);
     setSelectedState(null);
     form.resetFields();
-    // Initialize with empty products array
-    form.setFieldValue('Products', [
-      {
-        ProductType: undefined,
-        ProductId: undefined,
-        ProductSize: undefined,
-        BagMaterial: undefined,
-        Quantity: undefined,
-        SheetGSM: undefined,
-        SheetColor: undefined,
-        BorderGSM: undefined,
-        BorderColor: undefined,
-        HandleType: undefined,
-        HandleColor: undefined,
-        HandleGSM: undefined,
-        PrintingType: undefined,
-        PrintColor: undefined,
-        Color: undefined,
-        Design: false,
-        PlateBlockNumber: undefined,
-        PlateAvailable: false,
-        Rate: undefined,
-        ProductAmount: undefined,
-      },
-    ]);
+    form.setFieldValue('Products', [{ ...emptyProduct }]);
     form.setFieldValue('TotalAmount', 0);
-
     try {
       const agentsData = await fetchAgents();
       setAgents(agentsData);
     } catch (err) {
       message.error(err.message);
     }
-
     setIsModalOpen(true);
   };
 
@@ -411,14 +554,12 @@ export default function Order() {
     setModalMode('edit');
     setEditingOrderId(record.OrderId);
     setSelectedState(record.State || null);
-
     try {
       const agentsData = await fetchAgents();
       setAgents(agentsData);
     } catch (err) {
       message.error(err.message);
     }
-
     form.setFieldsValue({
       AgentId: record.AgentId,
       Party_Name: record.Party_Name,
@@ -432,33 +573,9 @@ export default function Order() {
       Mobile1: record.Mobile1,
       Mobile2: record.Mobile2,
       Email: record.Email,
-      Products: record.Products || [
-        {
-          ProductType: undefined,
-          ProductId: undefined,
-          ProductSize: undefined,
-          BagMaterial: undefined,
-          Quantity: undefined,
-          SheetGSM: undefined,
-          SheetColor: undefined,
-          BorderGSM: undefined,
-          BorderColor: undefined,
-          HandleType: undefined,
-          HandleColor: undefined,
-          HandleGSM: undefined,
-          PrintingType: undefined,
-          PrintColor: undefined,
-          Color: undefined,
-          Design: false,
-          PlateBlockNumber: undefined,
-          PlateAvailable: false,
-          Rate: undefined,
-          ProductAmount: undefined,
-        },
-      ],
+      Products: record.Products || [{ ...emptyProduct }],
       TotalAmount: record.TotalAmount || 0,
     });
-
     setIsModalOpen(true);
   };
 
@@ -494,19 +611,15 @@ export default function Order() {
         mobile2: values.Mobile2 ? String(values.Mobile2) : null,
         orderId: null,
       };
-
       console.log('Party Payload being sent:', partyPayload);
-
       const res = await fetch('/api/party', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(partyPayload),
       });
-
       const responseText = await res.text();
       console.log('Party API Response Status:', res.status);
       console.log('Party API Response:', responseText);
-
       if (!res.ok) {
         console.error('Party creation failed:', responseText);
         message.warning(
@@ -514,7 +627,6 @@ export default function Order() {
         );
         return false;
       }
-
       return true;
     } catch (err) {
       console.error('Error adding party from order:', err);
@@ -525,17 +637,36 @@ export default function Order() {
     }
   };
 
-  const handleAdd = async (values) => {
-    // Validate that at least one product is present
-    if (!values.Products || values.Products.length === 0) {
-      throw new Error('Please add at least one product');
-    }
+  const buildProductsPayload = (products) =>
+    (products || []).map((product) => ({
+      ProductType: product.ProductType,
+      ProductId: product.ProductId,
+      ProductSize: product.ProductSize,
+      BagMaterial: product.BagMaterial,
+      Quantity: product.Quantity,
+      SheetGSM: Number(product.SheetGSM),
+      SheetColor: product.SheetColor,
+      BorderGSM: Number(product.BorderGSM),
+      BorderColor: product.BorderColor,
+      HandleType: product.HandleType,
+      HandleColor: product.HandleColor,
+      HandleGSM: Number(product.HandleGSM),
+      PrintingType: product.PrintingType,
+      PrintColor: product.PrintColor,
+      Color: product.Color,
+      Design: product.Design || false,
+      PlateBlockNumber: product.PlateBlockNumber || null,
+      PlateAvailable: product.PlateAvailable || false,
+      Rate: product.Rate,
+      ProductAmount: product.ProductAmount || 0,
+    }));
 
-    // Ensure TotalAmount is a valid number
+  const handleAdd = async (values) => {
+    if (!values.Products || values.Products.length === 0)
+      throw new Error('Please add at least one product');
     const totalAmount = values.TotalAmount || 0;
-    if (isNaN(totalAmount) || totalAmount < 0) {
+    if (isNaN(totalAmount) || totalAmount < 0)
       throw new Error('Total Amount must be a valid non-negative number');
-    }
 
     const payload = {
       AgentId: values.AgentId ? parseInt(values.AgentId) : null,
@@ -551,63 +682,31 @@ export default function Order() {
       Mobile2: values.Mobile2 || null,
       Email: values.Email,
       TotalAmount: parseFloat(totalAmount),
-      Products: (values.Products || []).map((product) => ({
-        ProductType: product.ProductType,
-        ProductId: product.ProductId,
-        ProductSize: product.ProductSize,
-        BagMaterial: product.BagMaterial,
-        Quantity: product.Quantity,
-        SheetGSM: Number(product.SheetGSM),
-        SheetColor: product.SheetColor,
-        BorderGSM: Number(product.BorderGSM),
-        BorderColor: product.BorderColor,
-        HandleType: product.HandleType,
-        HandleColor: product.HandleColor,
-        HandleGSM: Number(product.HandleGSM),
-        PrintingType: product.PrintingType,
-        PrintColor: product.PrintColor,
-        Color: product.Color,
-        Design: product.Design || false,
-        PlateBlockNumber: product.PlateBlockNumber || null,
-        PlateAvailable: product.PlateAvailable || false,
-        Rate: product.Rate,
-        ProductAmount: product.ProductAmount || 0,
-      })),
+      Products: buildProductsPayload(values.Products),
     };
 
     console.log('Order Payload being sent:', JSON.stringify(payload, null, 2));
-
     const res = await fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       console.error('Order creation error:', text);
       throw new Error(`Failed to create order (${res.status}): ${text}`);
     }
-
     const orderResult = await res.json().catch(() => null);
-
-    // Add party details after order is created
     await addPartyFromOrder(values);
-
     return orderResult;
   };
 
   const handleUpdate = async (orderId, values) => {
-    // Validate that at least one product is present
-    if (!values.Products || values.Products.length === 0) {
+    if (!values.Products || values.Products.length === 0)
       throw new Error('Please add at least one product');
-    }
-
-    // Ensure TotalAmount is a valid number
     const totalAmount = values.TotalAmount || 0;
-    if (isNaN(totalAmount) || totalAmount < 0) {
+    if (isNaN(totalAmount) || totalAmount < 0)
       throw new Error('Total Amount must be a valid non-negative number');
-    }
 
     const payload = {
       AgentId: values.AgentId ? parseInt(values.AgentId) : null,
@@ -623,44 +722,20 @@ export default function Order() {
       Mobile2: values.Mobile2 || null,
       Email: values.Email,
       TotalAmount: parseFloat(totalAmount),
-      Products: (values.Products || []).map((product) => ({
-        ProductType: product.ProductType,
-        ProductId: product.ProductId,
-        ProductSize: product.ProductSize,
-        BagMaterial: product.BagMaterial,
-        Quantity: product.Quantity,
-        SheetGSM: Number(product.SheetGSM),
-        SheetColor: product.SheetColor,
-        BorderGSM: Number(product.BorderGSM),
-        BorderColor: product.BorderColor,
-        HandleType: product.HandleType,
-        HandleColor: product.HandleColor,
-        HandleGSM: Number(product.HandleGSM),
-        PrintingType: product.PrintingType,
-        PrintColor: product.PrintColor,
-        Color: product.Color,
-        Design: product.Design || false,
-        PlateBlockNumber: product.PlateBlockNumber || null,
-        PlateAvailable: product.PlateAvailable || false,
-        Rate: product.Rate,
-        ProductAmount: product.ProductAmount || 0,
-      })),
+      Products: buildProductsPayload(values.Products),
     };
 
     console.log('Update Payload being sent:', JSON.stringify(payload, null, 2));
-
     const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       console.error('Order update error:', text);
       throw new Error(`Failed to update order (${res.status}): ${text}`);
     }
-
     return res.json().catch(() => null);
   };
 
@@ -668,46 +743,38 @@ export default function Order() {
     const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
       method: 'DELETE',
     });
-
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(`Failed to delete order (${res.status}): ${text}`);
     }
   };
 
-  // Calculate ProductAmount when Rate or Quantity changes
   const handleRateOrQuantityChange = (fieldName) => {
     const products = form.getFieldValue('Products') || [];
     const parts = fieldName.split('_');
     const productIndex = parseInt(parts[0]);
-
     if (productIndex >= 0 && productIndex < products.length) {
       const product = products[productIndex];
       const rate = parseFloat(product.Rate) || 0;
       const quantity = parseFloat(product.Quantity) || 0;
       const productAmount = parseFloat((rate * quantity).toFixed(2));
-
-      // Update ProductAmount
       const updatedProducts = [...products];
       updatedProducts[productIndex].ProductAmount = productAmount;
       form.setFieldValue('Products', updatedProducts);
-
-      // Recalculate TotalAmount
-      const totalAmount = updatedProducts.reduce((sum, p) => {
-        const pAmount = parseFloat(p.ProductAmount) || 0;
-        return sum + pAmount;
-      }, 0);
+      const totalAmount = updatedProducts.reduce(
+        (sum, p) => sum + (parseFloat(p.ProductAmount) || 0),
+        0,
+      );
       form.setFieldValue('TotalAmount', parseFloat(totalAmount.toFixed(2)));
     }
   };
 
-  // Handle manual ProductAmount change
   const handleProductAmountChange = (fieldName) => {
     const products = form.getFieldValue('Products') || [];
-    const totalAmount = products.reduce((sum, p) => {
-      const productAmount = parseFloat(p.ProductAmount) || 0;
-      return sum + productAmount;
-    }, 0);
+    const totalAmount = products.reduce(
+      (sum, p) => sum + (parseFloat(p.ProductAmount) || 0),
+      0,
+    );
     form.setFieldValue('TotalAmount', parseFloat(totalAmount.toFixed(2)));
   };
 
@@ -715,13 +782,11 @@ export default function Order() {
     try {
       const values = await form.validateFields();
       setLoading(true);
-
       if (!values.Products || values.Products.length === 0) {
         message.error('Please add at least one product');
         setLoading(false);
         return;
       }
-
       if (modalMode === 'add') {
         const created = await handleAdd(values);
         message.success(
@@ -729,24 +794,20 @@ export default function Order() {
             ? `Created order ${created.OrderId} with ${values.Products.length} product(s)`
             : 'Order created successfully',
         );
-
         setIsModalOpen(false);
         setSelectedState(null);
         setPagination((p) => ({ ...p, current: 1 }));
         await refreshOrders();
         return;
       }
-
       if (modalMode === 'edit') {
         if (!editingOrderId) throw new Error('Missing OrderId for update.');
-
         const updated = await handleUpdate(editingOrderId, values);
         message.success(
           updated?.OrderId
             ? `Updated order ${updated.OrderId} with ${values.Products.length} product(s)`
             : 'Order updated successfully',
         );
-
         setIsModalOpen(false);
         setSelectedState(null);
         await refreshOrders();
@@ -842,11 +903,9 @@ export default function Order() {
           >
             View
           </Button>
-
           <Button size="small" onClick={() => openEditModal(record)}>
             Edit
           </Button>
-
           <Popconfirm
             title="Delete this order?"
             description={`Are you sure you want to delete ${record.OrderId}?`}
@@ -877,7 +936,6 @@ export default function Order() {
   const filteredData = useMemo(() => {
     const q = searchText.trim().toLowerCase();
     if (!q) return data;
-
     return data.filter((row) => {
       const orderId = String(row.OrderId || '').toLowerCase();
       const party = String(row.Party_Name || '').toLowerCase();
@@ -902,7 +960,6 @@ export default function Order() {
   return (
     <div style={{ width: '100%' }}>
       <Navbar />
-
       <div style={{ maxWidth: 1400, margin: '20px auto', padding: '0 16px' }}>
         <h1 style={{ textAlign: 'center', marginBottom: 16 }}>Orders</h1>
 
@@ -914,7 +971,6 @@ export default function Order() {
             onChange={(e) => onSearchChange(e.target.value)}
             onSearch={(value) => onSearchChange(value)}
           />
-
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
             <Button onClick={refreshOrders} disabled={loading}>
               Refresh
@@ -937,12 +993,12 @@ export default function Order() {
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} of ${total} orders`,
           }}
-          onChange={(newPagination) => {
+          onChange={(newPagination) =>
             setPagination({
               current: newPagination.current,
               pageSize: newPagination.pageSize,
-            });
-          }}
+            })
+          }
           scroll={{ x: 1600 }}
           rowClassName={(_, index) =>
             index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
@@ -950,33 +1006,19 @@ export default function Order() {
         />
 
         <style>{`
-          .ant-table-thead > tr > th {
-            background: #1f2937 !important;
-            color: #ffffff !important;
-            font-weight: 600;
-          }
-          .ant-table-thead > tr > th .ant-table-column-sorter {
-            color: rgba(255, 255, 255, 0.95);
-          }
+          .ant-table-thead > tr > th { background: #1f2937 !important; color: #ffffff !important; font-weight: 600; }
+          .ant-table-thead > tr > th .ant-table-column-sorter,
           .ant-table-thead > tr > th .ant-table-column-sorter-up,
-          .ant-table-thead > tr > th .ant-table-column-sorter-down {
-            color: rgba(255, 255, 255, 0.95);
-          }
-          .table-row-light {
-            background-color: #ffffff !important;
-          }
-          .table-row-dark {
-            background-color: #f5f5f5 !important;
-          }
-          .table-row-light:hover {
-            background-color: #fafafa !important;
-          }
-          .table-row-dark:hover {
-            background-color: #efefef !important;
-          }
+          .ant-table-thead > tr > th .ant-table-column-sorter-down { color: rgba(255, 255, 255, 0.95); }
+          .table-row-light { background-color: #ffffff !important; }
+          .table-row-dark { background-color: #f5f5f5 !important; }
+          .table-row-light:hover { background-color: #fafafa !important; }
+          .table-row-dark:hover { background-color: #efefef !important; }
+          .old-order-list-item { transition: all 0.2s; }
+          .old-order-list-item:hover { background: #f0f5ff !important; border-color: #1677ff !important; }
         `}</style>
 
-        {/* Order Type Selection Modal */}
+        {/* ── Order Type Selection Modal ── */}
         <Modal
           title="Create New Order"
           open={orderTypeModalOpen}
@@ -999,18 +1041,206 @@ export default function Order() {
               <Select
                 placeholder="Choose order type"
                 options={DROPDOWN_OPTIONS.orderTypes}
+                size="large"
               />
             </Form.Item>
-
             <Form.Item>
-              <Button type="primary" htmlType="submit" block>
+              <Button type="primary" htmlType="submit" block size="large">
                 Continue
               </Button>
             </Form.Item>
           </Form>
         </Modal>
 
-        {/* View Order Modal */}
+        {/* ── Old Order: Step 1 — Select Agent ── */}
+        <Modal
+          title={
+            <Space>
+              <FileTextOutlined style={{ color: '#1677ff' }} />
+              <span>Old Order — Select Agent</span>
+            </Space>
+          }
+          open={oldOrderAgentModalOpen}
+          onCancel={closeOldOrderAgentModal}
+          width={480}
+          footer={null}
+        >
+          <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>
+            Select an agent to browse their existing orders. The selected
+            order's party details will be auto-filled in the new order form.
+          </p>
+          <Form
+            form={oldOrderAgentForm}
+            layout="vertical"
+            onFinish={handleOldOrderAgentSelect}
+          >
+            <Form.Item
+              label="Agent"
+              name="agentId"
+              rules={[{ required: true, message: 'Please select an agent.' }]}
+            >
+              <Select
+                placeholder="Search and select an agent"
+                options={agentOptions}
+                showSearch
+                size="large"
+                filterOption={(input, option) =>
+                  (option?.label ?? '')
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              />
+            </Form.Item>
+            <Form.Item style={{ marginBottom: 0 }}>
+              <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+                <Button onClick={closeOldOrderAgentModal}>Cancel</Button>
+                <Button type="primary" htmlType="submit">
+                  View Orders →
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* ── Old Order: Step 2 — Pick an Order ── */}
+        <Modal
+          title={
+            <Space>
+              <FileTextOutlined style={{ color: '#1677ff' }} />
+              <span>Orders for {selectedOldAgent?.name || 'Agent'}</span>
+              {oldOrdersForAgent.length > 0 && (
+                <Tag color="blue">
+                  {oldOrdersForAgent.length} order
+                  {oldOrdersForAgent.length !== 1 ? 's' : ''}
+                </Tag>
+              )}
+            </Space>
+          }
+          open={oldOrderListModalOpen}
+          onCancel={closeOldOrderListModal}
+          width={660}
+          footer={[
+            <Button
+              key="back"
+              onClick={() => {
+                closeOldOrderListModal();
+                openOldOrderAgentModal();
+              }}
+            >
+              ← Back to Agents
+            </Button>,
+            <Button key="close" onClick={closeOldOrderListModal}>
+              Close
+            </Button>,
+          ]}
+        >
+          {/* Info banner */}
+          <div
+            style={{
+              background: '#e6f7ff',
+              border: '1px solid #91d5ff',
+              borderRadius: 6,
+              padding: '8px 12px',
+              marginBottom: 14,
+              fontSize: 13,
+              color: '#0050b3',
+            }}
+          >
+            💡 Click an order to open a <strong>New Order</strong> form with the
+            party's details auto-filled from the database.
+          </div>
+
+          <Input
+            placeholder="Search by Order ID, Party Name or Contact Person..."
+            prefix={<SearchOutlined style={{ color: '#aaa' }} />}
+            value={oldOrderSearch}
+            onChange={(e) => setOldOrderSearch(e.target.value)}
+            allowClear
+            style={{ marginBottom: 16 }}
+          />
+
+          {oldOrdersLoading ? (
+            <div style={{ textAlign: 'center', padding: '48px 0' }}>
+              <Spin size="large" />
+              <p style={{ marginTop: 12, color: '#999' }}>Loading orders...</p>
+            </div>
+          ) : filteredOldOrders.length === 0 ? (
+            <Empty
+              description={
+                oldOrdersForAgent.length === 0
+                  ? `No orders found for ${selectedOldAgent?.name || 'this agent'}`
+                  : 'No orders match your search'
+              }
+              style={{ padding: '32px 0' }}
+            />
+          ) : (
+            <List
+              dataSource={filteredOldOrders}
+              style={{ maxHeight: 440, overflowY: 'auto' }}
+              renderItem={(order) => (
+                <List.Item
+                  className="old-order-list-item"
+                  onClick={() => handleOldOrderSelect(order)}
+                  style={{
+                    border: '1px solid #f0f0f0',
+                    marginBottom: 8,
+                    borderRadius: 8,
+                    padding: 14,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <List.Item.Meta
+                    avatar={
+                      <Avatar
+                        style={{
+                          background: '#1677ff',
+                          fontWeight: 700,
+                          fontSize: 16,
+                        }}
+                        size={44}
+                      >
+                        {String(order.Party_Name || '?')[0].toUpperCase()}
+                      </Avatar>
+                    }
+                    title={
+                      <Space wrap>
+                        <span style={{ fontWeight: 600 }}>
+                          {order.Party_Name}
+                        </span>
+                        <Tag color="geekblue" style={{ fontSize: 11 }}>
+                          #{order.OrderId}
+                        </Tag>
+                        <Tag color="green" style={{ fontSize: 11 }}>
+                          {order.Products?.length || 0} product
+                          {(order.Products?.length || 0) !== 1 ? 's' : ''}
+                        </Tag>
+                      </Space>
+                    }
+                    description={
+                      <span style={{ fontSize: 12, color: '#888' }}>
+                        {order.Contact_Person1}
+                        {order.Mobile1 ? ` · ${order.Mobile1}` : ''}
+                        {order.TotalAmount != null && (
+                          <strong style={{ color: '#52c41a', marginLeft: 8 }}>
+                            ₹{Number(order.TotalAmount).toFixed(2)}
+                          </strong>
+                        )}
+                      </span>
+                    }
+                  />
+                  <Button
+                    type="link"
+                    style={{ color: '#1677ff', fontWeight: 600 }}
+                  >
+                    Select →
+                  </Button>
+                </List.Item>
+              )}
+            />
+          )}
+        </Modal>
+
+        {/* ── View Order Modal ── */}
         <Modal
           title={`View Order - ${viewingOrder?.OrderId || ''}`}
           open={viewModalOpen}
@@ -1025,7 +1255,6 @@ export default function Order() {
         >
           {viewingOrder && (
             <div>
-              {/* Party Information */}
               <div style={{ marginBottom: 24 }}>
                 <h3 style={{ marginBottom: 12, fontWeight: 600, fontSize: 16 }}>
                   Party Information
@@ -1054,8 +1283,6 @@ export default function Order() {
                   </Descriptions.Item>
                 </Descriptions>
               </div>
-
-              {/* Contact Information */}
               <div style={{ marginBottom: 24 }}>
                 <h3 style={{ marginBottom: 12, fontWeight: 600, fontSize: 16 }}>
                   Contact Information
@@ -1078,8 +1305,6 @@ export default function Order() {
                   </Descriptions.Item>
                 </Descriptions>
               </div>
-
-              {/* Products Information */}
               <div style={{ marginBottom: 24 }}>
                 <h3 style={{ marginBottom: 12, fontWeight: 600, fontSize: 16 }}>
                   Products ({viewingOrder.Products?.length || 0})
@@ -1177,7 +1402,7 @@ export default function Order() {
           )}
         </Modal>
 
-        {/* Add/Edit Order Modal */}
+        {/* ── Add / Edit Order Modal ── */}
         <Modal
           title={
             modalMode === 'add'
@@ -1193,7 +1418,6 @@ export default function Order() {
           bodyStyle={{ maxHeight: '80vh', overflowY: 'auto' }}
         >
           <Form form={form} layout="vertical">
-            {/* Info Message */}
             <div
               style={{
                 marginBottom: 16,
@@ -1221,7 +1445,6 @@ export default function Order() {
               }}
             >
               <h3 style={{ margin: '0 0 12px 0' }}>Party Information</h3>
-
               <Form.Item
                 label="Agent"
                 name="AgentId"
@@ -1239,7 +1462,6 @@ export default function Order() {
                   }
                 />
               </Form.Item>
-
               <Form.Item
                 label="Party Name"
                 name="Party_Name"
@@ -1252,7 +1474,6 @@ export default function Order() {
                   onInput={handleAlphabetsOnlyInput}
                 />
               </Form.Item>
-
               <Form.Item
                 label="Alias / Company Name"
                 name="AliasOrCompanyName"
@@ -1268,7 +1489,6 @@ export default function Order() {
                   onInput={handleAlphabetsOnlyInput}
                 />
               </Form.Item>
-
               <Form.Item
                 label="Address"
                 name="Address"
@@ -1276,7 +1496,6 @@ export default function Order() {
               >
                 <Input placeholder="e.g., Plot 123, Industrial Area" />
               </Form.Item>
-
               <div
                 style={{
                   display: 'grid',
@@ -1319,7 +1538,6 @@ export default function Order() {
                     }
                   />
                 </Form.Item>
-
                 <Form.Item
                   label="Pincode"
                   name="Pincode"
@@ -1350,7 +1568,6 @@ export default function Order() {
               }}
             >
               <h3 style={{ margin: '0 0 12px 0' }}>Contact Information</h3>
-
               <Form.Item
                 label="Contact Person 1"
                 name="Contact_Person1"
@@ -1363,7 +1580,6 @@ export default function Order() {
                   onInput={handleAlphabetsOnlyInput}
                 />
               </Form.Item>
-
               <Form.Item
                 label="Contact Person 2 (Optional)"
                 name="Contact_Person2"
@@ -1373,7 +1589,6 @@ export default function Order() {
                   onInput={handleAlphabetsOnlyInput}
                 />
               </Form.Item>
-
               <div
                 style={{
                   display: 'grid',
@@ -1398,15 +1613,10 @@ export default function Order() {
                     onInput={handleMobileInput}
                   />
                 </Form.Item>
-
                 <Form.Item
                   label="Mobile 2 (Optional)"
                   name="Mobile2"
-                  rules={[
-                    {
-                      validator: validateMobile,
-                    },
-                  ]}
+                  rules={[{ validator: validateMobile }]}
                 >
                   <Input
                     placeholder="e.g., 9876543211"
@@ -1415,7 +1625,6 @@ export default function Order() {
                   />
                 </Form.Item>
               </div>
-
               <Form.Item
                 label="Email"
                 name="Email"
@@ -1438,7 +1647,6 @@ export default function Order() {
               }}
             >
               <h3 style={{ margin: '0 0 12px 0' }}>Products</h3>
-
               <Form.List name="Products">
                 {(fields, { add, remove }) => (
                   <>
@@ -1486,7 +1694,6 @@ export default function Order() {
                                 options={DROPDOWN_OPTIONS.productTypes}
                               />
                             </Form.Item>
-
                             <Form.Item
                               label="Product ID"
                               name={[field.name, 'ProductId']}
@@ -1502,7 +1709,6 @@ export default function Order() {
                                 onInput={handleNumbersOnlyInput}
                               />
                             </Form.Item>
-
                             <Form.Item
                               label="Product Size"
                               name={[field.name, 'ProductSize']}
@@ -1519,7 +1725,6 @@ export default function Order() {
                               />
                             </Form.Item>
                           </div>
-
                           <div
                             style={{
                               display: 'grid',
@@ -1542,7 +1747,6 @@ export default function Order() {
                                 options={DROPDOWN_OPTIONS.bagMaterials}
                               />
                             </Form.Item>
-
                             <Form.Item
                               label="Quantity"
                               name={[field.name, 'Quantity']}
@@ -1562,8 +1766,6 @@ export default function Order() {
                               />
                             </Form.Item>
                           </div>
-
-                          {/* Sheet Information */}
                           <Divider style={{ margin: '12px 0' }}>
                             Sheet Information
                           </Divider>
@@ -1589,7 +1791,6 @@ export default function Order() {
                                 options={DROPDOWN_OPTIONS.sheetGSMs}
                               />
                             </Form.Item>
-
                             <Form.Item
                               label="Sheet Color"
                               name={[field.name, 'SheetColor']}
@@ -1605,7 +1806,6 @@ export default function Order() {
                                 options={DROPDOWN_OPTIONS.sheetColors}
                               />
                             </Form.Item>
-
                             <Form.Item
                               label="Border GSM"
                               name={[field.name, 'BorderGSM']}
@@ -1621,7 +1821,6 @@ export default function Order() {
                                 options={DROPDOWN_OPTIONS.borderGSMs}
                               />
                             </Form.Item>
-
                             <Form.Item
                               label="Border Color"
                               name={[field.name, 'BorderColor']}
@@ -1638,8 +1837,6 @@ export default function Order() {
                               />
                             </Form.Item>
                           </div>
-
-                          {/* Handle Information */}
                           <Divider style={{ margin: '12px 0' }}>
                             Handle Information
                           </Divider>
@@ -1665,7 +1862,6 @@ export default function Order() {
                                 options={DROPDOWN_OPTIONS.handleTypes}
                               />
                             </Form.Item>
-
                             <Form.Item
                               label="Handle Color"
                               name={[field.name, 'HandleColor']}
@@ -1681,7 +1877,6 @@ export default function Order() {
                                 options={DROPDOWN_OPTIONS.handleColors}
                               />
                             </Form.Item>
-
                             <Form.Item
                               label="Handle GSM"
                               name={[field.name, 'HandleGSM']}
@@ -1698,8 +1893,6 @@ export default function Order() {
                               />
                             </Form.Item>
                           </div>
-
-                          {/* Printing Information */}
                           <Divider style={{ margin: '12px 0' }}>
                             Printing Information
                           </Divider>
@@ -1725,7 +1918,6 @@ export default function Order() {
                                 options={DROPDOWN_OPTIONS.printingTypes}
                               />
                             </Form.Item>
-
                             <Form.Item
                               label="Print Color"
                               name={[field.name, 'PrintColor']}
@@ -1741,7 +1933,6 @@ export default function Order() {
                                 options={DROPDOWN_OPTIONS.printColors}
                               />
                             </Form.Item>
-
                             <Form.Item
                               label="Color"
                               name={[field.name, 'Color']}
@@ -1758,7 +1949,6 @@ export default function Order() {
                               />
                             </Form.Item>
                           </div>
-
                           <div
                             style={{
                               display: 'grid',
@@ -1773,7 +1963,6 @@ export default function Order() {
                             >
                               <Checkbox>Has Custom Design</Checkbox>
                             </Form.Item>
-
                             <Form.Item
                               label="Plate Available"
                               name={[field.name, 'PlateAvailable']}
@@ -1782,7 +1971,6 @@ export default function Order() {
                               <Checkbox>Plate Available</Checkbox>
                             </Form.Item>
                           </div>
-
                           <Form.Item
                             label="Plate Block Number"
                             name={[field.name, 'PlateBlockNumber']}
@@ -1792,8 +1980,6 @@ export default function Order() {
                               onInput={handleNumbersOnlyInput}
                             />
                           </Form.Item>
-
-                          {/* Pricing Information */}
                           <Divider style={{ margin: '12px 0' }}>
                             Pricing
                           </Divider>
@@ -1823,7 +2009,6 @@ export default function Order() {
                                 prefix="₹"
                               />
                             </Form.Item>
-
                             <Form.Item
                               label="Product Amount (Editable)"
                               name={[field.name, 'ProductAmount']}
@@ -1849,7 +2034,6 @@ export default function Order() {
                         </Card>
                       ))
                     )}
-
                     <Button
                       type="dashed"
                       onClick={() => add()}
@@ -1864,7 +2048,7 @@ export default function Order() {
               </Form.List>
             </div>
 
-            {/* Total Amount Section */}
+            {/* Total Amount */}
             <div
               style={{
                 marginBottom: 16,
