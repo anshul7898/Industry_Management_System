@@ -190,6 +190,19 @@ export default function Order() {
   const [oldOrderAgentForm] = Form.useForm();
   // ──────────────────────────────────────────────────────────────
 
+  // ── Repeat Order State ─────────────────────────────────────────
+  const [repeatOrderAgentModalOpen, setRepeatOrderAgentModalOpen] =
+    useState(false);
+  const [repeatOrderListModalOpen, setRepeatOrderListModalOpen] =
+    useState(false);
+  const [selectedRepeatAgent, setSelectedRepeatAgent] = useState(null);
+  const [repeatOrdersForAgent, setRepeatOrdersForAgent] = useState([]);
+  const [repeatOrdersLoading, setRepeatOrdersLoading] = useState(false);
+  const [repeatOrderSearch, setRepeatOrderSearch] = useState('');
+  const [isRepeatOrder, setIsRepeatOrder] = useState(false);
+  const [repeatOrderAgentForm] = Form.useForm();
+  // ──────────────────────────────────────────────────────────────
+
   const [form] = Form.useForm();
   const [orderTypeForm] = Form.useForm();
 
@@ -265,7 +278,6 @@ export default function Order() {
     return res.json();
   }
 
-  // ── Fetch party data by party name from the Party table ────────
   async function fetchPartyByName(partyName) {
     try {
       const res = await fetch(
@@ -277,7 +289,6 @@ export default function Order() {
       return null;
     }
   }
-  // ──────────────────────────────────────────────────────────────
 
   const refreshOrders = async () => {
     setLoading(true);
@@ -379,18 +390,9 @@ export default function Order() {
     }
   };
 
-  /**
-   * When an old order is selected:
-   * 1. Fetch the party record from the Party table using the order's Party_Name
-   * 2. Open the NEW ORDER modal (modalMode = 'add') with:
-   *    - Party & Contact info auto-filled from the party table record
-   *    - Products list empty (fresh new order)
-   *    - AgentId pre-set to the selected old agent
-   */
   const handleOldOrderSelect = async (order) => {
     setOldOrderListModalOpen(false);
 
-    // Show loading while fetching party data
     const loadingKey = 'party-lookup';
     message.loading({
       content: 'Loading party details...',
@@ -402,24 +404,18 @@ export default function Order() {
       const agentsData = await fetchAgents();
       setAgents(agentsData);
 
-      // Try to fetch party details from the Party table
       const partyData = await fetchPartyByName(order.Party_Name);
 
-      // Switch to NEW ORDER mode — products are blank, party info pre-filled
       setModalMode('add');
       setEditingOrderId(null);
+      setIsRepeatOrder(false);
 
-      // Use party table data if found, otherwise fall back to order fields
       const state = partyData?.state || partyData?.State || order.State || null;
       setSelectedState(state);
 
       form.resetFields();
-
       form.setFieldsValue({
-        // Pre-fill agent from the selected old order
         AgentId: order.AgentId,
-
-        // Party Information — from party table (preferred) or order
         Party_Name:
           partyData?.partyName ||
           partyData?.PartyName ||
@@ -436,8 +432,6 @@ export default function Order() {
         City: partyData?.city || partyData?.City || order.City || '',
         Pincode:
           partyData?.pincode || partyData?.Pincode || order.Pincode || '',
-
-        // Contact Information — from party table (preferred) or order
         Contact_Person1:
           partyData?.contact_Person1 ||
           partyData?.Contact_Person1 ||
@@ -453,8 +447,6 @@ export default function Order() {
         Mobile2:
           partyData?.mobile2 || partyData?.Mobile2 || order.Mobile2 || '',
         Email: partyData?.email || partyData?.Email || order.Email || '',
-
-        // Products are blank — this is a new order
         Products: [{ ...emptyProduct }],
         TotalAmount: 0,
       });
@@ -504,6 +496,154 @@ export default function Order() {
 
   // ──────────────────────────────────────────────────────────────
 
+  // ── Repeat Order Handlers ──────────────────────────────────────
+
+  const openRepeatOrderAgentModal = async () => {
+    repeatOrderAgentForm.resetFields();
+    setSelectedRepeatAgent(null);
+    setRepeatOrdersForAgent([]);
+    setRepeatOrderSearch('');
+    try {
+      const agentsData = await fetchAgents();
+      setAgents(agentsData);
+    } catch (err) {
+      message.error(err.message);
+    }
+    setRepeatOrderAgentModalOpen(true);
+  };
+
+  const handleRepeatOrderAgentSelect = async (values) => {
+    const agentId = values.agentId;
+    const agent = agents.find((a) => a.agentId === agentId);
+    setSelectedRepeatAgent(agent);
+    setRepeatOrderAgentModalOpen(false);
+    setRepeatOrderListModalOpen(true);
+    setRepeatOrderSearch('');
+    setRepeatOrdersLoading(true);
+    try {
+      const allOrders = await fetchOrders();
+      setRepeatOrdersForAgent(allOrders.filter((o) => o.AgentId === agentId));
+    } catch {
+      message.error('Failed to load orders for this agent');
+      setRepeatOrdersForAgent([]);
+    } finally {
+      setRepeatOrdersLoading(false);
+    }
+  };
+
+  /**
+   * When a repeat order is selected:
+   * - Copy ALL details (party + contact + all product specs) from the existing order
+   * - Open the new order modal in repeat mode
+   * - Only Quantity is editable; everything else is locked
+   * - ProductAmount and TotalAmount auto-recalculate when Quantity changes
+   */
+  const handleRepeatOrderSelect = async (order) => {
+    setRepeatOrderListModalOpen(false);
+
+    const loadingKey = 'repeat-order-lookup';
+    message.loading({
+      content: 'Loading order details...',
+      key: loadingKey,
+      duration: 0,
+    });
+
+    try {
+      const agentsData = await fetchAgents();
+      setAgents(agentsData);
+
+      setModalMode('add');
+      setEditingOrderId(null);
+      setIsRepeatOrder(true);
+
+      const state = order.State || null;
+      setSelectedState(state);
+
+      // Copy all products exactly — quantities will be editable in the form
+      const copiedProducts = (order.Products || []).map((p) => ({
+        ProductType: p.ProductType,
+        ProductId: p.ProductId,
+        ProductSize: p.ProductSize,
+        BagMaterial: p.BagMaterial,
+        Quantity: p.Quantity,
+        SheetGSM: p.SheetGSM,
+        SheetColor: p.SheetColor,
+        BorderGSM: p.BorderGSM,
+        BorderColor: p.BorderColor,
+        HandleType: p.HandleType,
+        HandleColor: p.HandleColor,
+        HandleGSM: p.HandleGSM,
+        PrintingType: p.PrintingType,
+        PrintColor: p.PrintColor,
+        Color: p.Color,
+        Design: p.Design || false,
+        PlateBlockNumber: p.PlateBlockNumber || undefined,
+        PlateAvailable: p.PlateAvailable || false,
+        Rate: p.Rate,
+        ProductAmount: p.ProductAmount || 0,
+      }));
+
+      form.resetFields();
+      form.setFieldsValue({
+        AgentId: order.AgentId,
+        Party_Name: order.Party_Name || '',
+        AliasOrCompanyName: order.AliasOrCompanyName || '',
+        Address: order.Address || '',
+        State: order.State || '',
+        City: order.City || '',
+        Pincode: order.Pincode || '',
+        Contact_Person1: order.Contact_Person1 || '',
+        Contact_Person2: order.Contact_Person2 || '',
+        Mobile1: order.Mobile1 || '',
+        Mobile2: order.Mobile2 || '',
+        Email: order.Email || '',
+        Products: copiedProducts,
+        TotalAmount: order.TotalAmount || 0,
+      });
+
+      message.success({
+        content: `Repeat order loaded from #${order.OrderId}. Only Quantity can be edited.`,
+        key: loadingKey,
+        duration: 3,
+      });
+
+      setIsModalOpen(true);
+    } catch (err) {
+      message.error({
+        content: 'Failed to load order details',
+        key: loadingKey,
+      });
+      console.error('handleRepeatOrderSelect error:', err);
+    }
+  };
+
+  const closeRepeatOrderAgentModal = () => {
+    setRepeatOrderAgentModalOpen(false);
+    repeatOrderAgentForm.resetFields();
+    setSelectedRepeatAgent(null);
+  };
+
+  const closeRepeatOrderListModal = () => {
+    setRepeatOrderListModalOpen(false);
+    setRepeatOrdersForAgent([]);
+    setSelectedRepeatAgent(null);
+    setRepeatOrderSearch('');
+  };
+
+  const filteredRepeatOrders = useMemo(() => {
+    if (!repeatOrderSearch.trim()) return repeatOrdersForAgent;
+    const q = repeatOrderSearch.trim().toLowerCase();
+    return repeatOrdersForAgent.filter((o) =>
+      [o.OrderId, o.Party_Name, o.Contact_Person1].some((v) =>
+        String(v || '')
+          .toLowerCase()
+          .includes(q),
+      ),
+    );
+  }, [repeatOrdersForAgent, repeatOrderSearch]);
+
+  // ──────────────────────────────────────────────────────────────
+
   const handleOrderTypeSelect = async (values) => {
     try {
       const orderType = values.orderType;
@@ -513,7 +653,7 @@ export default function Order() {
       if (orderType === 'new') {
         openAddOrderModal();
       } else if (orderType === 'repeat') {
-        message.info('Repeat Order feature coming soon');
+        openRepeatOrderAgentModal();
       } else if (orderType === 'old') {
         openOldOrderAgentModal();
       }
@@ -538,6 +678,7 @@ export default function Order() {
     setModalMode('add');
     setEditingOrderId(null);
     setSelectedState(null);
+    setIsRepeatOrder(false);
     form.resetFields();
     form.setFieldValue('Products', [{ ...emptyProduct }]);
     form.setFieldValue('TotalAmount', 0);
@@ -554,6 +695,7 @@ export default function Order() {
     setModalMode('edit');
     setEditingOrderId(record.OrderId);
     setSelectedState(record.State || null);
+    setIsRepeatOrder(false);
     try {
       const agentsData = await fetchAgents();
       setAgents(agentsData);
@@ -587,6 +729,7 @@ export default function Order() {
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedState(null);
+    setIsRepeatOrder(false);
   };
 
   const closeViewModal = () => {
@@ -611,17 +754,12 @@ export default function Order() {
         mobile2: values.Mobile2 ? String(values.Mobile2) : null,
         orderId: null,
       };
-      console.log('Party Payload being sent:', partyPayload);
       const res = await fetch('/api/party', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(partyPayload),
       });
-      const responseText = await res.text();
-      console.log('Party API Response Status:', res.status);
-      console.log('Party API Response:', responseText);
       if (!res.ok) {
-        console.error('Party creation failed:', responseText);
         message.warning(
           'Order created successfully, but party could not be added. Please add party manually if needed.',
         );
@@ -685,7 +823,6 @@ export default function Order() {
       Products: buildProductsPayload(values.Products),
     };
 
-    console.log('Order Payload being sent:', JSON.stringify(payload, null, 2));
     const res = await fetch('/api/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -693,7 +830,6 @@ export default function Order() {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      console.error('Order creation error:', text);
       throw new Error(`Failed to create order (${res.status}): ${text}`);
     }
     const orderResult = await res.json().catch(() => null);
@@ -725,7 +861,6 @@ export default function Order() {
       Products: buildProductsPayload(values.Products),
     };
 
-    console.log('Update Payload being sent:', JSON.stringify(payload, null, 2));
     const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -733,7 +868,6 @@ export default function Order() {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      console.error('Order update error:', text);
       throw new Error(`Failed to update order (${res.status}): ${text}`);
     }
     return res.json().catch(() => null);
@@ -769,7 +903,7 @@ export default function Order() {
     }
   };
 
-  const handleProductAmountChange = (fieldName) => {
+  const handleProductAmountChange = () => {
     const products = form.getFieldValue('Products') || [];
     const totalAmount = products.reduce(
       (sum, p) => sum + (parseFloat(p.ProductAmount) || 0),
@@ -796,6 +930,7 @@ export default function Order() {
         );
         setIsModalOpen(false);
         setSelectedState(null);
+        setIsRepeatOrder(false);
         setPagination((p) => ({ ...p, current: 1 }));
         await refreshOrders();
         return;
@@ -810,6 +945,7 @@ export default function Order() {
         );
         setIsModalOpen(false);
         setSelectedState(null);
+        setIsRepeatOrder(false);
         await refreshOrders();
       }
     } catch (err) {
@@ -956,6 +1092,64 @@ export default function Order() {
     setSearchText(value);
     setPagination((p) => ({ ...p, current: 1 }));
   };
+
+  // ── Shared order list item renderer (reused for both Old and Repeat flows)
+  const renderOrderListItem = ({
+    order,
+    onSelect,
+    avatarColor,
+    tagColor,
+    linkColor,
+  }) => (
+    <List.Item
+      className="old-order-list-item"
+      onClick={() => onSelect(order)}
+      style={{
+        border: '1px solid #f0f0f0',
+        marginBottom: 8,
+        borderRadius: 8,
+        padding: 14,
+        cursor: 'pointer',
+      }}
+    >
+      <List.Item.Meta
+        avatar={
+          <Avatar
+            style={{ background: avatarColor, fontWeight: 700, fontSize: 16 }}
+            size={44}
+          >
+            {String(order.Party_Name || '?')[0].toUpperCase()}
+          </Avatar>
+        }
+        title={
+          <Space wrap>
+            <span style={{ fontWeight: 600 }}>{order.Party_Name}</span>
+            <Tag color={tagColor} style={{ fontSize: 11 }}>
+              #{order.OrderId}
+            </Tag>
+            <Tag color="green" style={{ fontSize: 11 }}>
+              {order.Products?.length || 0} product
+              {(order.Products?.length || 0) !== 1 ? 's' : ''}
+            </Tag>
+          </Space>
+        }
+        description={
+          <span style={{ fontSize: 12, color: '#888' }}>
+            {order.Contact_Person1}
+            {order.Mobile1 ? ` · ${order.Mobile1}` : ''}
+            {order.TotalAmount != null && (
+              <strong style={{ color: '#52c41a', marginLeft: 8 }}>
+                ₹{Number(order.TotalAmount).toFixed(2)}
+              </strong>
+            )}
+          </span>
+        }
+      />
+      <Button type="link" style={{ color: linkColor, fontWeight: 600 }}>
+        Select →
+      </Button>
+    </List.Item>
+  );
 
   return (
     <div style={{ width: '100%' }}>
@@ -1134,7 +1328,6 @@ export default function Order() {
             </Button>,
           ]}
         >
-          {/* Info banner */}
           <div
             style={{
               background: '#e6f7ff',
@@ -1177,65 +1370,160 @@ export default function Order() {
             <List
               dataSource={filteredOldOrders}
               style={{ maxHeight: 440, overflowY: 'auto' }}
-              renderItem={(order) => (
-                <List.Item
-                  className="old-order-list-item"
-                  onClick={() => handleOldOrderSelect(order)}
-                  style={{
-                    border: '1px solid #f0f0f0',
-                    marginBottom: 8,
-                    borderRadius: 8,
-                    padding: 14,
-                    cursor: 'pointer',
-                  }}
+              renderItem={(order) =>
+                renderOrderListItem({
+                  order,
+                  onSelect: handleOldOrderSelect,
+                  avatarColor: '#1677ff',
+                  tagColor: 'geekblue',
+                  linkColor: '#1677ff',
+                })
+              }
+            />
+          )}
+        </Modal>
+
+        {/* ── Repeat Order: Step 1 — Select Agent ── */}
+        <Modal
+          title={
+            <Space>
+              <FileTextOutlined style={{ color: '#722ed1' }} />
+              <span>Repeat Order — Select Agent</span>
+            </Space>
+          }
+          open={repeatOrderAgentModalOpen}
+          onCancel={closeRepeatOrderAgentModal}
+          width={480}
+          footer={null}
+        >
+          <p style={{ color: '#666', marginBottom: 20, fontSize: 13 }}>
+            Select an agent to browse their existing orders. The selected
+            order's complete details will be copied — only quantity can be
+            changed.
+          </p>
+          <Form
+            form={repeatOrderAgentForm}
+            layout="vertical"
+            onFinish={handleRepeatOrderAgentSelect}
+          >
+            <Form.Item
+              label="Agent"
+              name="agentId"
+              rules={[{ required: true, message: 'Please select an agent.' }]}
+            >
+              <Select
+                placeholder="Search and select an agent"
+                options={agentOptions}
+                showSearch
+                size="large"
+                filterOption={(input, option) =>
+                  (option?.label ?? '')
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              />
+            </Form.Item>
+            <Form.Item style={{ marginBottom: 0 }}>
+              <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+                <Button onClick={closeRepeatOrderAgentModal}>Cancel</Button>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  style={{ background: '#722ed1', borderColor: '#722ed1' }}
                 >
-                  <List.Item.Meta
-                    avatar={
-                      <Avatar
-                        style={{
-                          background: '#1677ff',
-                          fontWeight: 700,
-                          fontSize: 16,
-                        }}
-                        size={44}
-                      >
-                        {String(order.Party_Name || '?')[0].toUpperCase()}
-                      </Avatar>
-                    }
-                    title={
-                      <Space wrap>
-                        <span style={{ fontWeight: 600 }}>
-                          {order.Party_Name}
-                        </span>
-                        <Tag color="geekblue" style={{ fontSize: 11 }}>
-                          #{order.OrderId}
-                        </Tag>
-                        <Tag color="green" style={{ fontSize: 11 }}>
-                          {order.Products?.length || 0} product
-                          {(order.Products?.length || 0) !== 1 ? 's' : ''}
-                        </Tag>
-                      </Space>
-                    }
-                    description={
-                      <span style={{ fontSize: 12, color: '#888' }}>
-                        {order.Contact_Person1}
-                        {order.Mobile1 ? ` · ${order.Mobile1}` : ''}
-                        {order.TotalAmount != null && (
-                          <strong style={{ color: '#52c41a', marginLeft: 8 }}>
-                            ₹{Number(order.TotalAmount).toFixed(2)}
-                          </strong>
-                        )}
-                      </span>
-                    }
-                  />
-                  <Button
-                    type="link"
-                    style={{ color: '#1677ff', fontWeight: 600 }}
-                  >
-                    Select →
-                  </Button>
-                </List.Item>
+                  View Orders →
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* ── Repeat Order: Step 2 — Pick an Order ── */}
+        <Modal
+          title={
+            <Space>
+              <FileTextOutlined style={{ color: '#722ed1' }} />
+              <span>
+                Repeat Orders for {selectedRepeatAgent?.name || 'Agent'}
+              </span>
+              {repeatOrdersForAgent.length > 0 && (
+                <Tag color="purple">
+                  {repeatOrdersForAgent.length} order
+                  {repeatOrdersForAgent.length !== 1 ? 's' : ''}
+                </Tag>
               )}
+            </Space>
+          }
+          open={repeatOrderListModalOpen}
+          onCancel={closeRepeatOrderListModal}
+          width={660}
+          footer={[
+            <Button
+              key="back"
+              onClick={() => {
+                closeRepeatOrderListModal();
+                openRepeatOrderAgentModal();
+              }}
+            >
+              ← Back to Agents
+            </Button>,
+            <Button key="close" onClick={closeRepeatOrderListModal}>
+              Close
+            </Button>,
+          ]}
+        >
+          <div
+            style={{
+              background: '#f9f0ff',
+              border: '1px solid #d3adf7',
+              borderRadius: 6,
+              padding: '8px 12px',
+              marginBottom: 14,
+              fontSize: 13,
+              color: '#531dab',
+            }}
+          >
+            🔁 Click an order to create a <strong>Repeat Order</strong> with all
+            details copied. You can only edit the <strong>Quantity</strong> for
+            each product.
+          </div>
+
+          <Input
+            placeholder="Search by Order ID, Party Name or Contact Person..."
+            prefix={<SearchOutlined style={{ color: '#aaa' }} />}
+            value={repeatOrderSearch}
+            onChange={(e) => setRepeatOrderSearch(e.target.value)}
+            allowClear
+            style={{ marginBottom: 16 }}
+          />
+
+          {repeatOrdersLoading ? (
+            <div style={{ textAlign: 'center', padding: '48px 0' }}>
+              <Spin size="large" />
+              <p style={{ marginTop: 12, color: '#999' }}>Loading orders...</p>
+            </div>
+          ) : filteredRepeatOrders.length === 0 ? (
+            <Empty
+              description={
+                repeatOrdersForAgent.length === 0
+                  ? `No orders found for ${selectedRepeatAgent?.name || 'this agent'}`
+                  : 'No orders match your search'
+              }
+              style={{ padding: '32px 0' }}
+            />
+          ) : (
+            <List
+              dataSource={filteredRepeatOrders}
+              style={{ maxHeight: 440, overflowY: 'auto' }}
+              renderItem={(order) =>
+                renderOrderListItem({
+                  order,
+                  onSelect: handleRepeatOrderSelect,
+                  avatarColor: '#722ed1',
+                  tagColor: 'purple',
+                  linkColor: '#722ed1',
+                })
+              }
             />
           )}
         </Modal>
@@ -1406,7 +1694,9 @@ export default function Order() {
         <Modal
           title={
             modalMode === 'add'
-              ? 'Add New Order (Multiple Products)'
+              ? isRepeatOrder
+                ? '🔁 Repeat Order — Edit Quantities & Submit'
+                : 'Add New Order (Multiple Products)'
               : `Edit Order - ${editingOrderId || ''}`
           }
           open={isModalOpen}
@@ -1418,22 +1708,42 @@ export default function Order() {
           bodyStyle={{ maxHeight: '80vh', overflowY: 'auto' }}
         >
           <Form form={form} layout="vertical">
-            <div
-              style={{
-                marginBottom: 16,
-                padding: 12,
-                backgroundColor: '#e6f7ff',
-                borderRadius: 4,
-                border: '1px solid #91d5ff',
-              }}
-            >
-              <p style={{ margin: 0, color: '#0050b3', fontSize: '14px' }}>
-                <strong>ℹ️ Note:</strong> Each order can contain multiple
-                products. ProductAmount = Rate × Quantity (auto-calculated, but
-                editable). TotalAmount = Sum of all ProductAmounts
-                (auto-calculated, but editable).
-              </p>
-            </div>
+            {/* Banner */}
+            {isRepeatOrder ? (
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: 12,
+                  backgroundColor: '#f9f0ff',
+                  borderRadius: 4,
+                  border: '1px solid #d3adf7',
+                }}
+              >
+                <p style={{ margin: 0, color: '#531dab', fontSize: '14px' }}>
+                  <strong>🔒 Repeat Order Mode:</strong> All party, contact, and
+                  product details are locked and copied from the original order.
+                  Only <strong>Quantity</strong> can be edited for each product.
+                  ProductAmount and TotalAmount will auto-recalculate.
+                </p>
+              </div>
+            ) : (
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: 12,
+                  backgroundColor: '#e6f7ff',
+                  borderRadius: 4,
+                  border: '1px solid #91d5ff',
+                }}
+              >
+                <p style={{ margin: 0, color: '#0050b3', fontSize: '14px' }}>
+                  <strong>ℹ️ Note:</strong> Each order can contain multiple
+                  products. ProductAmount = Rate × Quantity (auto-calculated,
+                  but editable). TotalAmount = Sum of all ProductAmounts
+                  (auto-calculated, but editable).
+                </p>
+              </div>
+            )}
 
             {/* Party Information */}
             <div
@@ -1444,7 +1754,17 @@ export default function Order() {
                 borderRadius: 4,
               }}
             >
-              <h3 style={{ margin: '0 0 12px 0' }}>Party Information</h3>
+              <h3 style={{ margin: '0 0 12px 0' }}>
+                Party Information
+                {isRepeatOrder && (
+                  <Tag
+                    color="purple"
+                    style={{ marginLeft: 8, fontSize: 11, fontWeight: 400 }}
+                  >
+                    🔒 Locked
+                  </Tag>
+                )}
+              </h3>
               <Form.Item
                 label="Agent"
                 name="AgentId"
@@ -1455,6 +1775,7 @@ export default function Order() {
                   options={agentOptions}
                   optionLabelProp="label"
                   showSearch
+                  disabled={isRepeatOrder}
                   filterOption={(input, option) =>
                     (option?.label ?? '')
                       .toLowerCase()
@@ -1472,6 +1793,7 @@ export default function Order() {
                 <Input
                   placeholder="e.g., ABC Packaging Solutions"
                   onInput={handleAlphabetsOnlyInput}
+                  disabled={isRepeatOrder}
                 />
               </Form.Item>
               <Form.Item
@@ -1487,6 +1809,7 @@ export default function Order() {
                 <Input
                   placeholder="e.g., ABC Pack"
                   onInput={handleAlphabetsOnlyInput}
+                  disabled={isRepeatOrder}
                 />
               </Form.Item>
               <Form.Item
@@ -1494,7 +1817,10 @@ export default function Order() {
                 name="Address"
                 rules={[{ required: true, message: 'Please enter Address.' }]}
               >
-                <Input placeholder="e.g., Plot 123, Industrial Area" />
+                <Input
+                  placeholder="e.g., Plot 123, Industrial Area"
+                  disabled={isRepeatOrder}
+                />
               </Form.Item>
               <div
                 style={{
@@ -1513,6 +1839,7 @@ export default function Order() {
                     options={stateOptions}
                     showSearch
                     onChange={handleStateChange}
+                    disabled={isRepeatOrder}
                     filterOption={(input, option) =>
                       (option?.label ?? '')
                         .toLowerCase()
@@ -1530,7 +1857,10 @@ export default function Order() {
                     options={cityOptions}
                     showSearch
                     onChange={handleCityChange}
-                    disabled={!selectedState || cityOptions.length === 0}
+                    disabled={
+                      isRepeatOrder ||
+                      (!selectedState && cityOptions.length === 0)
+                    }
                     filterOption={(input, option) =>
                       (option?.label ?? '')
                         .toLowerCase()
@@ -1553,6 +1883,7 @@ export default function Order() {
                     placeholder="e.g., 400001"
                     maxLength={6}
                     onInput={handlePincodeInput}
+                    disabled={isRepeatOrder}
                   />
                 </Form.Item>
               </div>
@@ -1567,7 +1898,17 @@ export default function Order() {
                 borderRadius: 4,
               }}
             >
-              <h3 style={{ margin: '0 0 12px 0' }}>Contact Information</h3>
+              <h3 style={{ margin: '0 0 12px 0' }}>
+                Contact Information
+                {isRepeatOrder && (
+                  <Tag
+                    color="purple"
+                    style={{ marginLeft: 8, fontSize: 11, fontWeight: 400 }}
+                  >
+                    🔒 Locked
+                  </Tag>
+                )}
+              </h3>
               <Form.Item
                 label="Contact Person 1"
                 name="Contact_Person1"
@@ -1578,6 +1919,7 @@ export default function Order() {
                 <Input
                   placeholder="e.g., Rajesh Kumar"
                   onInput={handleAlphabetsOnlyInput}
+                  disabled={isRepeatOrder}
                 />
               </Form.Item>
               <Form.Item
@@ -1587,6 +1929,7 @@ export default function Order() {
                 <Input
                   placeholder="e.g., Priya Sharma"
                   onInput={handleAlphabetsOnlyInput}
+                  disabled={isRepeatOrder}
                 />
               </Form.Item>
               <div
@@ -1611,6 +1954,7 @@ export default function Order() {
                     placeholder="e.g., 9876543210"
                     maxLength={10}
                     onInput={handleMobileInput}
+                    disabled={isRepeatOrder}
                   />
                 </Form.Item>
                 <Form.Item
@@ -1622,6 +1966,7 @@ export default function Order() {
                     placeholder="e.g., 9876543211"
                     maxLength={10}
                     onInput={handleMobileInput}
+                    disabled={isRepeatOrder}
                   />
                 </Form.Item>
               </div>
@@ -1633,7 +1978,10 @@ export default function Order() {
                   { validator: validateEmail },
                 ]}
               >
-                <Input placeholder="e.g., rajesh@abcpack.com" />
+                <Input
+                  placeholder="e.g., rajesh@abcpack.com"
+                  disabled={isRepeatOrder}
+                />
               </Form.Item>
             </div>
 
@@ -1646,7 +1994,17 @@ export default function Order() {
                 borderRadius: 4,
               }}
             >
-              <h3 style={{ margin: '0 0 12px 0' }}>Products</h3>
+              <h3 style={{ margin: '0 0 12px 0' }}>
+                Products
+                {isRepeatOrder && (
+                  <Tag
+                    color="purple"
+                    style={{ marginLeft: 8, fontSize: 11, fontWeight: 400 }}
+                  >
+                    🔒 All fields locked — only Quantity is editable
+                  </Tag>
+                )}
+              </h3>
               <Form.List name="Products">
                 {(fields, { add, remove }) => (
                   <>
@@ -1662,14 +2020,16 @@ export default function Order() {
                           style={{ marginBottom: 12 }}
                           title={`Product ${idx + 1}`}
                           extra={
-                            <Button
-                              danger
-                              size="small"
-                              icon={<DeleteOutlined />}
-                              onClick={() => remove(field.name)}
-                            >
-                              Remove
-                            </Button>
+                            !isRepeatOrder && (
+                              <Button
+                                danger
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                onClick={() => remove(field.name)}
+                              >
+                                Remove
+                              </Button>
+                            )
                           }
                         >
                           <div
@@ -1692,6 +2052,7 @@ export default function Order() {
                               <Select
                                 placeholder="Select Product Type"
                                 options={DROPDOWN_OPTIONS.productTypes}
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                             <Form.Item
@@ -1707,6 +2068,7 @@ export default function Order() {
                               <Input
                                 placeholder="e.g., 1001"
                                 onInput={handleNumbersOnlyInput}
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                             <Form.Item
@@ -1722,9 +2084,11 @@ export default function Order() {
                               <Input
                                 placeholder="e.g., 14"
                                 onInput={handleNumbersOnlyInput}
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                           </div>
+
                           <div
                             style={{
                               display: 'grid',
@@ -1745,10 +2109,22 @@ export default function Order() {
                               <Select
                                 placeholder="Select Bag Material"
                                 options={DROPDOWN_OPTIONS.bagMaterials}
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                             <Form.Item
-                              label="Quantity"
+                              label={
+                                isRepeatOrder ? (
+                                  <span>
+                                    Quantity{' '}
+                                    <Tag color="green" style={{ fontSize: 11 }}>
+                                      ✏️ Editable
+                                    </Tag>
+                                  </span>
+                                ) : (
+                                  'Quantity'
+                                )
+                              }
                               name={[field.name, 'Quantity']}
                               rules={[
                                 {
@@ -1763,9 +2139,20 @@ export default function Order() {
                                 onChange={() =>
                                   handleRateOrQuantityChange(`${idx}_Quantity`)
                                 }
+                                style={
+                                  isRepeatOrder
+                                    ? {
+                                        borderColor: '#52c41a',
+                                        boxShadow:
+                                          '0 0 0 2px rgba(82,196,26,0.15)',
+                                        background: '#f6ffed',
+                                      }
+                                    : {}
+                                }
                               />
                             </Form.Item>
                           </div>
+
                           <Divider style={{ margin: '12px 0' }}>
                             Sheet Information
                           </Divider>
@@ -1789,6 +2176,7 @@ export default function Order() {
                               <Select
                                 placeholder="Select Sheet GSM"
                                 options={DROPDOWN_OPTIONS.sheetGSMs}
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                             <Form.Item
@@ -1804,6 +2192,7 @@ export default function Order() {
                               <Select
                                 placeholder="Select Sheet Color"
                                 options={DROPDOWN_OPTIONS.sheetColors}
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                             <Form.Item
@@ -1819,6 +2208,7 @@ export default function Order() {
                               <Select
                                 placeholder="Select Border GSM"
                                 options={DROPDOWN_OPTIONS.borderGSMs}
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                             <Form.Item
@@ -1834,9 +2224,11 @@ export default function Order() {
                               <Select
                                 placeholder="Select Border Color"
                                 options={DROPDOWN_OPTIONS.borderColors}
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                           </div>
+
                           <Divider style={{ margin: '12px 0' }}>
                             Handle Information
                           </Divider>
@@ -1860,6 +2252,7 @@ export default function Order() {
                               <Select
                                 placeholder="Select Handle Type"
                                 options={DROPDOWN_OPTIONS.handleTypes}
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                             <Form.Item
@@ -1875,6 +2268,7 @@ export default function Order() {
                               <Select
                                 placeholder="Select Handle Color"
                                 options={DROPDOWN_OPTIONS.handleColors}
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                             <Form.Item
@@ -1890,9 +2284,11 @@ export default function Order() {
                               <Select
                                 placeholder="Select Handle GSM"
                                 options={DROPDOWN_OPTIONS.handleGSMs}
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                           </div>
+
                           <Divider style={{ margin: '12px 0' }}>
                             Printing Information
                           </Divider>
@@ -1916,6 +2312,7 @@ export default function Order() {
                               <Select
                                 placeholder="Select Printing Type"
                                 options={DROPDOWN_OPTIONS.printingTypes}
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                             <Form.Item
@@ -1931,6 +2328,7 @@ export default function Order() {
                               <Select
                                 placeholder="Select Print Color"
                                 options={DROPDOWN_OPTIONS.printColors}
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                             <Form.Item
@@ -1946,9 +2344,11 @@ export default function Order() {
                               <Select
                                 placeholder="Select Color"
                                 options={DROPDOWN_OPTIONS.colors}
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                           </div>
+
                           <div
                             style={{
                               display: 'grid',
@@ -1961,16 +2361,21 @@ export default function Order() {
                               name={[field.name, 'Design']}
                               valuePropName="checked"
                             >
-                              <Checkbox>Has Custom Design</Checkbox>
+                              <Checkbox disabled={isRepeatOrder}>
+                                Has Custom Design
+                              </Checkbox>
                             </Form.Item>
                             <Form.Item
                               label="Plate Available"
                               name={[field.name, 'PlateAvailable']}
                               valuePropName="checked"
                             >
-                              <Checkbox>Plate Available</Checkbox>
+                              <Checkbox disabled={isRepeatOrder}>
+                                Plate Available
+                              </Checkbox>
                             </Form.Item>
                           </div>
+
                           <Form.Item
                             label="Plate Block Number"
                             name={[field.name, 'PlateBlockNumber']}
@@ -1978,8 +2383,10 @@ export default function Order() {
                             <Input
                               placeholder="e.g., 2001"
                               onInput={handleNumbersOnlyInput}
+                              disabled={isRepeatOrder}
                             />
                           </Form.Item>
+
                           <Divider style={{ margin: '12px 0' }}>
                             Pricing
                           </Divider>
@@ -2007,10 +2414,15 @@ export default function Order() {
                                   handleRateOrQuantityChange(`${idx}_Rate`)
                                 }
                                 prefix="₹"
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                             <Form.Item
-                              label="Product Amount (Editable)"
+                              label={
+                                isRepeatOrder
+                                  ? 'Product Amount (Auto-calculated)'
+                                  : 'Product Amount (Editable)'
+                              }
                               name={[field.name, 'ProductAmount']}
                               rules={[
                                 {
@@ -2022,27 +2434,27 @@ export default function Order() {
                               <Input
                                 placeholder="Rate × Quantity"
                                 onInput={handleDecimalInput}
-                                onChange={() =>
-                                  handleProductAmountChange(
-                                    `${idx}_ProductAmount`,
-                                  )
-                                }
+                                onChange={handleProductAmountChange}
                                 prefix="₹"
+                                disabled={isRepeatOrder}
                               />
                             </Form.Item>
                           </div>
                         </Card>
                       ))
                     )}
-                    <Button
-                      type="dashed"
-                      onClick={() => add()}
-                      block
-                      icon={<PlusOutlined />}
-                      style={{ marginTop: 12 }}
-                    >
-                      Add Product
-                    </Button>
+                    {/* Hide Add Product button in repeat mode */}
+                    {!isRepeatOrder && (
+                      <Button
+                        type="dashed"
+                        onClick={() => add()}
+                        block
+                        icon={<PlusOutlined />}
+                        style={{ marginTop: 12 }}
+                      >
+                        Add Product
+                      </Button>
+                    )}
                   </>
                 )}
               </Form.List>
@@ -2060,7 +2472,11 @@ export default function Order() {
             >
               <h3 style={{ margin: '0 0 12px 0' }}>Order Total</h3>
               <Form.Item
-                label="Total Amount (Auto-calculated, but Editable)"
+                label={
+                  isRepeatOrder
+                    ? 'Total Amount (Auto-calculated from quantities)'
+                    : 'Total Amount (Auto-calculated, but Editable)'
+                }
                 name="TotalAmount"
                 rules={[
                   { required: true, message: 'Total Amount is required.' },
@@ -2070,6 +2486,7 @@ export default function Order() {
                   placeholder="Sum of all Product Amounts"
                   onInput={handleDecimalInput}
                   prefix="₹"
+                  disabled={isRepeatOrder}
                 />
               </Form.Item>
             </div>
