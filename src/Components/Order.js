@@ -34,6 +34,11 @@ import { getCityOptions } from '../data/cities';
 
 // DROPDOWN OPTIONS - MUST match backend VALID_* sets exactly
 const DROPDOWN_OPTIONS = {
+  plateBlockNumbers: [
+    { label: 'Single', value: 'Single' },
+    { label: 'Double', value: 'Double' },
+    { label: 'Multi', value: 'Multi' },
+  ],
   productTypes: [
     { label: 'Shopping Bag', value: 'Shopping Bag' },
     { label: 'Grocery Bag', value: 'Grocery Bag' },
@@ -2381,9 +2386,10 @@ export default function Order() {
                             label="Plate Block Number"
                             name={[field.name, 'PlateBlockNumber']}
                           >
-                            <Input
-                              placeholder="e.g., 2001"
-                              onInput={handleNumbersOnlyInput}
+                            <Select
+                              placeholder="Select Plate Block Number"
+                              options={DROPDOWN_OPTIONS.plateBlockNumbers}
+                              allowClear
                               disabled={isRepeatOrder}
                             />
                           </Form.Item>
