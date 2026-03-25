@@ -128,11 +128,10 @@ const DROPDOWN_OPTIONS = {
     { label: '120', value: 120 },
   ],
   handleGSMs: [
-    { label: '100', value: 100 },
-    { label: '120', value: 120 },
-    { label: '150', value: 150 },
-    { label: '180', value: 180 },
-    { label: '200', value: 200 },
+    { label: '60', value: 60 },
+    { label: '70', value: 70 },
+    { label: '80', value: 80 },
+    { label: '90', value: 90 },
   ],
   orderTypes: [
     { label: 'New Order', value: 'new' },
