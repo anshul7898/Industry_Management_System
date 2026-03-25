@@ -52,8 +52,10 @@ const DROPDOWN_OPTIONS = {
     { label: 'Double Colour', value: 'Double Colour' },
   ],
   printingTypes: [
-    { label: 'Flex', value: 'Flex' },
-    { label: 'Machine', value: 'Machine' },
+    { label: 'Flexo', value: 'Flexo' },
+    { label: 'Offset', value: 'Offset' },
+    { label: 'Screen', value: 'Screen' },
+    { label: 'Roto Gravaier', value: 'Roto Gravaier' },
   ],
   sheetColors: [
     { label: 'White', value: 'White' },
