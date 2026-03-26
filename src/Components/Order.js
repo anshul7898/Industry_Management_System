@@ -138,6 +138,8 @@ const DROPDOWN_OPTIONS = {
   ],
 };
 
+const OTHER_OPTION_VALUE = '__OTHER__';
+
 // Empty product template
 const emptyProduct = {
   ProductType: undefined,
@@ -147,14 +149,18 @@ const emptyProduct = {
   Quantity: undefined,
   SheetGSM: undefined,
   SheetColor: undefined,
+  SheetColorCustom: undefined,
   BorderGSM: undefined,
   BorderColor: undefined,
+  BorderColorCustom: undefined,
   HandleType: undefined,
   HandleColor: undefined,
+  HandleColorCustom: undefined,
   HandleGSM: undefined,
   PrintingType: undefined,
   PrintColor: undefined,
   Color: undefined,
+  ColorCustom: undefined,
   Design: false,
   PlateBlockNumber: undefined,
   PlateAvailable: false,
@@ -254,6 +260,23 @@ export default function Order() {
     if (!value) return Promise.resolve();
     if (/^[0-9]{10}$/.test(value)) return Promise.resolve();
     return Promise.reject(new Error('Mobile number should be 10 digits'));
+  };
+
+  const validateOtherRequired = (label) => (_, value) => {
+    const v = String(value || '').trim();
+    if (!v) return Promise.reject(new Error(`Please enter ${label}.`));
+    return Promise.resolve();
+  };
+
+  const addOtherOption = (options) => [
+    ...(options || []),
+    { label: 'Other', value: OTHER_OPTION_VALUE },
+  ];
+
+  const pickValueOrOther = (selectedValue, otherValue) => {
+    if (selectedValue !== OTHER_OPTION_VALUE) return selectedValue;
+    const v = String(otherValue || '').trim();
+    return v || null;
   };
 
   async function fetchOrders() {
@@ -565,14 +588,18 @@ export default function Order() {
         Quantity: p.Quantity,
         SheetGSM: p.SheetGSM,
         SheetColor: p.SheetColor,
+        SheetColorCustom: p.SheetColorCustom,
         BorderGSM: p.BorderGSM,
         BorderColor: p.BorderColor,
+        BorderColorCustom: p.BorderColorCustom,
         HandleType: p.HandleType,
         HandleColor: p.HandleColor,
+        HandleColorCustom: p.HandleColorCustom,
         HandleGSM: p.HandleGSM,
         PrintingType: p.PrintingType,
         PrintColor: p.PrintColor,
         Color: p.Color,
+        ColorCustom: p.ColorCustom,
         Design: p.Design || false,
         PlateBlockNumber: p.PlateBlockNumber || undefined,
         PlateAvailable: p.PlateAvailable || false,
@@ -639,7 +666,7 @@ export default function Order() {
     );
   }, [repeatOrdersForAgent, repeatOrderSearch]);
 
-  // ─────────────────────���────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────
 
   const handleOrderTypeSelect = async (values) => {
     try {
@@ -700,7 +727,6 @@ export default function Order() {
       message.error(err.message);
     }
 
-    // FIX: AntD Form API is setFieldsValue (not setFieldsValues)
     form.setFieldsValue({
       AgentId: record.AgentId,
       Party_Name: record.Party_Name,
@@ -714,7 +740,14 @@ export default function Order() {
       Mobile1: record.Mobile1,
       Mobile2: record.Mobile2,
       Email: record.Email,
-      Products: record.Products || [{ ...emptyProduct }],
+      Products: (record.Products || [{ ...emptyProduct }]).map((p) => ({
+        ...emptyProduct,
+        ...p,
+        SheetColorCustom: p.SheetColorCustom || undefined,
+        BorderColorCustom: p.BorderColorCustom || undefined,
+        HandleColorCustom: p.HandleColorCustom || undefined,
+        ColorCustom: p.ColorCustom || undefined,
+      })),
       TotalAmount: record.TotalAmount || 0,
     });
 
@@ -783,15 +816,24 @@ export default function Order() {
       BagMaterial: product.BagMaterial,
       Quantity: product.Quantity,
       SheetGSM: Number(product.SheetGSM),
-      SheetColor: product.SheetColor,
+      SheetColor: pickValueOrOther(
+        product.SheetColor,
+        product.SheetColorCustom,
+      ),
       BorderGSM: Number(product.BorderGSM),
-      BorderColor: product.BorderColor,
+      BorderColor: pickValueOrOther(
+        product.BorderColor,
+        product.BorderColorCustom,
+      ),
       HandleType: product.HandleType,
-      HandleColor: product.HandleColor,
+      HandleColor: pickValueOrOther(
+        product.HandleColor,
+        product.HandleColorCustom,
+      ),
       HandleGSM: Number(product.HandleGSM),
       PrintingType: product.PrintingType,
       PrintColor: product.PrintColor,
-      Color: product.Color,
+      Color: pickValueOrOther(product.Color, product.ColorCustom),
       Design: product.Design || false,
       PlateBlockNumber: product.PlateBlockNumber || null,
       PlateAvailable: product.PlateAvailable || false,
@@ -1610,9 +1652,6 @@ export default function Order() {
                           <Descriptions.Item label="Product Type">
                             {product.ProductType}
                           </Descriptions.Item>
-                          {/* <Descriptions.Item label="Product ID">
-                            {product.ProductId}
-                          </Descriptions.Item> */}
                           <Descriptions.Item label="Product Size">
                             {product.ProductSize}
                           </Descriptions.Item>
@@ -2055,22 +2094,6 @@ export default function Order() {
                                 disabled={isRepeatOrder}
                               />
                             </Form.Item>
-                            {/* <Form.Item
-                              label="Product ID"
-                              name={[field.name, 'ProductId']}
-                              rules={[
-                                {
-                                  required: true,
-                                  message: 'Please enter Product ID.',
-                                },
-                              ]}
-                            >
-                              <Input
-                                placeholder="e.g., 1001"
-                                onInput={handleNumbersOnlyInput}
-                                disabled={isRepeatOrder}
-                              />
-                            </Form.Item> */}
                             <Form.Item
                               label="Product Size"
                               name={[field.name, 'ProductSize']}
@@ -2179,22 +2202,82 @@ export default function Order() {
                                 disabled={isRepeatOrder}
                               />
                             </Form.Item>
+
                             <Form.Item
-                              label="Sheet Colour"
-                              name={[field.name, 'SheetColor']}
-                              rules={[
-                                {
-                                  required: true,
-                                  message: 'Please select Sheet Colour.',
-                                },
-                              ]}
+                              noStyle
+                              shouldUpdate={(prev, cur) =>
+                                prev?.Products?.[idx]?.SheetColor !==
+                                cur?.Products?.[idx]?.SheetColor
+                              }
                             >
-                              <Select
-                                placeholder="Select Sheet Colour"
-                                options={DROPDOWN_OPTIONS.sheetColors}
-                                disabled={isRepeatOrder}
-                              />
+                              {() => {
+                                const sheetColor = form.getFieldValue([
+                                  'Products',
+                                  idx,
+                                  'SheetColor',
+                                ]);
+                                const showOther =
+                                  sheetColor === OTHER_OPTION_VALUE;
+
+                                return (
+                                  <>
+                                    <Form.Item
+                                      label="Sheet Colour"
+                                      name={[field.name, 'SheetColor']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message:
+                                            'Please select Sheet Colour.',
+                                        },
+                                      ]}
+                                    >
+                                      <Select
+                                        placeholder="Select Sheet Colour"
+                                        options={addOtherOption(
+                                          DROPDOWN_OPTIONS.sheetColors,
+                                        )}
+                                        disabled={isRepeatOrder}
+                                        onChange={(v) => {
+                                          if (v !== OTHER_OPTION_VALUE) {
+                                            form.setFieldValue(
+                                              [
+                                                'Products',
+                                                idx,
+                                                'SheetColorCustom',
+                                              ],
+                                              undefined,
+                                            );
+                                          }
+                                        }}
+                                      />
+                                    </Form.Item>
+
+                                    {showOther && (
+                                      <Form.Item
+                                        label="Sheet Colour (Other)"
+                                        name={[field.name, 'SheetColorCustom']}
+                                        rules={[
+                                          {
+                                            validator:
+                                              validateOtherRequired(
+                                                'Sheet Colour',
+                                              ),
+                                          },
+                                        ]}
+                                        style={{ marginTop: 8 }}
+                                      >
+                                        <Input
+                                          placeholder="Enter custom sheet colour"
+                                          disabled={isRepeatOrder}
+                                        />
+                                      </Form.Item>
+                                    )}
+                                  </>
+                                );
+                              }}
                             </Form.Item>
+
                             <Form.Item
                               label="Border GSM"
                               name={[field.name, 'BorderGSM']}
@@ -2211,21 +2294,80 @@ export default function Order() {
                                 disabled={isRepeatOrder}
                               />
                             </Form.Item>
+
                             <Form.Item
-                              label="Border Colour"
-                              name={[field.name, 'BorderColor']}
-                              rules={[
-                                {
-                                  required: true,
-                                  message: 'Please select Border Colour.',
-                                },
-                              ]}
+                              noStyle
+                              shouldUpdate={(prev, cur) =>
+                                prev?.Products?.[idx]?.BorderColor !==
+                                cur?.Products?.[idx]?.BorderColor
+                              }
                             >
-                              <Select
-                                placeholder="Select Border Colour"
-                                options={DROPDOWN_OPTIONS.borderColors}
-                                disabled={isRepeatOrder}
-                              />
+                              {() => {
+                                const borderColor = form.getFieldValue([
+                                  'Products',
+                                  idx,
+                                  'BorderColor',
+                                ]);
+                                const showOther =
+                                  borderColor === OTHER_OPTION_VALUE;
+
+                                return (
+                                  <>
+                                    <Form.Item
+                                      label="Border Colour"
+                                      name={[field.name, 'BorderColor']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message:
+                                            'Please select Border Colour.',
+                                        },
+                                      ]}
+                                    >
+                                      <Select
+                                        placeholder="Select Border Colour"
+                                        options={addOtherOption(
+                                          DROPDOWN_OPTIONS.borderColors,
+                                        )}
+                                        disabled={isRepeatOrder}
+                                        onChange={(v) => {
+                                          if (v !== OTHER_OPTION_VALUE) {
+                                            form.setFieldValue(
+                                              [
+                                                'Products',
+                                                idx,
+                                                'BorderColorCustom',
+                                              ],
+                                              undefined,
+                                            );
+                                          }
+                                        }}
+                                      />
+                                    </Form.Item>
+
+                                    {showOther && (
+                                      <Form.Item
+                                        label="Border Colour (Other)"
+                                        name={[field.name, 'BorderColorCustom']}
+                                        rules={[
+                                          {
+                                            validator:
+                                              validateOtherRequired(
+                                                'Border Colour',
+                                              ),
+                                          },
+                                        ]}
+                                        style={{ marginTop: 8 }}
+                                      >
+                                        <Input
+                                          placeholder="Enter custom border colour"
+                                          disabled={isRepeatOrder}
+                                        />
+                                      </Form.Item>
+                                    )}
+                                  </>
+                                );
+                              }}
                             </Form.Item>
                           </div>
 
@@ -2255,22 +2397,82 @@ export default function Order() {
                                 disabled={isRepeatOrder}
                               />
                             </Form.Item>
+
                             <Form.Item
-                              label="Handle Colour"
-                              name={[field.name, 'HandleColor']}
-                              rules={[
-                                {
-                                  required: true,
-                                  message: 'Please select Handle Colour.',
-                                },
-                              ]}
+                              noStyle
+                              shouldUpdate={(prev, cur) =>
+                                prev?.Products?.[idx]?.HandleColor !==
+                                cur?.Products?.[idx]?.HandleColor
+                              }
                             >
-                              <Select
-                                placeholder="Select Handle Colour"
-                                options={DROPDOWN_OPTIONS.handleColors}
-                                disabled={isRepeatOrder}
-                              />
+                              {() => {
+                                const handleColor = form.getFieldValue([
+                                  'Products',
+                                  idx,
+                                  'HandleColor',
+                                ]);
+                                const showOther =
+                                  handleColor === OTHER_OPTION_VALUE;
+
+                                return (
+                                  <>
+                                    <Form.Item
+                                      label="Handle Colour"
+                                      name={[field.name, 'HandleColor']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message:
+                                            'Please select Handle Colour.',
+                                        },
+                                      ]}
+                                    >
+                                      <Select
+                                        placeholder="Select Handle Colour"
+                                        options={addOtherOption(
+                                          DROPDOWN_OPTIONS.handleColors,
+                                        )}
+                                        disabled={isRepeatOrder}
+                                        onChange={(v) => {
+                                          if (v !== OTHER_OPTION_VALUE) {
+                                            form.setFieldValue(
+                                              [
+                                                'Products',
+                                                idx,
+                                                'HandleColorCustom',
+                                              ],
+                                              undefined,
+                                            );
+                                          }
+                                        }}
+                                      />
+                                    </Form.Item>
+
+                                    {showOther && (
+                                      <Form.Item
+                                        label="Handle Colour (Other)"
+                                        name={[field.name, 'HandleColorCustom']}
+                                        rules={[
+                                          {
+                                            validator:
+                                              validateOtherRequired(
+                                                'Handle Colour',
+                                              ),
+                                          },
+                                        ]}
+                                        style={{ marginTop: 8 }}
+                                      >
+                                        <Input
+                                          placeholder="Enter custom handle colour"
+                                          disabled={isRepeatOrder}
+                                        />
+                                      </Form.Item>
+                                    )}
+                                  </>
+                                );
+                              }}
                             </Form.Item>
+
                             <Form.Item
                               label="Handle GSM"
                               name={[field.name, 'HandleGSM']}
@@ -2331,21 +2533,72 @@ export default function Order() {
                                 disabled={isRepeatOrder}
                               />
                             </Form.Item>
+
                             <Form.Item
-                              label="Colour"
-                              name={[field.name, 'Color']}
-                              rules={[
-                                {
-                                  required: true,
-                                  message: 'Please select Colour.',
-                                },
-                              ]}
+                              noStyle
+                              shouldUpdate={(prev, cur) =>
+                                prev?.Products?.[idx]?.Color !==
+                                cur?.Products?.[idx]?.Color
+                              }
                             >
-                              <Select
-                                placeholder="Select Colour"
-                                options={DROPDOWN_OPTIONS.colors}
-                                disabled={isRepeatOrder}
-                              />
+                              {() => {
+                                const color = form.getFieldValue([
+                                  'Products',
+                                  idx,
+                                  'Color',
+                                ]);
+                                const showOther = color === OTHER_OPTION_VALUE;
+
+                                return (
+                                  <>
+                                    <Form.Item
+                                      label="Colour"
+                                      name={[field.name, 'Color']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message: 'Please select Colour.',
+                                        },
+                                      ]}
+                                    >
+                                      <Select
+                                        placeholder="Select Colour"
+                                        options={addOtherOption(
+                                          DROPDOWN_OPTIONS.colors,
+                                        )}
+                                        disabled={isRepeatOrder}
+                                        onChange={(v) => {
+                                          if (v !== OTHER_OPTION_VALUE) {
+                                            form.setFieldValue(
+                                              ['Products', idx, 'ColorCustom'],
+                                              undefined,
+                                            );
+                                          }
+                                        }}
+                                      />
+                                    </Form.Item>
+
+                                    {showOther && (
+                                      <Form.Item
+                                        label="Colour (Other)"
+                                        name={[field.name, 'ColorCustom']}
+                                        rules={[
+                                          {
+                                            validator:
+                                              validateOtherRequired('Colour'),
+                                          },
+                                        ]}
+                                        style={{ marginTop: 8 }}
+                                      >
+                                        <Input
+                                          placeholder="Enter custom colour"
+                                          disabled={isRepeatOrder}
+                                        />
+                                      </Form.Item>
+                                    )}
+                                  </>
+                                );
+                              }}
                             </Form.Item>
                           </div>
 
