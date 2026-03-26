@@ -1616,9 +1616,9 @@ export default function Order() {
                           <Descriptions.Item label="Product Type">
                             {product.ProductType}
                           </Descriptions.Item>
-                          <Descriptions.Item label="Product ID">
+                          {/* <Descriptions.Item label="Product ID">
                             {product.ProductId}
-                          </Descriptions.Item>
+                          </Descriptions.Item> */}
                           <Descriptions.Item label="Product Size">
                             {product.ProductSize}
                           </Descriptions.Item>
@@ -2061,7 +2061,7 @@ export default function Order() {
                                 disabled={isRepeatOrder}
                               />
                             </Form.Item>
-                            <Form.Item
+                            {/* <Form.Item
                               label="Product ID"
                               name={[field.name, 'ProductId']}
                               rules={[
@@ -2076,7 +2076,7 @@ export default function Order() {
                                 onInput={handleNumbersOnlyInput}
                                 disabled={isRepeatOrder}
                               />
-                            </Form.Item>
+                            </Form.Item> */}
                             <Form.Item
                               label="Product Size"
                               name={[field.name, 'ProductSize']}
