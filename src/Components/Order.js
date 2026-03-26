@@ -45,12 +45,9 @@ const DROPDOWN_OPTIONS = {
     { label: 'Provisions Bag', value: 'Provisions Bag' },
   ],
   bagMaterials: [
-    { label: 'Cotton Canvas', value: 'Cotton Canvas' },
-    { label: 'Cotton Blend', value: 'Cotton Blend' },
-    { label: 'Jute', value: 'Jute' },
-    { label: 'Organic Cotton', value: 'Organic Cotton' },
-    { label: 'Recycled Polyester', value: 'Recycled Polyester' },
-    { label: 'Linen', value: 'Linen' },
+    { label: 'Non-woven', value: 'Non-woven' },
+    { label: 'Laminated Non Woven', value: 'Laminated Non Woven' },
+    { label: 'Bopp', value: 'Bopp' },
   ],
   handleTypes: [
     { label: 'Single Colour', value: 'Single Colour' },
