@@ -645,7 +645,7 @@ export default function Order() {
     );
   }, [repeatOrdersForAgent, repeatOrderSearch]);
 
-  // ──────────────────────────────────────────────────────────────
+  // ─────────────────────���────────────────────────────────────────
 
   const handleOrderTypeSelect = async (values) => {
     try {
@@ -705,6 +705,8 @@ export default function Order() {
     } catch (err) {
       message.error(err.message);
     }
+
+    // FIX: AntD Form API is setFieldsValue (not setFieldsValues)
     form.setFieldsValue({
       AgentId: record.AgentId,
       Party_Name: record.Party_Name,
@@ -721,6 +723,7 @@ export default function Order() {
       Products: record.Products || [{ ...emptyProduct }],
       TotalAmount: record.TotalAmount || 0,
     });
+
     setIsModalOpen(true);
   };
 
@@ -1631,19 +1634,19 @@ export default function Order() {
                           <Descriptions.Item label="Sheet GSM">
                             {product.SheetGSM}
                           </Descriptions.Item>
-                          <Descriptions.Item label="Sheet Color">
+                          <Descriptions.Item label="Sheet Colour">
                             {product.SheetColor}
                           </Descriptions.Item>
                           <Descriptions.Item label="Border GSM">
                             {product.BorderGSM}
                           </Descriptions.Item>
-                          <Descriptions.Item label="Border Color">
+                          <Descriptions.Item label="Border Colour">
                             {product.BorderColor}
                           </Descriptions.Item>
                           <Descriptions.Item label="Handle Type">
                             {product.HandleType}
                           </Descriptions.Item>
-                          <Descriptions.Item label="Handle Color">
+                          <Descriptions.Item label="Handle Colour">
                             {product.HandleColor}
                           </Descriptions.Item>
                           <Descriptions.Item label="Handle GSM">
@@ -1652,10 +1655,10 @@ export default function Order() {
                           <Descriptions.Item label="Printing Type">
                             {product.PrintingType}
                           </Descriptions.Item>
-                          <Descriptions.Item label="Print Color">
+                          <Descriptions.Item label="Print Colour">
                             {product.PrintColor}
                           </Descriptions.Item>
-                          <Descriptions.Item label="Color">
+                          <Descriptions.Item label="Colour">
                             {product.Color}
                           </Descriptions.Item>
                           <Descriptions.Item label="Design">
@@ -2183,17 +2186,17 @@ export default function Order() {
                               />
                             </Form.Item>
                             <Form.Item
-                              label="Sheet Color"
+                              label="Sheet Colour"
                               name={[field.name, 'SheetColor']}
                               rules={[
                                 {
                                   required: true,
-                                  message: 'Please select Sheet Color.',
+                                  message: 'Please select Sheet Colour.',
                                 },
                               ]}
                             >
                               <Select
-                                placeholder="Select Sheet Color"
+                                placeholder="Select Sheet Colour"
                                 options={DROPDOWN_OPTIONS.sheetColors}
                                 disabled={isRepeatOrder}
                               />
@@ -2215,17 +2218,17 @@ export default function Order() {
                               />
                             </Form.Item>
                             <Form.Item
-                              label="Border Color"
+                              label="Border Colour"
                               name={[field.name, 'BorderColor']}
                               rules={[
                                 {
                                   required: true,
-                                  message: 'Please select Border Color.',
+                                  message: 'Please select Border Colour.',
                                 },
                               ]}
                             >
                               <Select
-                                placeholder="Select Border Color"
+                                placeholder="Select Border Colour"
                                 options={DROPDOWN_OPTIONS.borderColors}
                                 disabled={isRepeatOrder}
                               />
@@ -2259,17 +2262,17 @@ export default function Order() {
                               />
                             </Form.Item>
                             <Form.Item
-                              label="Handle Color"
+                              label="Handle Colour"
                               name={[field.name, 'HandleColor']}
                               rules={[
                                 {
                                   required: true,
-                                  message: 'Please select Handle Color.',
+                                  message: 'Please select Handle Colour.',
                                 },
                               ]}
                             >
                               <Select
-                                placeholder="Select Handle Color"
+                                placeholder="Select Handle Colour"
                                 options={DROPDOWN_OPTIONS.handleColors}
                                 disabled={isRepeatOrder}
                               />
@@ -2319,33 +2322,33 @@ export default function Order() {
                               />
                             </Form.Item>
                             <Form.Item
-                              label="Print Color"
+                              label="Print Colour"
                               name={[field.name, 'PrintColor']}
                               rules={[
                                 {
                                   required: true,
-                                  message: 'Please select Print Color.',
+                                  message: 'Please select Print Colour.',
                                 },
                               ]}
                             >
                               <Select
-                                placeholder="Select Print Color"
+                                placeholder="Select Print Colour"
                                 options={DROPDOWN_OPTIONS.printColors}
                                 disabled={isRepeatOrder}
                               />
                             </Form.Item>
                             <Form.Item
-                              label="Color"
+                              label="Colour"
                               name={[field.name, 'Color']}
                               rules={[
                                 {
                                   required: true,
-                                  message: 'Please select Color.',
+                                  message: 'Please select Colour.',
                                 },
                               ]}
                             >
                               <Select
-                                placeholder="Select Color"
+                                placeholder="Select Colour"
                                 options={DROPDOWN_OPTIONS.colors}
                                 disabled={isRepeatOrder}
                               />
