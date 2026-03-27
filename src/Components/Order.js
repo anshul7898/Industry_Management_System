@@ -216,6 +216,7 @@ const DROPDOWN_OPTIONS = {
 const emptyProduct = {
   ProductType: undefined,
   ProductId: undefined,
+  ProductCategory: undefined,
   ProductSize: undefined,
   BagMaterial: undefined,
   Quantity: undefined,
@@ -255,7 +256,7 @@ export default function Order() {
   const [selectedOrderType, setSelectedOrderType] = useState(null);
   const [selectedState, setSelectedState] = useState(null);
 
-  // ── Old Order State ────────────��───────────────────────────────
+  // ── Old Order State ────────────────────────────────────────────
   const [oldOrderAgentModalOpen, setOldOrderAgentModalOpen] = useState(false);
   const [oldOrderListModalOpen, setOldOrderListModalOpen] = useState(false);
   const [selectedOldAgent, setSelectedOldAgent] = useState(null);
@@ -346,14 +347,52 @@ export default function Order() {
     return v || null;
   };
 
-  const getProductSizeOptions = (productType) => {
+  // Get product size options based on ProductType and ProductCategory
+  const getProductSizeOptions = (productType, productCategory) => {
     if (productType === 'Stitching') {
       return DROPDOWN_OPTIONS.productSizeStitching;
     }
+
+    // For Machine type products, return size based on category
+    if (productType === 'Machine') {
+      switch (productCategory) {
+        case 'Leader Bag':
+          return [];
+        case 'D-Cut Bag':
+          return DROPDOWN_OPTIONS.d_Cut_Bag_Size;
+        case 'U-Cut Bag':
+          return DROPDOWN_OPTIONS.u_Cut_Bag_Size;
+        case 'Cake bag - old Pattern':
+          return DROPDOWN_OPTIONS.cake_Bag_Old_Pattern_Size;
+        case 'Cake bag - New Pattern':
+          return DROPDOWN_OPTIONS.cake_Bag_New_Pattern_Size;
+        case 'Side Gaget Bag':
+          return DROPDOWN_OPTIONS.Side_Gaget_Bag_Size;
+        case 'Bottom Gaget Bag':
+          return DROPDOWN_OPTIONS.Bottom_Gaget_Bag_Size;
+        default:
+          return [];
+      }
+    }
+
     return [];
   };
 
   const handleProductTypeChange = (fieldName, productType) => {
+    const products = form.getFieldValue('Products') || [];
+    const parts = fieldName.split('_');
+    const productIndex = parseInt(parts[0]);
+
+    if (productIndex >= 0 && productIndex < products.length) {
+      const updatedProducts = [...products];
+      updatedProducts[productIndex].ProductSize = undefined;
+      updatedProducts[productIndex].ProductCategory = undefined;
+      form.setFieldValue('Products', updatedProducts);
+    }
+  };
+
+  // Handle Product Category change to reset ProductSize
+  const handleProductCategoryChange = (fieldName) => {
     const products = form.getFieldValue('Products') || [];
     const parts = fieldName.split('_');
     const productIndex = parseInt(parts[0]);
@@ -661,6 +700,7 @@ export default function Order() {
       const copiedProducts = (order.Products || []).map((p) => ({
         ProductType: p.ProductType,
         ProductId: p.ProductId,
+        ProductCategory: p.ProductCategory,
         ProductSize: p.ProductSize,
         BagMaterial: p.BagMaterial,
         Quantity: p.Quantity,
@@ -890,6 +930,7 @@ export default function Order() {
     (products || []).map((product) => ({
       ProductType: product.ProductType,
       ProductId: product.ProductId,
+      ProductCategory: product.ProductCategory,
       ProductSize: product.ProductSize,
       BagMaterial: product.BagMaterial,
       Quantity: product.Quantity,
@@ -1730,6 +1771,9 @@ export default function Order() {
                           <Descriptions.Item label="Product Type">
                             {product.ProductType}
                           </Descriptions.Item>
+                          <Descriptions.Item label="Product Category">
+                            {product.ProductCategory || '-'}
+                          </Descriptions.Item>
                           <Descriptions.Item label="Product Size">
                             {product.ProductSize}
                           </Descriptions.Item>
@@ -2134,8 +2178,13 @@ export default function Order() {
                       fields.map((field, idx) => {
                         const productType =
                           form.getFieldValue('Products')?.[idx]?.ProductType;
-                        const productSizeOptions =
-                          getProductSizeOptions(productType);
+                        const productCategory =
+                          form.getFieldValue('Products')?.[idx]
+                            ?.ProductCategory;
+                        const productSizeOptions = getProductSizeOptions(
+                          productType,
+                          productCategory,
+                        );
 
                         return (
                           <Card
@@ -2155,10 +2204,14 @@ export default function Order() {
                               )
                             }
                           >
+                            {/* Product Type, Category, and Size Row */}
                             <div
                               style={{
                                 display: 'grid',
-                                gridTemplateColumns: '1fr 1fr 1fr',
+                                gridTemplateColumns:
+                                  productType === 'Machine'
+                                    ? '1fr 1fr 1fr'
+                                    : '1fr 1fr',
                                 gap: 12,
                               }}
                             >
@@ -2185,6 +2238,32 @@ export default function Order() {
                                   }
                                 />
                               </Form.Item>
+
+                              {/* Product Category - Only show when ProductType is 'Machine' */}
+                              {productType === 'Machine' && (
+                                <Form.Item
+                                  label="Product Category"
+                                  name={[field.name, 'ProductCategory']}
+                                  rules={[
+                                    {
+                                      required: true,
+                                      message:
+                                        'Please select Product Category.',
+                                    },
+                                  ]}
+                                >
+                                  <Select
+                                    placeholder="Select Product Category"
+                                    options={DROPDOWN_OPTIONS.productCategory}
+                                    disabled={isRepeatOrder}
+                                    onChange={() =>
+                                      handleProductCategoryChange(
+                                        `${idx}_ProductCategory`,
+                                      )
+                                    }
+                                  />
+                                </Form.Item>
+                              )}
 
                               <Form.Item
                                 label="Product Size"
