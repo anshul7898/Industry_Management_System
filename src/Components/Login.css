@@ -241,6 +241,38 @@
   z-index: 2;
 }
 
+/* ── Brand name badge ─────────────────────────────────────────── */
+.login-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto 14px;
+  padding: 5px 14px;
+  background: linear-gradient(
+    135deg,
+    rgba(22, 163, 74, 0.1) 0%,
+    rgba(74, 222, 128, 0.12) 100%
+  );
+  border: 1px solid rgba(22, 163, 74, 0.28);
+  border-radius: 20px;
+}
+
+.login-brand-leaf {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.login-brand-name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, #16a34a 0%, #15803d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .login-title {
   font-size: 28px;
   font-weight: 700;
@@ -701,6 +733,10 @@
   .form-group {
     margin-bottom: 18px;
   }
+
+  .login-brand-name {
+    font-size: 11px;
+  }
 }
 
 /* Dark Mode Support */
@@ -805,5 +841,15 @@
     );
     border-left: 4px solid transparent;
     border-image: linear-gradient(180deg, #ef4444 0%, #dc2626 100%) 1;
+  }
+
+  /* Dark-mode support for the brand badge */
+  .login-brand {
+    background: linear-gradient(
+      135deg,
+      rgba(22, 163, 74, 0.15) 0%,
+      rgba(74, 222, 128, 0.1) 100%
+    );
+    border-color: rgba(74, 222, 128, 0.25);
   }
 }

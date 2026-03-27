@@ -82,8 +82,8 @@ export default function Login() {
       let currentUser = null;
       try {
         currentUser = await getCurrentUser();
-      } catch (err) {
-        // no user, ignore
+      } catch {
+        /* no user */
       }
       if (currentUser) {
         await signOut();
@@ -170,6 +170,15 @@ export default function Login() {
                 <UserOutlined className="logo-icon" />
               )}
             </div>
+
+            {/* ── Brand name — only shown on the normal login screen ── */}
+            {!requiresNewPassword && (
+              <div className="login-brand">
+                <span className="login-brand-leaf">🌿</span>
+                <span className="login-brand-name">Eco Packaging Venture</span>
+              </div>
+            )}
+
             <h1 className="login-title">
               {requiresNewPassword ? 'Secure Your Account' : 'Welcome Back'}
             </h1>

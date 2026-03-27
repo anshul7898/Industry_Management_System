@@ -9,144 +9,114 @@ import {
   Form,
   message,
   Select,
+  Card,
+  Row,
+  Col,
+  Badge,
+  Tag,
 } from 'antd';
+import {
+  EditOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  ReloadOutlined,
+  PlusOutlined,
+  TeamOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 import Navbar from './Navbar';
 import { getStateOptions } from '../data/states';
 import { getCityOptions } from '../data/cities';
 
+// ── Reusable section box for the modal form ───────────────────────
+const SectionBox = ({ title, children, accent = '#1677ff' }) => (
+  <div
+    style={{
+      marginBottom: 20,
+      borderRadius: 10,
+      border: '1px solid #e8eaf0',
+      overflow: 'hidden',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+    }}
+  >
+    <div
+      style={{
+        padding: '10px 16px',
+        background: `linear-gradient(90deg, ${accent}18 0%, #f8f9ff 100%)`,
+        borderBottom: `2px solid ${accent}30`,
+      }}
+    >
+      <span style={{ fontWeight: 700, fontSize: 13, color: '#1a1a2e' }}>
+        {title}
+      </span>
+    </div>
+    <div style={{ padding: '16px 16px 4px' }}>{children}</div>
+  </div>
+);
+
 export default function Party() {
   const [searchText, setSearchText] = useState('');
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 5,
-  });
-
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 5 });
   const [data, setData] = useState([]);
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // 'add', 'edit', 'view'
+  const [modalMode, setModalMode] = useState('add');
   const [editingPartyId, setEditingPartyId] = useState(null);
-
   const [form] = Form.useForm();
   const [selectedState, setSelectedState] = useState(null);
 
-  // Email validation regex
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  // Get state options from data file
   const stateOptions = useMemo(() => getStateOptions(), []);
-
-  // Get city options based on selected state
   const cityOptions = useMemo(
     () => getCityOptions(selectedState),
     [selectedState],
   );
+  const isViewMode = modalMode === 'view';
 
-  // Handle state change to clear city selection
   const handleStateChange = (value) => {
     setSelectedState(value);
     form.setFieldValue('city', null);
   };
-
-  // Handle city change
   const handleCityChange = (value) => {
     form.setFieldValue('city', value);
   };
 
-  // Input handler to allow only alphabets and spaces
   const handleAlphabetsOnlyInput = (e) => {
-    const value = e.target.value;
-    const filteredValue = value.replace(/[^a-zA-Z\s]/g, '');
-    e.target.value = filteredValue;
+    e.target.value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
   };
-
-  // Input handler to allow only numbers
   const handleNumbersOnlyInput = (e) => {
-    const value = e.target.value;
-    const filteredValue = value.replace(/[^0-9]/g, '');
-    e.target.value = filteredValue;
+    e.target.value = e.target.value.replace(/[^0-9]/g, '');
   };
-
-  // Input handler for pincode (only numbers, max 6 digits)
   const handlePincodeInput = (e) => {
-    const value = e.target.value;
-    const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 6);
-    e.target.value = filteredValue;
+    e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
   };
-
-  // Input handler for mobile (only numbers, max 10 digits)
   const handleMobileInput = (e) => {
-    const value = e.target.value;
-    const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 10);
-    e.target.value = filteredValue;
+    e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
   };
 
-  // Alphabets only validator function
-  const validateAlphabetsOnly = (_, value) => {
-    if (!value) {
-      // Field is optional, so empty is valid
-      return Promise.resolve();
-    }
-    if (/^[a-zA-Z\s]*$/.test(value)) {
-      return Promise.resolve();
-    }
-    return Promise.reject(new Error('Only alphabets and spaces are allowed'));
-  };
-
-  // Numbers only validator function
-  const validateNumbersOnly = (_, value) => {
-    if (!value) {
-      // Field is optional, so empty is valid
-      return Promise.resolve();
-    }
-    if (/^[0-9]*$/.test(value)) {
-      return Promise.resolve();
-    }
-    return Promise.reject(new Error('Only numbers are allowed'));
-  };
-
-  // Pincode validator function (6 digits only)
   const validatePincode = (_, value) => {
-    if (!value) {
-      // Pincode is optional, so empty is valid
-      return Promise.resolve();
-    }
-    if (/^[0-9]{6}$/.test(value)) {
-      return Promise.resolve();
-    }
-    return Promise.reject(new Error('Pincode should be exactly 6 digits'));
+    if (!value) return Promise.resolve();
+    return /^[0-9]{6}$/.test(value)
+      ? Promise.resolve()
+      : Promise.reject(new Error('Pincode should be exactly 6 digits'));
   };
-
-  // Email validator function
   const validateEmail = (_, value) => {
-    if (!value) {
-      // Email is optional, so empty is valid
-      return Promise.resolve();
-    }
-    if (emailRegex.test(value)) {
-      return Promise.resolve();
-    }
-    return Promise.reject(
-      new Error('Please enter a valid email address (e.g., user@example.com)'),
-    );
+    if (!value) return Promise.resolve();
+    return emailRegex.test(value)
+      ? Promise.resolve()
+      : Promise.reject(
+          new Error(
+            'Please enter a valid email address (e.g., user@example.com)',
+          ),
+        );
   };
-
-  // Mobile validator function
   const validateMobile = (_, value) => {
-    if (!value) {
-      // Mobile is optional, so empty is valid
-      return Promise.resolve();
-    }
-    if (/^[0-9]{10}$/.test(value)) {
-      return Promise.resolve();
-    }
-    return Promise.reject(new Error('Mobile number should be 10 digits'));
+    if (!value) return Promise.resolve();
+    return /^[0-9]{10}$/.test(value)
+      ? Promise.resolve()
+      : Promise.reject(new Error('Mobile number should be 10 digits'));
   };
-
-  // Check if modal is in view mode (read-only)
-  const isViewMode = modalMode === 'view';
 
   // ---------------- FETCH ----------------
   const fetchParties = async () => {
@@ -154,7 +124,6 @@ export default function Party() {
     if (!res.ok) throw new Error('Failed to fetch parties');
     return res.json();
   };
-
   const fetchAgents = async () => {
     const res = await fetch('/api/agents/lightweight');
     if (!res.ok) throw new Error('Failed to fetch agents');
@@ -168,19 +137,17 @@ export default function Party() {
         fetchParties(),
         fetchAgents(),
       ]);
-
       setAgents(agentsData);
-
-      const rows = parties.map((p, idx) => {
-        const agent = agentsData.find((a) => a.agentId === p.agentId);
-        return {
-          key: p.partyId ?? String(idx),
-          ...p,
-          agentName: agent ? agent.name : '',
-        };
-      });
-
-      setData(rows);
+      setData(
+        parties.map((p, idx) => {
+          const agent = agentsData.find((a) => a.agentId === p.agentId);
+          return {
+            key: p.partyId ?? String(idx),
+            ...p,
+            agentName: agent ? agent.name : '',
+          };
+        }),
+      );
       setPagination((p) => ({ ...p, current: 1 }));
     } catch (err) {
       message.error(err.message);
@@ -193,25 +160,35 @@ export default function Party() {
     refreshParties();
   }, []);
 
-  // Watch form state changes
-  useEffect(() => {
-    const unsubscribe = form.getFieldInstance('state');
-  }, [form]);
-
   // ---------------- MODAL ----------------
+  const setFormValues = (record) => {
+    form.setFieldsValue({
+      partyName: record.partyName,
+      aliasOrCompanyName: record.aliasOrCompanyName,
+      contact_Person1: record.contact_Person1,
+      contact_Person2: record.contact_Person2,
+      mobile1: record.mobile1,
+      mobile2: record.mobile2,
+      email: record.email,
+      address: record.address,
+      city: record.city,
+      state: record.state,
+      pincode: record.pincode,
+      agentId: record.agentId,
+      orderId: record.orderId,
+    });
+  };
+
   const openAddModal = async () => {
     setModalMode('add');
     setEditingPartyId(null);
     setSelectedState(null);
     form.resetFields();
-
     try {
-      const agentsData = await fetchAgents();
-      setAgents(agentsData);
+      setAgents(await fetchAgents());
     } catch (err) {
       message.error(err.message);
     }
-
     setIsModalOpen(true);
   };
 
@@ -219,30 +196,12 @@ export default function Party() {
     setModalMode('view');
     setEditingPartyId(record.partyId);
     setSelectedState(record.state || null);
-
     try {
-      const agentsData = await fetchAgents();
-      setAgents(agentsData);
+      setAgents(await fetchAgents());
     } catch (err) {
       message.error(err.message);
     }
-
-    form.setFieldsValue({
-      partyName: record.partyName,
-      aliasOrCompanyName: record.aliasOrCompanyName,
-      contact_Person1: record.contact_Person1,
-      contact_Person2: record.contact_Person2,
-      mobile1: record.mobile1,
-      mobile2: record.mobile2,
-      email: record.email,
-      address: record.address,
-      city: record.city,
-      state: record.state,
-      pincode: record.pincode,
-      agentId: record.agentId,
-      orderId: record.orderId,
-    });
-
+    setFormValues(record);
     setIsModalOpen(true);
   };
 
@@ -250,30 +209,12 @@ export default function Party() {
     setModalMode('edit');
     setEditingPartyId(record.partyId);
     setSelectedState(record.state || null);
-
     try {
-      const agentsData = await fetchAgents();
-      setAgents(agentsData);
+      setAgents(await fetchAgents());
     } catch (err) {
       message.error(err.message);
     }
-
-    form.setFieldsValue({
-      partyName: record.partyName,
-      aliasOrCompanyName: record.aliasOrCompanyName,
-      contact_Person1: record.contact_Person1,
-      contact_Person2: record.contact_Person2,
-      mobile1: record.mobile1,
-      mobile2: record.mobile2,
-      email: record.email,
-      address: record.address,
-      city: record.city,
-      state: record.state,
-      pincode: record.pincode,
-      agentId: record.agentId,
-      orderId: record.orderId,
-    });
-
+    setFormValues(record);
     setIsModalOpen(true);
   };
 
@@ -281,8 +222,6 @@ export default function Party() {
     try {
       const values = await form.validateFields();
       setLoading(true);
-
-      // Build payload without partyId (auto-generated on backend)
       const payload = {
         partyName: values.partyName,
         aliasOrCompanyName: values.aliasOrCompanyName || null,
@@ -305,12 +244,10 @@ export default function Party() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-
         if (!res.ok) {
-          const errorData = await res.text();
-          throw new Error(errorData || 'Failed to create party');
+          const e = await res.text();
+          throw new Error(e || 'Failed to create party');
         }
-
         message.success('Party created successfully');
       } else if (modalMode === 'edit') {
         const res = await fetch(`/api/party/${editingPartyId}`, {
@@ -318,12 +255,10 @@ export default function Party() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-
         if (!res.ok) {
-          const errorData = await res.text();
-          throw new Error(errorData || 'Failed to update party');
+          const e = await res.text();
+          throw new Error(e || 'Failed to update party');
         }
-
         message.success('Party updated successfully');
       }
 
@@ -341,11 +276,7 @@ export default function Party() {
     try {
       setLoading(true);
       const res = await fetch(`/api/party/${partyId}`, { method: 'DELETE' });
-
-      if (!res.ok) {
-        throw new Error('Failed to delete party');
-      }
-
+      if (!res.ok) throw new Error('Failed to delete party');
       message.success('Party deleted successfully');
       await refreshParties();
     } catch (err) {
@@ -355,7 +286,6 @@ export default function Party() {
     }
   };
 
-  // Close modal handler
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedState(null);
@@ -365,31 +295,21 @@ export default function Party() {
   const filteredData = useMemo(() => {
     const q = searchText.toLowerCase();
     if (!q) return data;
-
-    return data.filter(
-      (row) =>
-        String(row.partyId).toLowerCase().includes(q) ||
-        String(row.partyName || '')
-          .toLowerCase()
-          .includes(q) ||
-        String(row.mobile1 || '')
-          .toLowerCase()
-          .includes(q) ||
-        String(row.mobile2 || '')
-          .toLowerCase()
-          .includes(q) ||
-        String(row.aliasOrCompanyName || '')
-          .toLowerCase()
-          .includes(q) ||
-        String(row.email || '')
-          .toLowerCase()
-          .includes(q) ||
-        String(row.city || '')
-          .toLowerCase()
-          .includes(q) ||
-        String(row.state || '')
+    return data.filter((row) =>
+      [
+        row.partyId,
+        row.partyName,
+        row.mobile1,
+        row.mobile2,
+        row.aliasOrCompanyName,
+        row.email,
+        row.city,
+        row.state,
+      ].some((v) =>
+        String(v || '')
           .toLowerCase()
           .includes(q),
+      ),
     );
   }, [data, searchText]);
 
@@ -398,17 +318,12 @@ export default function Party() {
     setPagination((p) => ({ ...p, current: 1 }));
   };
 
-  // Build agent dropdown options
-  const agentOptions = agents.map((agent) => ({
-    label: agent.name,
-    value: agent.agentId,
-  }));
+  const agentOptions = agents.map((a) => ({ label: a.name, value: a.agentId }));
 
-  // Helper function to truncate long text
   const truncateText = (text, maxLength = 20) => {
     if (!text) return '-';
     return String(text).length > maxLength
-      ? String(text).substring(0, maxLength) + '...'
+      ? String(text).substring(0, maxLength) + '…'
       : String(text);
   };
 
@@ -421,6 +336,9 @@ export default function Party() {
       width: 80,
       sorter: (a, b) => (a.partyId || 0) - (b.partyId || 0),
       fixed: 'left',
+      render: (v) => (
+        <span style={{ fontWeight: 600, color: '#1677ff' }}>{v}</span>
+      ),
     },
     {
       title: 'Party Name',
@@ -429,7 +347,11 @@ export default function Party() {
       width: 150,
       sorter: (a, b) =>
         String(a.partyName || '').localeCompare(String(b.partyName || '')),
-      render: (text) => <span title={text}>{truncateText(text, 20)}</span>,
+      render: (text) => (
+        <span title={text} style={{ fontWeight: 500 }}>
+          {truncateText(text, 20)}
+        </span>
+      ),
     },
     {
       title: 'Company',
@@ -489,7 +411,11 @@ export default function Party() {
       width: 160,
       sorter: (a, b) =>
         String(a.email || '').localeCompare(String(b.email || '')),
-      render: (text) => <span title={text}>{truncateText(text, 25)}</span>,
+      render: (text) => (
+        <span title={text} style={{ color: '#595959' }}>
+          {truncateText(text, 25)}
+        </span>
+      ),
     },
     {
       title: 'Address',
@@ -507,7 +433,14 @@ export default function Party() {
       width: 150,
       sorter: (a, b) =>
         String(a.state || '').localeCompare(String(b.state || '')),
-      render: (text) => <span title={text}>{truncateText(text, 20)}</span>,
+      render: (text) =>
+        text ? (
+          <Tag color="geekblue" style={{ fontSize: 11 }}>
+            {truncateText(text, 20)}
+          </Tag>
+        ) : (
+          '-'
+        ),
     },
     {
       title: 'City',
@@ -525,6 +458,8 @@ export default function Party() {
       width: 100,
       sorter: (a, b) =>
         String(a.pincode || '').localeCompare(String(b.pincode || '')),
+      render: (v) =>
+        v ? <span style={{ fontFamily: 'monospace' }}>{v}</span> : '-',
     },
     {
       title: 'Order ID',
@@ -533,7 +468,14 @@ export default function Party() {
       width: 120,
       sorter: (a, b) =>
         String(a.orderId || '').localeCompare(String(b.orderId || '')),
-      render: (text) => <span title={text}>{truncateText(text, 15)}</span>,
+      render: (text) =>
+        text ? (
+          <Tag color="cyan" style={{ fontSize: 11 }}>
+            {truncateText(text, 15)}
+          </Tag>
+        ) : (
+          '-'
+        ),
     },
     {
       title: 'Agent',
@@ -542,22 +484,37 @@ export default function Party() {
       width: 150,
       sorter: (a, b) =>
         String(a.agentName || '').localeCompare(String(b.agentName || '')),
-      render: (text) => <span title={text}>{truncateText(text, 20)}</span>,
+      render: (text) =>
+        text ? (
+          <Tag color="blue" style={{ fontSize: 11, fontWeight: 500 }}>
+            {truncateText(text, 20)}
+          </Tag>
+        ) : (
+          '-'
+        ),
     },
     {
       title: 'Action',
       key: 'action',
-      width: 200,
+      width: 210,
       fixed: 'right',
       render: (_, record) => (
-        <Space>
-          <Button size="small" onClick={() => openViewModal(record)}>
+        <Space size={4}>
+          <Button
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => openViewModal(record)}
+            style={{ borderRadius: 6 }}
+          >
             View
           </Button>
           <Button
             size="small"
             type="primary"
+            ghost
+            icon={<EditOutlined />}
             onClick={() => openEditModal(record)}
+            style={{ borderRadius: 6 }}
           >
             Edit
           </Button>
@@ -568,7 +525,12 @@ export default function Party() {
             okText="Yes"
             cancelText="No"
           >
-            <Button danger size="small">
+            <Button
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              style={{ borderRadius: 6 }}
+            >
               Delete
             </Button>
           </Popconfirm>
@@ -578,37 +540,146 @@ export default function Party() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', background: '#f4f6fb', minHeight: '100vh' }}>
       <Navbar />
 
-      <div style={{ maxWidth: '100%', margin: '20px auto', padding: 16 }}>
-        <h1 style={{ textAlign: 'center', marginBottom: 16 }}>Party</h1>
+      <style>{`
+        .parties-table .ant-table-thead > tr > th {
+          background: #1f2937 !important;
+          color: #ffffff !important;
+          font-weight: 600;
+          font-size: 13px;
+          border-bottom: none !important;
+        }
+        .parties-table .ant-table-thead > tr > th .ant-table-column-sorter,
+        .parties-table .ant-table-thead > tr > th .ant-table-column-sorter-up,
+        .parties-table .ant-table-thead > tr > th .ant-table-column-sorter-down {
+          color: rgba(255,255,255,0.85);
+        }
+        .parties-table .table-row-light { background-color: #ffffff !important; }
+        .parties-table .table-row-dark  { background-color: #f8f9fc !important; }
+        .parties-table .ant-table-row:hover > td { background-color: #e6f4ff !important; }
+        .parties-table .ant-table-cell { font-size: 13px; }
+        .parties-table-card .ant-card-body { padding: 0 !important; }
+        .party-modal .ant-modal-title { font-size: 16px; font-weight: 700; }
+        .party-modal .ant-modal-footer .ant-btn-primary { border-radius: 8px; font-weight: 600; }
+        .ant-input-disabled, .ant-input-disabled:hover { background-color: #f5f5f5 !important; color: #1f2937 !important; cursor: default; }
+        .ant-select-disabled .ant-select-selector { background-color: #f5f5f5 !important; }
+        .ant-select-disabled .ant-select-selector .ant-select-selection-item { color: #1f2937 !important; }
+        .ant-form-item-label > label { font-size: 12px; font-weight: 600; color: #374151; }
+      `}</style>
 
-        <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
-          <Input.Search
-            placeholder="Search by Party ID, Name, Company, Email, City, State, Mobile 1 or Mobile 2"
-            allowClear
-            value={searchText}
-            onChange={(e) => handleSearchChange(e.target.value)}
-          />
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button onClick={refreshParties}>Refresh</Button>
-            <Button type="primary" onClick={openAddModal}>
-              Add Party
-            </Button>
-          </div>
-        </Space>
-
+      <div style={{ maxWidth: '100%', margin: '24px auto', padding: '0 20px' }}>
+        {/* ── Page Header ── */}
         <div
           style={{
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            border: '1px solid #e0e0e0',
-            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 20,
+            padding: '18px 24px',
+            background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+            borderRadius: 14,
+            boxShadow: '0 4px 16px rgba(31,41,55,0.18)',
           }}
         >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 10,
+                background: 'rgba(255,255,255,0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <TeamOutlined style={{ color: '#fff', fontSize: 22 }} />
+            </div>
+            <div>
+              <h1
+                style={{
+                  color: '#fff',
+                  margin: 0,
+                  fontSize: 22,
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                }}
+              >
+                Parties
+              </h1>
+              <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13 }}>
+                Manage customers and business parties
+              </span>
+            </div>
+          </div>
+          <Badge
+            count={filteredData.length}
+            style={{
+              backgroundColor: '#52c41a',
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+            overflowCount={9999}
+            showZero
+          />
+        </div>
+
+        {/* ── Toolbar ── */}
+        <Card
+          style={{
+            borderRadius: 12,
+            marginBottom: 16,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+          }}
+          bodyStyle={{ padding: '14px 20px' }}
+        >
+          <Row gutter={12} align="middle">
+            <Col flex="auto">
+              <Input.Search
+                allowClear
+                size="large"
+                placeholder="Search by Party ID, Name, Company, Email, City, State, Mobile 1 or Mobile 2"
+                value={searchText}
+                prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                style={{ borderRadius: 8 }}
+              />
+            </Col>
+            <Col>
+              <Button
+                size="large"
+                icon={<ReloadOutlined />}
+                onClick={refreshParties}
+                disabled={loading}
+                style={{ borderRadius: 8 }}
+              >
+                Refresh
+              </Button>
+            </Col>
+            <Col>
+              <Button
+                type="primary"
+                size="large"
+                icon={<PlusOutlined />}
+                onClick={openAddModal}
+                style={{ borderRadius: 8, fontWeight: 600 }}
+              >
+                Add Party
+              </Button>
+            </Col>
+          </Row>
+        </Card>
+
+        {/* ── Table ── */}
+        <Card
+          className="parties-table-card"
+          style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
+          bodyStyle={{ padding: 0 }}
+        >
           <Table
+            className="parties-table"
             loading={loading}
             columns={columns}
             dataSource={filteredData}
@@ -618,326 +689,334 @@ export default function Party() {
               showSizeChanger: true,
               pageSizeOptions: ['5', '10', '20', '50'],
               showTotal: (total, range) =>
-                `${range[0]}-${range[1]} of ${total} parties`,
+                `${range[0]}–${range[1]} of ${total} parties`,
+              style: { padding: '12px 20px' },
             }}
-            onChange={(newPagination) => {
+            onChange={(newPagination) =>
               setPagination({
                 current: newPagination.current,
                 pageSize: newPagination.pageSize,
-              });
-            }}
+              })
+            }
             scroll={{ x: 2000 }}
             size="small"
             rowClassName={(_, index) =>
               index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
             }
           />
-        </div>
+        </Card>
+      </div>
 
-        {/* Dark Header Styling and Alternating Row Colors */}
-        <style>{`
-          .ant-table-thead > tr > th {
-            background: #1f2937 !important;
-            color: #ffffff !important;
-            font-weight: 600;
-          }
-          .ant-table-thead > tr > th .ant-table-column-sorter {
-            color: rgba(255, 255, 255, 0.95);
-          }
-          .ant-table-thead > tr > th .ant-table-column-sorter-up,
-          .ant-table-thead > tr > th .ant-table-column-sorter-down {
-            color: rgba(255, 255, 255, 0.95);
-          }
-          .table-row-light {
-            background-color: #ffffff !important;
-          }
-          .table-row-dark {
-            background-color: #f5f5f5 !important;
-          }
-          .table-row-light:hover {
-            background-color: #fafafa !important;
-          }
-          .table-row-dark:hover {
-            background-color: #efefef !important;
-          }
-          
-          /* Styling for disabled inputs in view mode */
-          .ant-input-disabled,
-          .ant-input-disabled:hover,
-          .ant-input-textarea-disabled {
-            background-color: #f5f5f5 !important;
-            color: #000000 !important;
-            cursor: default;
-          }
-          
-          .ant-input-disabled::placeholder {
-            color: #000000 !important;
-          }
-          
-          /* Styling for disabled select in view mode */
-          .ant-select-disabled .ant-select-selector {
-            background-color: #f5f5f5 !important;
-          }
-          
-          .ant-select-disabled .ant-select-selector .ant-select-selection-item {
-            color: #000000 !important;
-          }
-          
-          .ant-select-disabled .ant-select-selector .ant-select-selection-placeholder {
-            color: #000000 !important;
-          }
-        `}</style>
+      {/* ── Add / Edit / View Modal ── */}
+      <Modal
+        className="party-modal"
+        title={
+          <Space>
+            {isViewMode ? (
+              <>
+                <EyeOutlined style={{ color: '#1677ff' }} />
+                <span>View Party</span>
+              </>
+            ) : modalMode === 'add' ? (
+              <>
+                <PlusOutlined style={{ color: '#1677ff' }} />
+                <span>Add Party</span>
+              </>
+            ) : (
+              <>
+                <EditOutlined style={{ color: '#faad14' }} />
+                <span>Edit Party</span>
+              </>
+            )}
+          </Space>
+        }
+        open={isModalOpen}
+        onCancel={handleCloseModal}
+        onOk={isViewMode ? handleCloseModal : handleSubmitModal}
+        okText={isViewMode ? 'Close' : 'Save'}
+        okButtonProps={{ style: { borderRadius: 8, fontWeight: 600 } }}
+        cancelButtonProps={{ style: { borderRadius: 8 } }}
+        confirmLoading={loading}
+        width={720}
+        centered
+        footer={
+          isViewMode
+            ? [
+                <Button
+                  key="close"
+                  type="primary"
+                  onClick={handleCloseModal}
+                  style={{ borderRadius: 8 }}
+                >
+                  Close
+                </Button>,
+              ]
+            : undefined
+        }
+      >
+        {!isViewMode && (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: '10px 14px',
+              background:
+                modalMode === 'add'
+                  ? 'linear-gradient(90deg,#e6f7ff,#f0f9ff)'
+                  : 'linear-gradient(90deg,#fffbe6,#fff9e6)',
+              borderRadius: 8,
+              border: `1px solid ${modalMode === 'add' ? '#91d5ff' : '#ffe58f'}`,
+              fontSize: 13,
+              color: modalMode === 'add' ? '#0050b3' : '#874d00',
+            }}
+          >
+            {modalMode === 'add'
+              ? '➕ Fill in the details below to register a new party.'
+              : "✏️ Update the party's details below."}
+          </div>
+        )}
 
-        <Modal
-          title={
-            isViewMode
-              ? 'View Party'
-              : modalMode === 'add'
-                ? 'Add Party'
-                : 'Edit Party'
-          }
-          open={isModalOpen}
-          onCancel={handleCloseModal}
-          onOk={isViewMode ? handleCloseModal : handleSubmitModal}
-          okText={isViewMode ? 'Close' : 'Save'}
-          confirmLoading={loading}
-          width={700}
-          footer={
-            isViewMode
-              ? [
-                  <Button key="close" type="primary" onClick={handleCloseModal}>
-                    Close
-                  </Button>,
-                ]
-              : undefined
-          }
-        >
-          <Form form={form} layout="vertical">
-            <Form.Item
-              name="partyName"
-              label="Party Name"
-              rules={
-                isViewMode
-                  ? []
-                  : [
-                      {
-                        required: true,
-                        message: 'Please enter party name',
-                      },
-                    ]
-              }
-            >
-              <Input
-                placeholder="Enter party name"
-                disabled={isViewMode}
-                onInput={handleAlphabetsOnlyInput}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="aliasOrCompanyName"
-              label="Alias / Company Name"
-              rules={
-                isViewMode
-                  ? []
-                  : [
-                      {
-                        required: true,
-                        message: 'Please enter alias or company name',
-                      },
-                    ]
-              }
-            >
-              <Input
-                placeholder="Enter alias or company name"
-                disabled={isViewMode}
-                onInput={handleAlphabetsOnlyInput}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="contact_Person1"
-              label="Contact Person 1"
-              rules={
-                isViewMode
-                  ? []
-                  : [
-                      {
-                        required: true,
-                        message: 'Please enter first contact person name',
-                      },
-                    ]
-              }
-            >
-              <Input
-                placeholder="Enter first contact person name"
-                disabled={isViewMode}
-                onInput={handleAlphabetsOnlyInput}
-              />
-            </Form.Item>
-
-            <Form.Item name="contact_Person2" label="Contact Person 2">
-              <Input
-                placeholder="Enter second contact person name (optional)"
-                disabled={isViewMode}
-                onInput={handleAlphabetsOnlyInput}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="mobile1"
-              label="Mobile 1"
-              rules={
-                isViewMode
-                  ? []
-                  : [
-                      {
-                        required: true,
-                        message: 'Please enter mobile number',
-                      },
-                      {
-                        pattern: /^[0-9]{10}$/,
-                        message: 'Mobile number should be 10 digits',
-                      },
-                    ]
-              }
-            >
-              <Input
-                placeholder="Enter 10 digit mobile number"
-                disabled={isViewMode}
-                onInput={handleMobileInput}
-                maxLength={10}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="mobile2"
-              label="Mobile 2"
-              rules={
-                isViewMode
-                  ? []
-                  : [
-                      {
-                        validator: validateMobile,
-                      },
-                    ]
-              }
-            >
-              <Input
-                placeholder="Enter 10 digit mobile number (optional)"
-                disabled={isViewMode}
-                onInput={handleMobileInput}
-                maxLength={10}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="email"
-              label="Email"
-              rules={isViewMode ? [] : [{ validator: validateEmail }]}
-            >
-              <Input
-                type="email"
-                placeholder="Enter email address (e.g., user@example.com)"
-                disabled={isViewMode}
-              />
-            </Form.Item>
-
+        <Form form={form} layout="vertical">
+          <SectionBox title="Party Information" accent="#1677ff">
+            <Row gutter={12}>
+              <Col span={12}>
+                <Form.Item
+                  name="partyName"
+                  label="Party Name"
+                  rules={
+                    isViewMode
+                      ? []
+                      : [{ required: true, message: 'Please enter party name' }]
+                  }
+                >
+                  <Input
+                    placeholder="Enter party name"
+                    disabled={isViewMode}
+                    onInput={handleAlphabetsOnlyInput}
+                    style={{ borderRadius: 8 }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="aliasOrCompanyName"
+                  label="Alias / Company Name"
+                  rules={
+                    isViewMode
+                      ? []
+                      : [
+                          {
+                            required: true,
+                            message: 'Please enter alias or company name',
+                          },
+                        ]
+                  }
+                >
+                  <Input
+                    placeholder="Enter alias or company name"
+                    disabled={isViewMode}
+                    onInput={handleAlphabetsOnlyInput}
+                    style={{ borderRadius: 8 }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
             <Form.Item name="address" label="Address">
               <Input.TextArea
                 rows={2}
                 placeholder="Enter complete address"
                 disabled={isViewMode}
+                style={{ borderRadius: 8 }}
               />
             </Form.Item>
+            <Row gutter={12}>
+              <Col span={8}>
+                <Form.Item name="state" label="State">
+                  <Select
+                    placeholder="Select State"
+                    options={stateOptions}
+                    showSearch
+                    onChange={handleStateChange}
+                    disabled={isViewMode}
+                    filterOption={(input, option) =>
+                      (option?.label ?? '')
+                        .toLowerCase()
+                        .includes(input.toLowerCase())
+                    }
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="city" label="City">
+                  <Select
+                    placeholder={
+                      selectedState
+                        ? 'Select City'
+                        : 'Please select a state first'
+                    }
+                    options={cityOptions}
+                    showSearch
+                    onChange={handleCityChange}
+                    disabled={
+                      isViewMode || !selectedState || cityOptions.length === 0
+                    }
+                    filterOption={(input, option) =>
+                      (option?.label ?? '')
+                        .toLowerCase()
+                        .includes(input.toLowerCase())
+                    }
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  name="pincode"
+                  label="Pincode"
+                  rules={isViewMode ? [] : [{ validator: validatePincode }]}
+                >
+                  <Input
+                    placeholder="6-digit pincode"
+                    disabled={isViewMode}
+                    onInput={handlePincodeInput}
+                    maxLength={6}
+                    style={{ borderRadius: 8, fontFamily: 'monospace' }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={12}>
+              <Col span={12}>
+                <Form.Item
+                  name="agentId"
+                  label="Agent"
+                  rules={
+                    isViewMode
+                      ? []
+                      : [{ required: true, message: 'Please select an agent' }]
+                  }
+                >
+                  <Select
+                    placeholder="Select Agent"
+                    options={agentOptions}
+                    showSearch
+                    disabled={isViewMode}
+                    filterOption={(input, option) =>
+                      (option?.label ?? '')
+                        .toLowerCase()
+                        .includes(input.toLowerCase())
+                    }
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="orderId" label="Order ID">
+                  <Input
+                    placeholder="Enter order ID (optional)"
+                    disabled={isViewMode}
+                    style={{ borderRadius: 8 }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </SectionBox>
 
-            <Form.Item name="state" label="State">
-              <Select
-                placeholder="Select State"
-                options={stateOptions}
-                showSearch
-                onChange={handleStateChange}
-                disabled={isViewMode}
-                filterOption={(input, option) =>
-                  (option?.label ?? '')
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-              />
-            </Form.Item>
-
-            <Form.Item name="city" label="City">
-              <Select
-                placeholder={
-                  selectedState ? 'Select City' : 'Please select a state first'
-                }
-                options={cityOptions}
-                showSearch
-                onChange={handleCityChange}
-                disabled={
-                  isViewMode || !selectedState || cityOptions.length === 0
-                }
-                filterOption={(input, option) =>
-                  (option?.label ?? '')
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="pincode"
-              label="Pincode"
-              rules={
-                isViewMode
-                  ? []
-                  : [
-                      {
-                        validator: validatePincode,
-                      },
-                    ]
-              }
-            >
-              <Input
-                placeholder="Enter pincode (6 digits)"
-                disabled={isViewMode}
-                onInput={handlePincodeInput}
-                maxLength={6}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="agentId"
-              label="Agent"
-              rules={
-                isViewMode
-                  ? []
-                  : [{ required: true, message: 'Please select an agent' }]
-              }
-            >
-              <Select
-                placeholder="Select Agent"
-                options={agentOptions}
-                optionLabelProp="label"
-                showSearch
-                disabled={isViewMode}
-                filterOption={(input, option) =>
-                  (option?.label ?? '')
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-              />
-            </Form.Item>
-
-            <Form.Item name="orderId" label="Order ID">
-              <Input
-                placeholder="Enter order ID (optional)"
-                disabled={isViewMode}
-              />
-            </Form.Item>
-          </Form>
-        </Modal>
-      </div>
+          <SectionBox title="Contact Information" accent="#13c2c2">
+            <Row gutter={12}>
+              <Col span={12}>
+                <Form.Item
+                  name="contact_Person1"
+                  label="Contact Person 1"
+                  rules={
+                    isViewMode
+                      ? []
+                      : [
+                          {
+                            required: true,
+                            message: 'Please enter first contact person name',
+                          },
+                        ]
+                  }
+                >
+                  <Input
+                    placeholder="Enter first contact person name"
+                    disabled={isViewMode}
+                    onInput={handleAlphabetsOnlyInput}
+                    style={{ borderRadius: 8 }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item name="contact_Person2" label="Contact Person 2">
+                  <Input
+                    placeholder="Second contact person (optional)"
+                    disabled={isViewMode}
+                    onInput={handleAlphabetsOnlyInput}
+                    style={{ borderRadius: 8 }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={12}>
+              <Col span={8}>
+                <Form.Item
+                  name="mobile1"
+                  label="Mobile 1"
+                  rules={
+                    isViewMode
+                      ? []
+                      : [
+                          {
+                            required: true,
+                            message: 'Please enter mobile number',
+                          },
+                          {
+                            pattern: /^[0-9]{10}$/,
+                            message: 'Mobile number should be 10 digits',
+                          },
+                        ]
+                  }
+                >
+                  <Input
+                    placeholder="10-digit mobile"
+                    disabled={isViewMode}
+                    onInput={handleMobileInput}
+                    maxLength={10}
+                    style={{ borderRadius: 8 }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  name="mobile2"
+                  label="Mobile 2"
+                  rules={isViewMode ? [] : [{ validator: validateMobile }]}
+                >
+                  <Input
+                    placeholder="10-digit mobile (optional)"
+                    disabled={isViewMode}
+                    onInput={handleMobileInput}
+                    maxLength={10}
+                    style={{ borderRadius: 8 }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  name="email"
+                  label="Email"
+                  rules={isViewMode ? [] : [{ validator: validateEmail }]}
+                >
+                  <Input
+                    type="email"
+                    placeholder="user@example.com"
+                    disabled={isViewMode}
+                    style={{ borderRadius: 8 }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </SectionBox>
+        </Form>
+      </Modal>
     </div>
   );
 }
