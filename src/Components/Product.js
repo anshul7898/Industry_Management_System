@@ -13,13 +13,25 @@ import {
   Spin,
   Empty,
   Select,
+  Card,
+  Row,
+  Col,
+  Badge,
+  Tag,
 } from 'antd';
-import { EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import {
+  EyeOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+  AppstoreOutlined,
+} from '@ant-design/icons';
 import Navbar from './Navbar';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
-// Dropdown options - MUST match EXACTLY with backend VALID_* sets
 const DROPDOWN_OPTIONS = {
   bagMaterial: [
     { label: 'Cotton Canvas', value: 'Cotton Canvas' },
@@ -130,19 +142,42 @@ const DROPDOWN_OPTIONS = {
   ],
 };
 
+// ── Reusable section box for the modal form ───────────────────────
+const SectionBox = ({ title, children, accent = '#1677ff' }) => (
+  <div
+    style={{
+      marginBottom: 20,
+      borderRadius: 10,
+      border: '1px solid #e8eaf0',
+      overflow: 'hidden',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+    }}
+  >
+    <div
+      style={{
+        padding: '10px 16px',
+        background: `linear-gradient(90deg, ${accent}18 0%, #f8f9ff 100%)`,
+        borderBottom: `2px solid ${accent}30`,
+      }}
+    >
+      <span style={{ fontWeight: 700, fontSize: 13, color: '#1a1a2e' }}>
+        {title}
+      </span>
+    </div>
+    <div style={{ padding: '16px 16px 4px' }}>{children}</div>
+  </div>
+);
+
 export default function Products() {
   const [searchText, setSearchText] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10 });
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
-
-  // modal/form
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // add | edit | view
+  const [modalMode, setModalMode] = useState('add');
   const [editingProductId, setEditingProductId] = useState(null);
   const [form] = Form.useForm();
 
-  // Fetch products on component mount
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -151,15 +186,11 @@ export default function Products() {
     try {
       setLoading(true);
       const response = await fetch(`${API_BASE_URL}/products`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch products');
-      }
+      if (!response.ok) throw new Error('Failed to fetch products');
       const products = await response.json();
-      const dataWithKeys = products.map((p) => ({ key: p.productId, ...p }));
-      setData(dataWithKeys);
+      setData(products.map((p) => ({ key: p.productId, ...p })));
     } catch (error) {
       message.error('Failed to load products');
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -173,9 +204,8 @@ export default function Products() {
   const filteredData = useMemo(() => {
     const q = searchText.trim().toLowerCase();
     if (!q) return data;
-
-    return data.filter((row) => {
-      const haystack = [
+    return data.filter((row) =>
+      [
         row.productId,
         row.productType,
         row.bagMaterial,
@@ -189,99 +219,55 @@ export default function Products() {
         String(row.rate),
       ]
         .map((x) => String(x || '').toLowerCase())
-        .join(' ');
-      return haystack.includes(q);
-    });
+        .join(' ')
+        .includes(q),
+    );
   }, [data, searchText]);
+
+  const setFormFields = (record) => {
+    form.resetFields();
+    form.setFieldsValue({
+      productType: record?.productType || '',
+      productSize: record?.productSize ? Number(record.productSize) : null,
+      bagMaterial: record?.bagMaterial || '',
+      quantity: record?.quantity ? Number(record.quantity) : null,
+      sheetGSM: record?.sheetGSM ? Number(record.sheetGSM) : null,
+      sheetColor: record?.sheetColor || '',
+      borderGSM: record?.borderGSM ? Number(record.borderGSM) : null,
+      borderColor: record?.borderColor || '',
+      handleType: record?.handleType || '',
+      handleColor: record?.handleColor || '',
+      handleGSM: record?.handleGSM ? Number(record.handleGSM) : null,
+      printingType: record?.printingType || '',
+      printColor: record?.printColor || '',
+      color: record?.color || '',
+      design: Boolean(record?.design),
+      plateBlockNumber: record?.plateBlockNumber
+        ? Number(record.plateBlockNumber)
+        : null,
+      plateAvailable: Boolean(record?.plateAvailable),
+      rate: record?.rate ? Number(record.rate) : null,
+    });
+  };
 
   const openAddModal = () => {
     setModalMode('add');
     setEditingProductId(null);
-
-    form.resetFields();
-    form.setFieldsValue({
-      productType: '',
-      productSize: null,
-      bagMaterial: '',
-      quantity: null,
-      sheetGSM: null,
-      sheetColor: '',
-      borderGSM: null,
-      borderColor: '',
-      handleType: '',
-      handleColor: '',
-      handleGSM: null,
-      printingType: '',
-      printColor: '',
-      color: '',
-      design: false,
-      plateBlockNumber: null,
-      plateAvailable: false,
-      rate: null,
-    });
-
+    setFormFields(null);
     setIsModalOpen(true);
   };
 
   const openEditModal = (record) => {
     setModalMode('edit');
     setEditingProductId(record.productId);
-
-    form.resetFields();
-    form.setFieldsValue({
-      productType: record.productType || '',
-      productSize: record.productSize ? Number(record.productSize) : null,
-      bagMaterial: record.bagMaterial || '',
-      quantity: record.quantity ? Number(record.quantity) : null,
-      sheetGSM: record.sheetGSM ? Number(record.sheetGSM) : null,
-      sheetColor: record.sheetColor || '',
-      borderGSM: record.borderGSM ? Number(record.borderGSM) : null,
-      borderColor: record.borderColor || '',
-      handleType: record.handleType || '',
-      handleColor: record.handleColor || '',
-      handleGSM: record.handleGSM ? Number(record.handleGSM) : null,
-      printingType: record.printingType || '',
-      printColor: record.printColor || '',
-      color: record.color || '',
-      design: Boolean(record.design),
-      plateBlockNumber: record.plateBlockNumber
-        ? Number(record.plateBlockNumber)
-        : null,
-      plateAvailable: Boolean(record.plateAvailable),
-      rate: record.rate ? Number(record.rate) : null,
-    });
-
+    setFormFields(record);
     setIsModalOpen(true);
   };
 
   const openViewModal = (record) => {
     setModalMode('view');
     setEditingProductId(record.productId);
-
-    form.resetFields();
-    form.setFieldsValue({
-      productType: record.productType || '',
-      productSize: record.productSize ? Number(record.productSize) : null,
-      bagMaterial: record.bagMaterial || '',
-      quantity: record.quantity ? Number(record.quantity) : null,
-      sheetGSM: record.sheetGSM ? Number(record.sheetGSM) : null,
-      sheetColor: record.sheetColor || '',
-      borderGSM: record.borderGSM ? Number(record.borderGSM) : null,
-      borderColor: record.borderColor || '',
-      handleType: record.handleType || '',
-      handleColor: record.handleColor || '',
-      handleGSM: record.handleGSM ? Number(record.handleGSM) : null,
-      printingType: record.printingType || '',
-      printColor: record.printColor || '',
-      color: record.color || '',
-      design: Boolean(record.design),
-      plateBlockNumber: record.plateBlockNumber
-        ? Number(record.plateBlockNumber)
-        : null,
-      plateAvailable: Boolean(record.plateAvailable),
-      rate: record.rate ? Number(record.rate) : null,
-    });
-
+    setFormFields(record);
     setIsModalOpen(true);
   };
 
@@ -290,8 +276,6 @@ export default function Products() {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-
-      // Convert numeric fields that come from Select dropdowns
       const payload = {
         ...values,
         sheetGSM: Number(values.sheetGSM),
@@ -304,71 +288,53 @@ export default function Products() {
       };
 
       if (modalMode === 'add') {
-        try {
-          const response = await fetch(`${API_BASE_URL}/products`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const errorMsg = errorData.detail || 'Failed to create product';
-            throw new Error(errorMsg);
-          }
-
-          const newProduct = await response.json();
-          setData((prev) => [
-            { key: newProduct.productId, ...newProduct },
-            ...prev,
-          ]);
-          setPagination((p) => ({ ...p, current: 1 }));
-          setIsModalOpen(false);
-          message.success(`Added Product ID: ${newProduct.productId}`);
-        } catch (error) {
-          message.error(error.message || 'Failed to create product');
-          console.error(error);
+        const response = await fetch(`${API_BASE_URL}/products`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          const e = await response.json().catch(() => ({}));
+          throw new Error(e.detail || 'Failed to create product');
         }
+        const newProduct = await response.json();
+        setData((prev) => [
+          { key: newProduct.productId, ...newProduct },
+          ...prev,
+        ]);
+        setPagination((p) => ({ ...p, current: 1 }));
+        setIsModalOpen(false);
+        message.success(`Added Product ID: ${newProduct.productId}`);
         return;
       }
 
       if (modalMode === 'edit') {
         if (!editingProductId) return;
-
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/products/${editingProductId}`,
-            {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-            },
-          );
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            const errorMsg = errorData.detail || 'Failed to update product';
-            throw new Error(errorMsg);
-          }
-
-          const updatedProduct = await response.json();
-          setData((prev) =>
-            prev.map((row) =>
-              row.productId === editingProductId
-                ? { key: updatedProduct.productId, ...updatedProduct }
-                : row,
-            ),
-          );
-
-          setIsModalOpen(false);
-          message.success(`Updated Product ID: ${editingProductId}`);
-        } catch (error) {
-          message.error(error.message || 'Failed to update product');
-          console.error(error);
+        const response = await fetch(
+          `${API_BASE_URL}/products/${editingProductId}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          },
+        );
+        if (!response.ok) {
+          const e = await response.json().catch(() => ({}));
+          throw new Error(e.detail || 'Failed to update product');
         }
+        const updatedProduct = await response.json();
+        setData((prev) =>
+          prev.map((row) =>
+            row.productId === editingProductId
+              ? { key: updatedProduct.productId, ...updatedProduct }
+              : row,
+          ),
+        );
+        setIsModalOpen(false);
+        message.success(`Updated Product ID: ${editingProductId}`);
       }
-    } catch {
-      // antd will show validation errors
+    } catch (err) {
+      if (err?.message) message.error(err.message);
     }
   };
 
@@ -377,16 +343,11 @@ export default function Products() {
       const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
         method: 'DELETE',
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete product');
-      }
-
+      if (!response.ok) throw new Error('Failed to delete product');
       setData((prev) => prev.filter((row) => row.productId !== productId));
       message.success(`Deleted Product ID: ${productId}`);
     } catch (error) {
       message.error('Failed to delete product');
-      console.error(error);
     }
   };
 
@@ -397,6 +358,9 @@ export default function Products() {
       key: 'productId',
       width: 100,
       sorter: (a, b) => a.productId - b.productId,
+      render: (v) => (
+        <span style={{ fontWeight: 600, color: '#1677ff' }}>{v}</span>
+      ),
     },
     {
       title: 'Product Type',
@@ -404,6 +368,7 @@ export default function Products() {
       key: 'productType',
       sorter: (a, b) =>
         String(a.productType).localeCompare(String(b.productType)),
+      render: (v) => <span style={{ fontWeight: 500 }}>{v}</span>,
     },
     {
       title: 'Material',
@@ -411,6 +376,11 @@ export default function Products() {
       key: 'bagMaterial',
       sorter: (a, b) =>
         String(a.bagMaterial).localeCompare(String(b.bagMaterial)),
+      render: (v) => (
+        <Tag color="cyan" style={{ fontSize: 11 }}>
+          {v}
+        </Tag>
+      ),
     },
     {
       title: 'Size',
@@ -427,13 +397,22 @@ export default function Products() {
       width: 100,
       align: 'right',
       sorter: (a, b) => (a.quantity ?? 0) - (b.quantity ?? 0),
-      render: (q) => Number(q ?? 0).toLocaleString('en-IN'),
+      render: (q) => (
+        <span style={{ fontWeight: 500 }}>
+          {Number(q ?? 0).toLocaleString('en-IN')}
+        </span>
+      ),
     },
     {
       title: 'Color',
       dataIndex: 'color',
       key: 'color',
       sorter: (a, b) => String(a.color).localeCompare(String(b.color)),
+      render: (v) => (
+        <Tag color="geekblue" style={{ fontSize: 11 }}>
+          {v}
+        </Tag>
+      ),
     },
     {
       title: 'Printing Type',
@@ -441,26 +420,36 @@ export default function Products() {
       key: 'printingType',
       sorter: (a, b) =>
         String(a.printingType).localeCompare(String(b.printingType)),
+      render: (v) => (
+        <Tag color="purple" style={{ fontSize: 11 }}>
+          {v}
+        </Tag>
+      ),
     },
     {
       title: 'Rate (₹)',
       dataIndex: 'rate',
       key: 'rate',
-      width: 100,
+      width: 110,
       align: 'right',
       sorter: (a, b) => (a.rate ?? 0) - (b.rate ?? 0),
-      render: (rate) => Number(rate ?? 0).toFixed(2),
+      render: (rate) => (
+        <span style={{ fontWeight: 700, color: '#389e0d' }}>
+          ₹{Number(rate ?? 0).toFixed(2)}
+        </span>
+      ),
     },
     {
       title: 'Action',
       key: 'action',
-      width: 180,
+      width: 190,
       render: (_, record) => (
-        <Space size="small">
+        <Space size={4}>
           <Button
             size="small"
             icon={<EyeOutlined />}
             onClick={() => openViewModal(record)}
+            style={{ borderRadius: 6 }}
           >
             View
           </Button>
@@ -468,6 +457,7 @@ export default function Products() {
             size="small"
             icon={<EditOutlined />}
             onClick={() => openEditModal(record)}
+            style={{ borderRadius: 6 }}
           >
             Edit
           </Button>
@@ -478,7 +468,12 @@ export default function Products() {
             okButtonProps={{ danger: true }}
             onConfirm={() => handleDelete(record.productId)}
           >
-            <Button danger size="small" icon={<DeleteOutlined />}>
+            <Button
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              style={{ borderRadius: 6 }}
+            >
               Delete
             </Button>
           </Popconfirm>
@@ -488,450 +483,567 @@ export default function Products() {
   ];
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', background: '#f4f6fb', minHeight: '100vh' }}>
       <Navbar />
 
-      <div style={{ maxWidth: 1400, margin: '20px auto', padding: '0 16px' }}>
-        <h1 style={{ textAlign: 'center', marginBottom: 16 }}>Products</h1>
+      <style>{`
+        .products-table .ant-table-thead > tr > th {
+          background: #1f2937 !important;
+          color: #ffffff !important;
+          font-weight: 600;
+          font-size: 13px;
+          border-bottom: none !important;
+        }
+        .products-table .ant-table-thead > tr > th .ant-table-column-sorter,
+        .products-table .ant-table-thead > tr > th .ant-table-column-sorter-up,
+        .products-table .ant-table-thead > tr > th .ant-table-column-sorter-down {
+          color: rgba(255,255,255,0.85);
+        }
+        .products-table .table-row-light { background-color: #ffffff !important; }
+        .products-table .table-row-dark  { background-color: #f8f9fc !important; }
+        .products-table .ant-table-row:hover > td { background-color: #e6f4ff !important; }
+        .products-table .ant-table-cell { font-size: 13px; }
+        .products-table-card .ant-card-body { padding: 0 !important; }
+        .product-modal .ant-modal-title { font-size: 16px; font-weight: 700; }
+        .product-modal .ant-modal-footer .ant-btn-primary { border-radius: 8px; font-weight: 600; }
+        .product-modal .readonly-input .ant-input,
+        .product-modal .readonly-input .ant-input-number-input,
+        .product-modal .readonly-input .ant-select-selector {
+          background-color: #f5f5f5 !important;
+          color: #1f2937 !important;
+          font-weight: 500;
+        }
+        .ant-form-item-label > label { font-size: 12px; font-weight: 600; color: #374151; }
+      `}</style>
 
-        <Space style={{ width: '100%', marginBottom: 12 }} direction="vertical">
-          <Input.Search
-            allowClear
-            placeholder="Search by Product ID, Type, Material, Color, Printing Type..."
-            value={searchText}
-            onChange={(e) => onSearchChange(e.target.value)}
-            onSearch={(value) => onSearchChange(value)}
-          />
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-            <Button type="primary" onClick={openAddModal}>
-              Add Product
-            </Button>
-          </div>
-        </Space>
-
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px' }}>
-            <Spin />
-          </div>
-        ) : filteredData.length === 0 ? (
-          <Empty description="No products found" style={{ padding: '40px' }} />
-        ) : (
-          <Table
-            columns={columns}
-            dataSource={filteredData}
-            pagination={{
-              current: pagination.current,
-              pageSize: pagination.pageSize,
-              showSizeChanger: true,
-              pageSizeOptions: [5, 10, 20, 50, 100],
-              showTotal: (total, range) =>
-                `${range[0]}-${range[1]} of ${total} products`,
-            }}
-            onChange={(newPagination) => {
-              setPagination({
-                current: newPagination.current,
-                pageSize: newPagination.pageSize,
-              });
-            }}
-            scroll={{ x: 1200 }}
-            rowClassName={(_, index) =>
-              index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
-            }
-          />
-        )}
-
-        {/* Dark Header Styling and Alternating Row Colors */}
-        <style>{`
-          .ant-table-thead > tr > th {
-            background: #1f2937 !important;
-            color: #ffffff !important;
-            font-weight: 600;
-          }
-          .ant-table-thead > tr > th .ant-table-column-sorter {
-            color: rgba(255, 255, 255, 0.95);
-          }
-          .ant-table-thead > tr > th .ant-table-column-sorter-up,
-          .ant-table-thead > tr > th .ant-table-column-sorter-down {
-            color: rgba(255, 255, 255, 0.95);
-          }
-          .table-row-light {
-            background-color: #ffffff !important;
-          }
-          .table-row-dark {
-            background-color: #f5f5f5 !important;
-          }
-          .table-row-light:hover {
-            background-color: #fafafa !important;
-          }
-          .table-row-dark:hover {
-            background-color: #efefef !important;
-          }
-          .readonly-form-item .ant-input,
-          .readonly-form-item .ant-input-number,
-          .readonly-form-item .ant-select-selector {
-            background-color: #f5f5f5 !important;
-            color: #1f2937 !important;
-            font-weight: 500;
-            border-color: #d9d9d9 !important;
-          }
-          .readonly-form-item .ant-input::placeholder {
-            color: #999 !important;
-          }
-          .readonly-form-item .ant-checkbox-inner {
-            background-color: #f5f5f5 !important;
-          }
-        `}</style>
-
-        <Modal
-          title={
-            modalMode === 'add'
-              ? 'Add Product'
-              : modalMode === 'edit'
-                ? `Edit Product (ID: ${editingProductId})`
-                : `View Product (ID: ${editingProductId})`
-          }
-          open={isModalOpen}
-          onCancel={closeModal}
-          onOk={modalMode === 'view' ? closeModal : handleSubmit}
-          okText={
-            modalMode === 'add'
-              ? 'Add'
-              : modalMode === 'edit'
-                ? 'Save'
-                : 'Close'
-          }
-          cancelButtonProps={{
-            style: { display: modalMode === 'view' ? 'none' : 'inline-block' },
+      <div style={{ maxWidth: 1440, margin: '24px auto', padding: '0 20px' }}>
+        {/* ── Page Header ── */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 20,
+            padding: '18px 24px',
+            background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+            borderRadius: 14,
+            boxShadow: '0 4px 16px rgba(31,41,55,0.18)',
           }}
         >
-          <Form
-            form={form}
-            layout="vertical"
-            className={modalMode === 'view' ? 'readonly-form-item' : ''}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 10,
+                background: 'rgba(255,255,255,0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <AppstoreOutlined style={{ color: '#fff', fontSize: 22 }} />
+            </div>
+            <div>
+              <h1
+                style={{
+                  color: '#fff',
+                  margin: 0,
+                  fontSize: 22,
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                }}
+              >
+                Products
+              </h1>
+              <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13 }}>
+                Manage all bag products and specifications
+              </span>
+            </div>
+          </div>
+          <Badge
+            count={filteredData.length}
+            style={{
+              backgroundColor: '#52c41a',
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+            overflowCount={9999}
+            showZero
+          />
+        </div>
+
+        {/* ── Toolbar ── */}
+        <Card
+          style={{
+            borderRadius: 12,
+            marginBottom: 16,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+          }}
+          bodyStyle={{ padding: '14px 20px' }}
+        >
+          <Row gutter={12} align="middle">
+            <Col flex="auto">
+              <Input.Search
+                allowClear
+                size="large"
+                placeholder="Search by Product ID, Type, Material, Color, Printing Type..."
+                value={searchText}
+                prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+                onChange={(e) => onSearchChange(e.target.value)}
+                onSearch={(value) => onSearchChange(value)}
+                style={{ borderRadius: 8 }}
+              />
+            </Col>
+            <Col>
+              <Button
+                size="large"
+                icon={<ReloadOutlined />}
+                onClick={fetchProducts}
+                disabled={loading}
+                style={{ borderRadius: 8 }}
+              >
+                Refresh
+              </Button>
+            </Col>
+            <Col>
+              <Button
+                type="primary"
+                size="large"
+                icon={<PlusOutlined />}
+                onClick={openAddModal}
+                style={{ borderRadius: 8, fontWeight: 600 }}
+              >
+                Add Product
+              </Button>
+            </Col>
+          </Row>
+        </Card>
+
+        {/* ── Table ── */}
+        {loading ? (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '60px',
+              background: '#fff',
+              borderRadius: 12,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            }}
           >
-            {/* Row 1 */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 16,
+            <Spin size="large" />
+            <p style={{ marginTop: 16, color: '#999', fontSize: 14 }}>
+              Loading products...
+            </p>
+          </div>
+        ) : filteredData.length === 0 ? (
+          <Card
+            style={{
+              borderRadius: 12,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              textAlign: 'center',
+            }}
+          >
+            <Empty
+              description={
+                <span style={{ color: '#999' }}>No products found</span>
+              }
+              style={{ padding: '40px 0' }}
+            />
+          </Card>
+        ) : (
+          <Card
+            className="products-table-card"
+            style={{
+              borderRadius: 12,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            }}
+            bodyStyle={{ padding: 0 }}
+          >
+            <Table
+              className="products-table"
+              columns={columns}
+              dataSource={filteredData}
+              pagination={{
+                current: pagination.current,
+                pageSize: pagination.pageSize,
+                showSizeChanger: true,
+                pageSizeOptions: [5, 10, 20, 50, 100],
+                showTotal: (total, range) =>
+                  `${range[0]}–${range[1]} of ${total} products`,
+                style: { padding: '12px 20px' },
               }}
-            >
-              <Form.Item
-                label="Product Type"
-                name="productType"
-                rules={[
-                  { required: true, message: 'Please enter product type.' },
-                ]}
-              >
-                <Input
-                  placeholder="e.g., Premium Shopping Bag"
-                  disabled={modalMode === 'view'}
-                />
-              </Form.Item>
-
-              <Form.Item
-                label="Product Size"
-                name="productSize"
-                rules={[
-                  { required: true, message: 'Please enter product size.' },
-                ]}
-              >
-                <InputNumber
-                  min={0}
-                  placeholder="e.g., 12"
-                  disabled={modalMode === 'view'}
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-            </div>
-
-            {/* Row 2 */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 16,
-              }}
-            >
-              <Form.Item
-                label="Bag Material"
-                name="bagMaterial"
-                rules={[
-                  { required: true, message: 'Please select bag material.' },
-                ]}
-              >
-                <Select
-                  placeholder="Select bag material"
-                  disabled={modalMode === 'view'}
-                  options={DROPDOWN_OPTIONS.bagMaterial}
-                />
-              </Form.Item>
-
-              <Form.Item
-                label="Quantity"
-                name="quantity"
-                rules={[{ required: true, message: 'Please enter quantity.' }]}
-              >
-                <InputNumber
-                  min={0}
-                  placeholder="e.g., 5000"
-                  disabled={modalMode === 'view'}
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-            </div>
-
-            {/* Row 3 - Sheet */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 16,
-              }}
-            >
-              <Form.Item
-                label="Sheet GSM"
-                name="sheetGSM"
-                rules={[
-                  { required: true, message: 'Please select sheet GSM.' },
-                ]}
-              >
-                <Select
-                  placeholder="Select sheet GSM"
-                  disabled={modalMode === 'view'}
-                  options={DROPDOWN_OPTIONS.sheetGSM}
-                />
-              </Form.Item>
-
-              <Form.Item
-                label="Sheet Color"
-                name="sheetColor"
-                rules={[
-                  { required: true, message: 'Please select sheet color.' },
-                ]}
-              >
-                <Select
-                  placeholder="Select sheet color"
-                  disabled={modalMode === 'view'}
-                  options={DROPDOWN_OPTIONS.sheetColor}
-                />
-              </Form.Item>
-            </div>
-
-            {/* Row 4 - Border */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 16,
-              }}
-            >
-              <Form.Item
-                label="Border GSM"
-                name="borderGSM"
-                rules={[
-                  { required: true, message: 'Please select border GSM.' },
-                ]}
-              >
-                <Select
-                  placeholder="Select border GSM"
-                  disabled={modalMode === 'view'}
-                  options={DROPDOWN_OPTIONS.borderGSM}
-                />
-              </Form.Item>
-
-              <Form.Item
-                label="Border Color"
-                name="borderColor"
-                rules={[
-                  { required: true, message: 'Please select border color.' },
-                ]}
-              >
-                <Select
-                  placeholder="Select border color"
-                  disabled={modalMode === 'view'}
-                  options={DROPDOWN_OPTIONS.borderColor}
-                />
-              </Form.Item>
-            </div>
-
-            {/* Row 5 - Handle */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 16,
-              }}
-            >
-              <Form.Item
-                label="Handle Type"
-                name="handleType"
-                rules={[
-                  { required: true, message: 'Please select handle type.' },
-                ]}
-              >
-                <Select
-                  placeholder="Select handle type"
-                  disabled={modalMode === 'view'}
-                  options={DROPDOWN_OPTIONS.handleType}
-                />
-              </Form.Item>
-
-              <Form.Item
-                label="Handle Color"
-                name="handleColor"
-                rules={[
-                  { required: true, message: 'Please select handle color.' },
-                ]}
-              >
-                <Select
-                  placeholder="Select handle color"
-                  disabled={modalMode === 'view'}
-                  options={DROPDOWN_OPTIONS.handleColor}
-                />
-              </Form.Item>
-            </div>
-
-            {/* Row 6 */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 16,
-              }}
-            >
-              <Form.Item
-                label="Handle GSM"
-                name="handleGSM"
-                rules={[
-                  { required: true, message: 'Please select handle GSM.' },
-                ]}
-              >
-                <Select
-                  placeholder="Select handle GSM"
-                  disabled={modalMode === 'view'}
-                  options={DROPDOWN_OPTIONS.handleGSM}
-                />
-              </Form.Item>
-
-              <Form.Item
-                label="Color"
-                name="color"
-                rules={[{ required: true, message: 'Please select color.' }]}
-              >
-                <Select
-                  placeholder="Select color"
-                  disabled={modalMode === 'view'}
-                  options={DROPDOWN_OPTIONS.color}
-                />
-              </Form.Item>
-            </div>
-
-            {/* Row 7 - Printing */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 16,
-              }}
-            >
-              <Form.Item
-                label="Printing Type"
-                name="printingType"
-                rules={[
-                  { required: true, message: 'Please select printing type.' },
-                ]}
-              >
-                <Select
-                  placeholder="Select printing type"
-                  disabled={modalMode === 'view'}
-                  options={DROPDOWN_OPTIONS.printingType}
-                />
-              </Form.Item>
-
-              <Form.Item
-                label="Print Color"
-                name="printColor"
-                rules={[
-                  { required: true, message: 'Please select print color.' },
-                ]}
-              >
-                <Select
-                  placeholder="Select print color"
-                  disabled={modalMode === 'view'}
-                  options={DROPDOWN_OPTIONS.printColor}
-                />
-              </Form.Item>
-            </div>
-
-            {/* Row 8 - Plate */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 16,
-              }}
-            >
-              <Form.Item
-                label="Plate Block Number"
-                name="plateBlockNumber"
-                rules={[
-                  {
-                    required: false,
-                    message: 'Please enter plate block number.',
-                  },
-                ]}
-              >
-                <InputNumber
-                  min={0}
-                  placeholder="e.g., 1"
-                  disabled={modalMode === 'view'}
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-
-              <Form.Item
-                label="Rate (₹)"
-                name="rate"
-                rules={[{ required: true, message: 'Please enter rate.' }]}
-              >
-                <InputNumber
-                  min={0}
-                  step={0.01}
-                  placeholder="e.g., 2.75"
-                  disabled={modalMode === 'view'}
-                  style={{ width: '100%' }}
-                />
-              </Form.Item>
-            </div>
-
-            {/* Row 9 - Booleans */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 16,
-              }}
-            >
-              <Form.Item label="Design" name="design" valuePropName="checked">
-                <Checkbox disabled={modalMode === 'view'}>Has Design</Checkbox>
-              </Form.Item>
-
-              <Form.Item
-                label="Plate Available"
-                name="plateAvailable"
-                valuePropName="checked"
-              >
-                <Checkbox disabled={modalMode === 'view'}>
-                  Plate Available
-                </Checkbox>
-              </Form.Item>
-            </div>
-          </Form>
-        </Modal>
+              onChange={(newPagination) =>
+                setPagination({
+                  current: newPagination.current,
+                  pageSize: newPagination.pageSize,
+                })
+              }
+              scroll={{ x: 1200 }}
+              rowClassName={(_, index) =>
+                index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
+              }
+            />
+          </Card>
+        )}
       </div>
+
+      {/* ── Add / Edit / View Modal ── */}
+      <Modal
+        className="product-modal"
+        title={
+          <Space>
+            {modalMode === 'add' ? (
+              <>
+                <PlusOutlined style={{ color: '#1677ff' }} />
+                <span>Add Product</span>
+              </>
+            ) : modalMode === 'edit' ? (
+              <>
+                <EditOutlined style={{ color: '#faad14' }} />
+                <span>Edit Product</span>
+                <Tag color="orange">ID: {editingProductId}</Tag>
+              </>
+            ) : (
+              <>
+                <EyeOutlined style={{ color: '#1677ff' }} />
+                <span>View Product</span>
+                <Tag color="blue">ID: {editingProductId}</Tag>
+              </>
+            )}
+          </Space>
+        }
+        open={isModalOpen}
+        onCancel={closeModal}
+        onOk={modalMode === 'view' ? closeModal : handleSubmit}
+        okText={
+          modalMode === 'add' ? 'Add' : modalMode === 'edit' ? 'Save' : 'Close'
+        }
+        okButtonProps={{ style: { borderRadius: 8, fontWeight: 600 } }}
+        cancelButtonProps={{
+          style: {
+            borderRadius: 8,
+            display: modalMode === 'view' ? 'none' : 'inline-block',
+          },
+        }}
+        centered
+        width={680}
+      >
+        {modalMode !== 'view' && (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: '10px 14px',
+              background:
+                modalMode === 'add'
+                  ? 'linear-gradient(90deg,#e6f7ff,#f0f9ff)'
+                  : 'linear-gradient(90deg,#fffbe6,#fff9e6)',
+              borderRadius: 8,
+              border: `1px solid ${modalMode === 'add' ? '#91d5ff' : '#ffe58f'}`,
+              fontSize: 13,
+              color: modalMode === 'add' ? '#0050b3' : '#874d00',
+            }}
+          >
+            {modalMode === 'add'
+              ? '➕ Fill in the details below to add a new product.'
+              : '✏️ Update the product details below.'}
+          </div>
+        )}
+
+        <Form
+          form={form}
+          layout="vertical"
+          className={modalMode === 'view' ? 'readonly-input' : ''}
+        >
+          <SectionBox title="Basic Information" accent="#1677ff">
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Product Type"
+                  name="productType"
+                  rules={[
+                    { required: true, message: 'Please enter product type.' },
+                  ]}
+                >
+                  <Input
+                    placeholder="e.g., Premium Shopping Bag"
+                    disabled={modalMode === 'view'}
+                    style={{ borderRadius: 8 }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Product Size"
+                  name="productSize"
+                  rules={[
+                    { required: true, message: 'Please enter product size.' },
+                  ]}
+                >
+                  <InputNumber
+                    min={0}
+                    placeholder="e.g., 12"
+                    disabled={modalMode === 'view'}
+                    style={{ width: '100%', borderRadius: 8 }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Bag Material"
+                  name="bagMaterial"
+                  rules={[
+                    { required: true, message: 'Please select bag material.' },
+                  ]}
+                >
+                  <Select
+                    placeholder="Select bag material"
+                    disabled={modalMode === 'view'}
+                    options={DROPDOWN_OPTIONS.bagMaterial}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Quantity"
+                  name="quantity"
+                  rules={[
+                    { required: true, message: 'Please enter quantity.' },
+                  ]}
+                >
+                  <InputNumber
+                    min={0}
+                    placeholder="e.g., 5000"
+                    disabled={modalMode === 'view'}
+                    style={{ width: '100%', borderRadius: 8 }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </SectionBox>
+
+          <SectionBox title="Sheet Information" accent="#13c2c2">
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Sheet GSM"
+                  name="sheetGSM"
+                  rules={[
+                    { required: true, message: 'Please select sheet GSM.' },
+                  ]}
+                >
+                  <Select
+                    placeholder="Select sheet GSM"
+                    disabled={modalMode === 'view'}
+                    options={DROPDOWN_OPTIONS.sheetGSM}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Sheet Color"
+                  name="sheetColor"
+                  rules={[
+                    { required: true, message: 'Please select sheet color.' },
+                  ]}
+                >
+                  <Select
+                    placeholder="Select sheet color"
+                    disabled={modalMode === 'view'}
+                    options={DROPDOWN_OPTIONS.sheetColor}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </SectionBox>
+
+          <SectionBox title="Border Information" accent="#722ed1">
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  label="Border GSM"
+                  name="borderGSM"
+                  rules={[
+                    { required: true, message: 'Please select border GSM.' },
+                  ]}
+                >
+                  <Select
+                    placeholder="Select border GSM"
+                    disabled={modalMode === 'view'}
+                    options={DROPDOWN_OPTIONS.borderGSM}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Border Color"
+                  name="borderColor"
+                  rules={[
+                    { required: true, message: 'Please select border color.' },
+                  ]}
+                >
+                  <Select
+                    placeholder="Select border color"
+                    disabled={modalMode === 'view'}
+                    options={DROPDOWN_OPTIONS.borderColor}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </SectionBox>
+
+          <SectionBox title="Handle Information" accent="#fa8c16">
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item
+                  label="Handle Type"
+                  name="handleType"
+                  rules={[
+                    { required: true, message: 'Please select handle type.' },
+                  ]}
+                >
+                  <Select
+                    placeholder="Select handle type"
+                    disabled={modalMode === 'view'}
+                    options={DROPDOWN_OPTIONS.handleType}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  label="Handle Color"
+                  name="handleColor"
+                  rules={[
+                    { required: true, message: 'Please select handle color.' },
+                  ]}
+                >
+                  <Select
+                    placeholder="Select handle color"
+                    disabled={modalMode === 'view'}
+                    options={DROPDOWN_OPTIONS.handleColor}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  label="Handle GSM"
+                  name="handleGSM"
+                  rules={[
+                    { required: true, message: 'Please select handle GSM.' },
+                  ]}
+                >
+                  <Select
+                    placeholder="Select handle GSM"
+                    disabled={modalMode === 'view'}
+                    options={DROPDOWN_OPTIONS.handleGSM}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </SectionBox>
+
+          <SectionBox title="Printing & Colour" accent="#52c41a">
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item
+                  label="Printing Type"
+                  name="printingType"
+                  rules={[
+                    { required: true, message: 'Please select printing type.' },
+                  ]}
+                >
+                  <Select
+                    placeholder="Select printing type"
+                    disabled={modalMode === 'view'}
+                    options={DROPDOWN_OPTIONS.printingType}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  label="Print Color"
+                  name="printColor"
+                  rules={[
+                    { required: true, message: 'Please select print color.' },
+                  ]}
+                >
+                  <Select
+                    placeholder="Select print color"
+                    disabled={modalMode === 'view'}
+                    options={DROPDOWN_OPTIONS.printColor}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item
+                  label="Color"
+                  name="color"
+                  rules={[{ required: true, message: 'Please select color.' }]}
+                >
+                  <Select
+                    placeholder="Select color"
+                    disabled={modalMode === 'view'}
+                    options={DROPDOWN_OPTIONS.color}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </SectionBox>
+
+          <SectionBox title="Plate & Pricing" accent="#eb2f96">
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item label="Plate Block Number" name="plateBlockNumber">
+                  <InputNumber
+                    min={0}
+                    placeholder="e.g., 1"
+                    disabled={modalMode === 'view'}
+                    style={{ width: '100%', borderRadius: 8 }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Rate (₹)"
+                  name="rate"
+                  rules={[{ required: true, message: 'Please enter rate.' }]}
+                >
+                  <InputNumber
+                    min={0}
+                    step={0.01}
+                    placeholder="e.g., 2.75"
+                    disabled={modalMode === 'view'}
+                    style={{ width: '100%', borderRadius: 8 }}
+                    prefix="₹"
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item label="Design" name="design" valuePropName="checked">
+                  <Checkbox disabled={modalMode === 'view'}>
+                    Has Design
+                  </Checkbox>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  label="Plate Available"
+                  name="plateAvailable"
+                  valuePropName="checked"
+                >
+                  <Checkbox disabled={modalMode === 'view'}>
+                    Plate Available
+                  </Checkbox>
+                </Form.Item>
+              </Col>
+            </Row>
+          </SectionBox>
+        </Form>
+      </Modal>
     </div>
   );
 }
