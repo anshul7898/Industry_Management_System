@@ -1,12 +1,21 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Select } from 'antd';
+import { Select, Input, Button, Spin } from 'antd';
 import {
   signIn,
   confirmSignIn,
   signOut,
   getCurrentUser,
 } from 'aws-amplify/auth';
+import {
+  LockOutlined,
+  UserOutlined,
+  EyeInvisibleOutlined,
+  EyeTwoTone,
+  ArrowRightOutlined,
+  CheckCircleOutlined,
+} from '@ant-design/icons';
+import './Login.css';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -14,12 +23,13 @@ export default function Login() {
   const [role, setRole] = useState('super_user');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-
   const [newPassword, setNewPassword] = useState('');
   const [requiresNewPassword, setRequiresNewPassword] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   const ROLE_REDIRECT = {
     super_user: '/Home',
@@ -32,101 +42,17 @@ export default function Login() {
   };
 
   const roleOptions = [
-    { value: 'super_user', label: 'Super User' },
-    { value: 'inventory_admin', label: 'Inventory Admin' },
-    { value: 'accounts_admin', label: 'Accounts Admin' },
-    { value: 'machine_maintenance_admin', label: 'Machine Maintenance Admin' },
-    { value: 'delivery_admin', label: 'Delivery Admin' },
-    { value: 'product_admin', label: 'Product Admin' },
-    { value: 'order_admin', label: 'Order Admin' },
+    { value: 'super_user', label: '👑 Super User' },
+    { value: 'inventory_admin', label: '📦 Inventory Admin' },
+    { value: 'accounts_admin', label: '💼 Accounts Admin' },
+    {
+      value: 'machine_maintenance_admin',
+      label: '🔧 Machine Maintenance Admin',
+    },
+    { value: 'delivery_admin', label: '🚚 Delivery Admin' },
+    { value: 'product_admin', label: '🏭 Product Admin' },
+    { value: 'order_admin', label: '📋 Order Admin' },
   ];
-
-  const styles = {
-    page: {
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 20,
-      background: '#ffffff',
-      fontFamily:
-        'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-    },
-    card: {
-      width: '100%',
-      maxWidth: 420,
-      padding: 20,
-      border: '1px solid #E6E8EE',
-      borderRadius: 12,
-      background: '#FFFFFF',
-      boxShadow: '0 8px 24px rgba(20, 21, 28, 0.08)',
-    },
-    title: {
-      margin: '0 0 14px',
-      fontSize: 20,
-      fontWeight: 800,
-      color: '#14151C',
-    },
-    field: { marginBottom: 12, textAlign: 'left' },
-    label: {
-      display: 'block',
-      marginBottom: 6,
-      fontSize: 13,
-      fontWeight: 700,
-      color: '#4D5165',
-    },
-    input: {
-      width: '100%',
-      padding: '10px 12px',
-      border: '1px solid #DFE2E7',
-      borderRadius: 10,
-      outline: 'none',
-      fontSize: 14,
-      color: '#14151C',
-      background: '#FFFFFF',
-      boxSizing: 'border-box',
-    },
-    error: {
-      margin: '10px 0 12px',
-      padding: '10px 12px',
-      border: '1px solid #FFD6D6',
-      background: '#FFF5F5',
-      color: '#B42318',
-      borderRadius: 10,
-      fontSize: 13,
-      textAlign: 'left',
-    },
-    button: {
-      width: '100%',
-      border: 'none',
-      borderRadius: 10,
-      padding: '10px 12px',
-      background: '#16A34A',
-      color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: 800,
-      cursor: 'pointer',
-    },
-    buttonSecondary: {
-      width: '100%',
-      border: '1px solid #DFE2E7',
-      borderRadius: 10,
-      padding: '10px 12px',
-      background: '#FFFFFF',
-      color: '#14151C',
-      fontSize: 14,
-      fontWeight: 800,
-      cursor: 'pointer',
-      marginTop: 10,
-    },
-    buttonDisabled: { opacity: 0.6, cursor: 'not-allowed' },
-    hint: {
-      marginTop: 12,
-      fontSize: 12,
-      color: '#667085',
-      textAlign: 'center',
-    },
-  };
 
   const persistRole = () => {
     sessionStorage.setItem('role', role);
@@ -140,7 +66,6 @@ export default function Login() {
     navigate(redirectTo, { replace: true });
   };
 
-  // --- This is the main Fix ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -154,7 +79,6 @@ export default function Login() {
       if (!u) throw new Error('Username is required.');
       if (!p) throw new Error('Password is required.');
 
-      // Detect if user is already signed in, sign them out first
       let currentUser = null;
       try {
         currentUser = await getCurrentUser();
@@ -162,8 +86,7 @@ export default function Login() {
         // no user, ignore
       }
       if (currentUser) {
-        await signOut(); // clears session
-        // Optionally: small delay to allow signOut to fully clear session
+        await signOut();
         await new Promise((resolve) => setTimeout(resolve, 200));
       }
 
@@ -224,119 +147,201 @@ export default function Login() {
   };
 
   return (
-    <div style={styles.page}>
-      <form
-        onSubmit={requiresNewPassword ? handleSetNewPassword : handleSubmit}
-        style={styles.card}
-      >
-        <h2 style={styles.title}>
-          {requiresNewPassword ? 'Set New Password' : 'Login'}
-        </h2>
+    <div className="login-container">
+      {/* Animated background */}
+      <div className="login-background">
+        <div className="gradient-circle gradient-circle-1"></div>
+        <div className="gradient-circle gradient-circle-2"></div>
+        <div className="gradient-circle gradient-circle-3"></div>
+      </div>
 
-        {!requiresNewPassword ? (
-          <>
-            <div style={styles.field}>
-              <label style={styles.label} htmlFor="role">
-                Role
-              </label>
-              <Select
-                id="role"
-                value={role}
-                onChange={setRole}
-                style={{ width: '100%' }}
-                options={roleOptions}
-              />
-            </div>
-
-            <div style={styles.field}>
-              <label style={styles.label} htmlFor="username">
-                Username / Email
-              </label>
-              <input
-                id="username"
-                type="text"
-                autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                style={styles.input}
-                placeholder="Enter username or email"
-                required
-              />
-            </div>
-
-            <div style={styles.field}>
-              <label style={styles.label} htmlFor="password">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={styles.input}
-                placeholder="Enter password"
-                required
-              />
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={styles.field}>
-              <label style={styles.label} htmlFor="newPassword">
-                New Password
-              </label>
-              <input
-                id="newPassword"
-                type="password"
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                style={styles.input}
-                placeholder="Enter a new password"
-                required
-              />
-            </div>
-
-            <div style={styles.hint}>
-              Your account requires a password change on first login.
-            </div>
-          </>
-        )}
-
-        {error ? <div style={styles.error}>{error}</div> : null}
-
-        <button
-          type="submit"
-          disabled={submitting}
-          style={{
-            ...styles.button,
-            ...(submitting ? styles.buttonDisabled : null),
-          }}
+      {/* Main content */}
+      <div className="login-wrapper">
+        <form
+          onSubmit={requiresNewPassword ? handleSetNewPassword : handleSubmit}
+          className="login-card"
         >
-          {submitting
-            ? requiresNewPassword
-              ? 'Saving...'
-              : 'Signing in...'
-            : requiresNewPassword
-              ? 'Set Password & Continue'
-              : 'Sign in'}
-        </button>
+          {/* Header with logo */}
+          <div className="login-header">
+            <div className="login-logo">
+              {requiresNewPassword ? (
+                <LockOutlined className="logo-icon" />
+              ) : (
+                <UserOutlined className="logo-icon" />
+              )}
+            </div>
+            <h1 className="login-title">
+              {requiresNewPassword ? 'Secure Your Account' : 'Welcome Back'}
+            </h1>
+            <p className="login-subtitle">
+              {requiresNewPassword
+                ? 'Set a new password to continue'
+                : 'Manage your operations with ease'}
+            </p>
+          </div>
 
-        {requiresNewPassword ? (
-          <button
-            type="button"
-            onClick={handleBackToLogin}
-            disabled={submitting}
-            style={{
-              ...styles.buttonSecondary,
-              ...(submitting ? styles.buttonDisabled : null),
-            }}
-          >
-            Back
-          </button>
-        ) : null}
-      </form>
+          {!requiresNewPassword ? (
+            <>
+              {/* Role selector */}
+              <div className="form-group">
+                <label className="form-label">
+                  <span className="label-text">Select Your Role</span>
+                </label>
+                <Select
+                  value={role}
+                  onChange={setRole}
+                  options={roleOptions}
+                  className="role-select"
+                  popupMatchSelectWidth={false}
+                  disabled={submitting}
+                />
+              </div>
+
+              {/* Username field */}
+              <div className="form-group">
+                <label className="form-label">
+                  <span className="label-text">Username or Email</span>
+                </label>
+                <div className="input-wrapper">
+                  <UserOutlined className="input-icon" />
+                  <input
+                    type="text"
+                    autoComplete="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="form-input"
+                    placeholder="Enter your username or email"
+                    disabled={submitting}
+                  />
+                </div>
+              </div>
+
+              {/* Password field */}
+              <div className="form-group">
+                <label className="form-label">
+                  <span className="label-text">Password</span>
+                </label>
+                <div className="input-wrapper">
+                  <LockOutlined className="input-icon" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="form-input"
+                    placeholder="Enter your password"
+                    disabled={submitting}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={submitting}
+                  >
+                    {showPassword ? (
+                      <EyeTwoTone className="icon" />
+                    ) : (
+                      <EyeInvisibleOutlined className="icon" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* New password field */}
+              <div className="form-group">
+                <label className="form-label">
+                  <span className="label-text">New Password</span>
+                </label>
+                <div className="input-wrapper">
+                  <LockOutlined className="input-icon" />
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="form-input"
+                    placeholder="Enter a strong new password"
+                    disabled={submitting}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    disabled={submitting}
+                  >
+                    {showNewPassword ? (
+                      <EyeTwoTone className="icon" />
+                    ) : (
+                      <EyeInvisibleOutlined className="icon" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="password-hint">
+                <CheckCircleOutlined className="hint-icon" />
+                <p>Your account requires a password change on first login.</p>
+              </div>
+            </>
+          )}
+
+          {/* Error message */}
+          {error && (
+            <div className="error-message">
+              <span className="error-icon">⚠️</span>
+              <div>
+                <strong>Login Error</strong>
+                <p>{error}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div className="form-actions">
+            <button
+              type="submit"
+              disabled={submitting}
+              className={`btn-primary ${submitting ? 'loading' : ''}`}
+            >
+              {submitting ? (
+                <>
+                  <Spin size="small" />
+                  <span>
+                    {requiresNewPassword ? 'Updating...' : 'Signing in...'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span>
+                    {requiresNewPassword
+                      ? 'Set Password & Continue'
+                      : 'Sign In'}
+                  </span>
+                  <ArrowRightOutlined />
+                </>
+              )}
+            </button>
+
+            {requiresNewPassword && (
+              <button
+                type="button"
+                onClick={handleBackToLogin}
+                disabled={submitting}
+                className="btn-secondary"
+              >
+                ← Back to Login
+              </button>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="login-footer">
+            <p>🔒 Your login is secured with enterprise-grade encryption</p>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
