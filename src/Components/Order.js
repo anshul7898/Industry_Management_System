@@ -40,7 +40,7 @@ const DROPDOWN_OPTIONS = {
     { label: 'Multi', value: 'Multi' },
   ],
   productTypes: [
-    { label: 'Stiching', value: 'Stiching' },
+    { label: 'Stitching', value: 'Stitching' },
     { label: 'Machine', value: 'Machine' },
   ],
 
