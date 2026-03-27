@@ -346,6 +346,13 @@ export default function Order() {
     return v || null;
   };
 
+  const getProductSizeOptions = (productType) => {
+    if (productType === 'Stiching') {
+      return DROPDOWN_OPTIONS.productSizeStitching;
+    }
+    return [];
+  };
+
   async function fetchOrders() {
     const res = await fetch('/api/orders');
     if (!res.ok) {
@@ -2161,21 +2168,45 @@ export default function Order() {
                                 disabled={isRepeatOrder}
                               />
                             </Form.Item>
+
                             <Form.Item
-                              label="Product Size"
-                              name={[field.name, 'ProductSize']}
-                              rules={[
-                                {
-                                  required: true,
-                                  message: 'Please enter Product Size.',
-                                },
-                              ]}
+                              noStyle
+                              shouldUpdate={(prev, cur) =>
+                                prev?.Products?.[idx]?.ProductType !==
+                                cur?.Products?.[idx]?.ProductType
+                              }
                             >
-                              <Input
-                                placeholder="e.g., 14"
-                                onInput={handleNumbersOnlyInput}
-                                disabled={isRepeatOrder}
-                              />
+                              {() => {
+                                const productType = form.getFieldValue([
+                                  'Products',
+                                  idx,
+                                  'ProductType',
+                                ]);
+                                const productSizeOptions =
+                                  getProductSizeOptions(productType);
+
+                                return (
+                                  <Form.Item
+                                    label="Product Size"
+                                    name={[field.name, 'ProductSize']}
+                                    rules={[
+                                      {
+                                        required: true,
+                                        message: 'Please select Product Size.',
+                                      },
+                                    ]}
+                                  >
+                                    <Select
+                                      placeholder="Select Product Size"
+                                      options={productSizeOptions}
+                                      disabled={
+                                        isRepeatOrder ||
+                                        productSizeOptions.length === 0
+                                      }
+                                    />
+                                  </Form.Item>
+                                );
+                              }}
                             </Form.Item>
                           </div>
 
