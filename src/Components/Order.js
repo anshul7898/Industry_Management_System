@@ -40,10 +40,77 @@ const DROPDOWN_OPTIONS = {
     { label: 'Multi', value: 'Multi' },
   ],
   productTypes: [
-    { label: 'Shopping Bag', value: 'Shopping Bag' },
-    { label: 'Grocery Bag', value: 'Grocery Bag' },
-    { label: 'Provisions Bag', value: 'Provisions Bag' },
+    { label: 'Stiching', value: 'Stiching' },
+    { label: 'Machine', value: 'Machine' },
   ],
+
+  productSizeStitching: [
+    { label: '15 X 18 X 5', value: '15 X 18 X 5' },
+    { label: '19 X 15 X 5', value: '19 X 15 X 5' },
+    { label: '13 X 15 X 5', value: '13 X 15 X 5' },
+    { label: '16 X 16 X 5', value: '16 X 16 X 5' },
+  ],
+
+  productCategory: [
+    { label: 'Leader Bag', value: 'Leader Bag' },
+    { label: 'D-Cut Bag', value: 'D-Cut Bag' },
+    { label: 'U-Cut Bag', value: 'U-Cut Bag' },
+    { label: 'Cake bag - old Pattern', value: 'Cake bag - old Pattern' },
+    { label: 'Cake bag - New Pattern', value: 'Cake bag - New Pattern' },
+    { label: 'Side Gaget Bag', value: 'Side Gaget Bag' },
+    { label: 'Bottom Gaget Bag', value: 'Bottom Gaget Bag' },
+  ],
+
+  d_Cut_Bag_Size: [
+    { label: '9 X 12', value: '9 X 12' },
+    { label: '10 X 14', value: '10 X 14' },
+    { label: '12 X 16', value: '12 X 16' },
+    { label: '14 X 19', value: '14 X 19' },
+    { label: '16 X 21', value: '16 X 21' },
+  ],
+
+  u_Cut_Bag_Size: [
+    { label: '9 X 12', value: '9 X 12' },
+    { label: '11 X 16', value: '11 X 16' },
+    { label: '16 X 21', value: '16 X 21' },
+    { label: '17 X 23', value: '17 X 23' },
+  ],
+
+  cake_Bag_Old_Pattern_Size: [
+    { label: '4 X 4', value: '4 X 4' },
+    { label: '6 X 6', value: '6 X 6' },
+    { label: '7 X 7', value: '7 X 7' },
+    { label: '8 X 8', value: '8 X 8' },
+    { label: '9 X 9', value: '9 X 9' },
+    { label: '10 X 10', value: '10 X 10' },
+    { label: '12 X 12', value: '12 X 12' },
+    { label: '14 X 14', value: '14 X 14' },
+  ],
+
+  cake_Bag_New_Pattern_Size: [
+    { label: '4 X 4', value: '4 X 4' },
+    { label: '6 X 6', value: '6 X 6' },
+    { label: '7 X 7', value: '7 X 7' },
+    { label: '8 X 8', value: '8 X 8' },
+    { label: '9 X 9', value: '9 X 9' },
+    { label: '10 X 10', value: '10 X 10' },
+    { label: '12 X 12', value: '12 X 12' },
+    { label: '14 X 14', value: '14 X 14' },
+  ],
+
+  Side_Gaget_Bag_Size: [
+    { label: '15 X 18 X 5', value: '15 X 18 X 5' },
+    { label: '19 X 15 X 5', value: '19 X 15 X 5' },
+    { label: '12 X 16 X 4', value: '12 X 16 X 4' },
+    { label: '16 X 16 X 4', value: '16 X 16 X 4' },
+  ],
+
+  Bottom_Gaget_Bag_Size: [
+    { label: '10 X 8 X 2', value: '10 X 8 X 2' },
+    { label: '12 X 8 X 3', value: '12 X 8 X 3' },
+    { label: '16 X 14 X 4', value: '16 X 14 X 4' },
+  ],
+
   bagMaterials: [
     { label: 'Non-woven', value: 'Non-woven' },
     { label: 'Laminated Non Woven', value: 'Laminated Non Woven' },
