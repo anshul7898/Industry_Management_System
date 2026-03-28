@@ -118,6 +118,14 @@ export default function Party() {
       : Promise.reject(new Error('Mobile number should be 10 digits'));
   };
 
+  // ── NEW: Order ID must be numeric only ──────────────────────────
+  const validateOrderId = (_, value) => {
+    if (!value) return Promise.resolve();
+    return /^[0-9]+$/.test(String(value))
+      ? Promise.resolve()
+      : Promise.reject(new Error('Order ID must contain numbers only'));
+  };
+
   // ---------------- FETCH ----------------
   const fetchParties = async () => {
     const res = await fetch('/api/party');
@@ -785,7 +793,12 @@ export default function Party() {
                   rules={
                     isViewMode
                       ? []
-                      : [{ required: true, message: 'Please enter party name' }]
+                      : [
+                          {
+                            required: true,
+                            message: 'Please enter party name',
+                          },
+                        ]
                   }
                 >
                   <Input
@@ -891,7 +904,12 @@ export default function Party() {
                   rules={
                     isViewMode
                       ? []
-                      : [{ required: true, message: 'Please select an agent' }]
+                      : [
+                          {
+                            required: true,
+                            message: 'Please select an agent',
+                          },
+                        ]
                   }
                 >
                   <Select
@@ -908,11 +926,17 @@ export default function Party() {
                 </Form.Item>
               </Col>
               <Col span={12}>
-                <Form.Item name="orderId" label="Order ID">
+                {/* ── Order ID: numbers only ── */}
+                <Form.Item
+                  name="orderId"
+                  label="Order ID"
+                  rules={isViewMode ? [] : [{ validator: validateOrderId }]}
+                >
                   <Input
-                    placeholder="Enter order ID (optional)"
+                    placeholder="Enter numeric order ID (optional)"
                     disabled={isViewMode}
-                    style={{ borderRadius: 8 }}
+                    onInput={handleNumbersOnlyInput}
+                    style={{ borderRadius: 8, fontFamily: 'monospace' }}
                   />
                 </Form.Item>
               </Col>
