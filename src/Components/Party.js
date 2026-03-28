@@ -313,6 +313,7 @@ export default function Party() {
         row.email,
         row.city,
         row.state,
+        row.agentName, // ✅ Added: search by agent name
       ].some((v) =>
         String(v || '')
           .toLowerCase()
@@ -648,7 +649,7 @@ export default function Party() {
               <Input.Search
                 allowClear
                 size="large"
-                placeholder="Search by Party ID, Name, Company, Email, City, State, Mobile 1 or Mobile 2"
+                placeholder="Search by Party ID, Name, Company, Email, City, State, Mobile 1, Mobile 2 or Agent" // ✅ Updated placeholder
                 value={searchText}
                 prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
                 onChange={(e) => handleSearchChange(e.target.value)}
