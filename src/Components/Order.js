@@ -389,7 +389,7 @@ export default function Order() {
     return v || null;
   };
 
-  // ── FIX: case strings now match the productCategory dropdown values ──
+  // ── case strings match the productCategory dropdown values ──
   const getProductSizeOptions = (productType, productCategory) => {
     if (productType === 'Stitching')
       return DROPDOWN_OPTIONS.productSizeStitching;
@@ -401,9 +401,9 @@ export default function Order() {
           return DROPDOWN_OPTIONS.d_Cut_Bag_Size;
         case 'U-Cut Bag':
           return DROPDOWN_OPTIONS.u_Cut_Bag_Size;
-        case 'Cake Bag - Old Pattern': // ← fixed (was 'Cake bag - old Pattern')
+        case 'Cake Bag - Old Pattern':
           return DROPDOWN_OPTIONS.cake_Bag_Old_Pattern_Size;
-        case 'Cake Bag - New Pattern': // ← fixed (was 'Cake bag - New Pattern')
+        case 'Cake Bag - New Pattern':
           return DROPDOWN_OPTIONS.cake_Bag_New_Pattern_Size;
         case 'Side Gaget Bag':
           return DROPDOWN_OPTIONS.Side_Gaget_Bag_Size;
@@ -416,7 +416,7 @@ export default function Order() {
     return [];
   };
 
-  const handleProductTypeChange = (fieldName, productType) => {
+  const handleProductTypeChange = (fieldName) => {
     const products = form.getFieldValue('Products') || [];
     const productIndex = parseInt(fieldName.split('_')[0]);
     if (productIndex >= 0 && productIndex < products.length) {
@@ -857,11 +857,13 @@ export default function Order() {
     setViewingOrder(record);
     setViewModalOpen(true);
   };
+
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedState(null);
     setIsRepeatOrder(false);
   };
+
   const closeViewModal = () => {
     setViewModalOpen(false);
     setViewingOrder(null);
@@ -1006,6 +1008,7 @@ export default function Order() {
     }
   };
 
+  // Recalculates ProductAmount from Rate × Quantity, then updates TotalAmount
   const handleRateOrQuantityChange = (fieldName) => {
     const products = form.getFieldValue('Products') || [];
     const productIndex = parseInt(fieldName.split('_')[0]);
@@ -1030,12 +1033,21 @@ export default function Order() {
     }
   };
 
-  const handleProductAmountChange = () => {
+  // ── FIX: when ProductAmount is manually edited, only recalc TotalAmount ──
+  const handleProductAmountChange = (fieldName) => {
     const products = form.getFieldValue('Products') || [];
+    const productIndex = parseInt(fieldName.split('_')[0]);
+    if (productIndex >= 0 && productIndex < products.length) {
+      // Flush the field value into the products array first
+      const updated = [...products];
+      form.setFieldValue('Products', updated);
+    }
+    // Recompute TotalAmount from all current ProductAmounts
+    const latestProducts = form.getFieldValue('Products') || [];
     form.setFieldValue(
       'TotalAmount',
       parseFloat(
-        products
+        latestProducts
           .reduce((s, p) => s + (parseFloat(p.ProductAmount) || 0), 0)
           .toFixed(2),
       ),
@@ -2151,6 +2163,7 @@ export default function Order() {
           }}
         >
           <Form form={form} layout="vertical">
+            {/* Banner */}
             {isRepeatOrder ? (
               <div
                 style={{
@@ -2187,6 +2200,7 @@ export default function Order() {
               </div>
             )}
 
+            {/* Party Information */}
             <SectionBox
               title="Party Information"
               lockedTag={isRepeatOrder}
@@ -2321,6 +2335,7 @@ export default function Order() {
               </Row>
             </SectionBox>
 
+            {/* Contact Information */}
             <SectionBox
               title="Contact Information"
               lockedTag={isRepeatOrder}
@@ -2411,6 +2426,7 @@ export default function Order() {
               </Row>
             </SectionBox>
 
+            {/* Products Section */}
             <SectionBox
               title="Products"
               lockedTag={isRepeatOrder}
@@ -2480,6 +2496,7 @@ export default function Order() {
                               )
                             }
                           >
+                            {/* Type / Category / Size */}
                             <Row gutter={12}>
                               <Col span={productType === 'Machine' ? 8 : 12}>
                                 <Form.Item
@@ -2499,8 +2516,6 @@ export default function Order() {
                                     onChange={() =>
                                       handleProductTypeChange(
                                         `${idx}_ProductType`,
-                                        form.getFieldValue('Products')?.[idx]
-                                          ?.ProductType,
                                       )
                                     }
                                   />
@@ -2612,6 +2627,7 @@ export default function Order() {
                               </Col>
                             </Row>
 
+                            {/* Sheet */}
                             <SubHeading>Sheet Information</SubHeading>
                             <Row gutter={12}>
                               <Col span={12}>
@@ -2670,6 +2686,7 @@ export default function Order() {
                               </Form.Item>
                             )}
 
+                            {/* Border */}
                             <SubHeading>Border Information</SubHeading>
                             <Row gutter={12}>
                               <Col span={12}>
@@ -2728,6 +2745,7 @@ export default function Order() {
                               </Form.Item>
                             )}
 
+                            {/* Handle */}
                             <SubHeading>Handle Information</SubHeading>
                             <Row gutter={12}>
                               <Col span={8}>
@@ -2804,6 +2822,7 @@ export default function Order() {
                               </Form.Item>
                             )}
 
+                            {/* Printing */}
                             <SubHeading>Printing Information</SubHeading>
                             <Row gutter={12}>
                               <Col span={12}>
@@ -2844,6 +2863,7 @@ export default function Order() {
                               </Col>
                             </Row>
 
+                            {/* Other */}
                             <SubHeading>Other Information</SubHeading>
                             <Row gutter={12}>
                               <Col span={12}>
@@ -2894,6 +2914,7 @@ export default function Order() {
                               </Form.Item>
                             )}
 
+                            {/* Plate */}
                             <SubHeading>Plate Information</SubHeading>
                             <Row gutter={12}>
                               <Col span={12}>
@@ -2921,6 +2942,7 @@ export default function Order() {
                               </Col>
                             </Row>
 
+                            {/* Rate & Amount */}
                             <SubHeading>Pricing</SubHeading>
                             <Row gutter={12}>
                               <Col span={12}>
@@ -2946,13 +2968,33 @@ export default function Order() {
                                 </Form.Item>
                               </Col>
                               <Col span={12}>
+                                {/*
+                                  ── FIX: ProductAmount is now fully editable.
+                                     Removing `disabled` prop and hooking up
+                                     onChange to recalculate TotalAmount.
+                                */}
                                 <Form.Item
-                                  label="Product Amount"
+                                  label={
+                                    <span>
+                                      Product Amount{' '}
+                                      <Tag
+                                        color="blue"
+                                        style={{ fontSize: 11 }}
+                                      >
+                                        ✏️ Editable
+                                      </Tag>
+                                    </span>
+                                  }
                                   name={[field.name, 'ProductAmount']}
                                 >
                                   <Input
-                                    placeholder="Auto calculated"
-                                    disabled
+                                    placeholder="Auto calculated or enter manually"
+                                    onInput={handleDecimalInput}
+                                    onChange={() =>
+                                      handleProductAmountChange(
+                                        `${idx}_ProductAmount`,
+                                      )
+                                    }
                                     prefix="₹"
                                     style={{
                                       fontWeight: 600,
@@ -2993,6 +3035,7 @@ export default function Order() {
               )}
             </SectionBox>
 
+            {/* Total Amount */}
             <div
               style={{
                 display: 'flex',
@@ -3017,7 +3060,7 @@ export default function Order() {
               </span>
               <Form.Item name="TotalAmount" style={{ margin: 0, flex: 1 }}>
                 <Input
-                  placeholder="Auto calculated"
+                  placeholder="Auto calculated or enter manually"
                   onInput={handleDecimalInput}
                   prefix={
                     <span style={{ fontWeight: 700, color: '#389e0d' }}>₹</span>
