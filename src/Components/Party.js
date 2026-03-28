@@ -934,7 +934,7 @@ export default function Party() {
                 >
                   <Input
                     placeholder="Enter numeric order ID (optional)"
-                    disabled={isViewMode}
+                    disabled={isViewMode || modalMode === 'edit'}
                     onInput={handleNumbersOnlyInput}
                     style={{ borderRadius: 8, fontFamily: 'monospace' }}
                   />
