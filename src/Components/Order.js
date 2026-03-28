@@ -268,7 +268,7 @@ const SectionBox = ({ title, lockedTag, children, accent = '#1677ff' }) => (
   </div>
 );
 
-// ── Sub-section heading ─────────────────────────────────────��─────
+// ── Sub-section heading ───────────────────────────────────────────
 const SubHeading = ({ children }) => (
   <div
     style={{
@@ -287,17 +287,7 @@ const SubHeading = ({ children }) => (
   </div>
 );
 
-// ── OtherSelectField: renders a Select, and when "Other" is chosen
-//    replaces itself inline with a plain text Input. ──────────────
-//
-//  Props:
-//    fieldName       – Form.List field.name (number)
-//    selectFieldKey  – e.g. 'SheetColor'
-//    customFieldKey  – e.g. 'SheetColorCustom'
-//    label           – displayed label string
-//    options         – dropdown options array
-//    disabled        – boolean (repeat-order lock)
-//    form            – antd Form instance
+// ── OtherSelectField ──────────────────────────────────────────────
 const OtherSelectField = ({
   fieldName,
   selectFieldKey,
@@ -306,6 +296,7 @@ const OtherSelectField = ({
   options,
   disabled,
   form,
+  required = true,
 }) => (
   <Form.Item
     noStyle
@@ -329,7 +320,11 @@ const OtherSelectField = ({
             <Form.Item
               label={label}
               name={[fieldName, selectFieldKey]}
-              rules={[{ required: true, message: `Please select ${label}.` }]}
+              rules={
+                required
+                  ? [{ required: true, message: `Please select ${label}.` }]
+                  : []
+              }
               style={{ marginBottom: 0 }}
             >
               <Select
@@ -337,7 +332,6 @@ const OtherSelectField = ({
                 options={options}
                 disabled={disabled}
                 onChange={() => {
-                  // Clear the custom field whenever the dropdown changes
                   const products = form.getFieldValue('Products') || [];
                   const updated = [...products];
                   if (updated[fieldName]) {
@@ -353,22 +347,26 @@ const OtherSelectField = ({
               <Form.Item
                 label={`Custom ${label}`}
                 name={[fieldName, customFieldKey]}
-                rules={[
-                  {
-                    required: true,
-                    message: `Please enter custom ${label}.`,
-                  },
-                  {
-                    validator: (_, value) => {
-                      const v = String(value || '').trim();
-                      if (!v)
-                        return Promise.reject(
-                          new Error(`Please enter custom ${label}.`),
-                        );
-                      return Promise.resolve();
-                    },
-                  },
-                ]}
+                rules={
+                  required
+                    ? [
+                        {
+                          required: true,
+                          message: `Please enter custom ${label}.`,
+                        },
+                        {
+                          validator: (_, value) => {
+                            const v = String(value || '').trim();
+                            if (!v)
+                              return Promise.reject(
+                                new Error(`Please enter custom ${label}.`),
+                              );
+                            return Promise.resolve();
+                          },
+                        },
+                      ]
+                    : []
+                }
                 style={{ marginBottom: 0 }}
               >
                 <Input
@@ -475,15 +473,12 @@ export default function Order() {
     return Promise.reject(new Error('Mobile number should be 10 digits'));
   };
 
-  // ── pickValueOrOther: if the dropdown value is OTHER_OPTION_VALUE,
-  //    return the custom text; otherwise return the dropdown value.
   const pickValueOrOther = (selectedValue, otherValue) => {
     if (selectedValue !== OTHER_OPTION_VALUE) return selectedValue;
     const v = String(otherValue || '').trim();
     return v || null;
   };
 
-  // ── getProductSizeOptions: case strings match the productCategory values ──
   const getProductSizeOptions = (productType, productCategory) => {
     if (productType === 'Stitching')
       return DROPDOWN_OPTIONS.productSizeStitching;
@@ -517,6 +512,10 @@ export default function Order() {
       const updated = [...products];
       updated[productIndex].ProductSize = undefined;
       updated[productIndex].ProductCategory = undefined;
+      // ✅ Clear border fields when product type changes
+      updated[productIndex].BorderGSM = undefined;
+      updated[productIndex].BorderColor = undefined;
+      updated[productIndex].BorderColorCustom = undefined;
       form.setFieldValue('Products', updated);
     }
   };
@@ -777,9 +776,6 @@ export default function Order() {
     }
   };
 
-  // ── When loading a repeat order, if a colour value is NOT one of the
-  //    preset option values, set the dropdown to OTHER_OPTION_VALUE and
-  //    put the real value in the Custom field. ────────────────────────
   const normaliseColorForForm = (value, options) => {
     if (!value) return { selected: undefined, custom: undefined };
     const match = options.find((o) => o.value === value);
@@ -938,8 +934,6 @@ export default function Order() {
     setIsModalOpen(true);
   };
 
-  // ── When opening the Edit modal, normalise any "custom" colour values
-  //    so the dropdown shows OTHER and the text field shows the real value.
   const openEditModal = async (record) => {
     setModalMode('edit');
     setEditingOrderId(record.OrderId);
@@ -1063,8 +1057,19 @@ export default function Order() {
       Quantity: p.Quantity,
       SheetGSM: Number(p.SheetGSM),
       SheetColor: pickValueOrOther(p.SheetColor, p.SheetColorCustom),
-      BorderGSM: Number(p.BorderGSM),
-      BorderColor: pickValueOrOther(p.BorderColor, p.BorderColorCustom),
+      // ✅ For Machine type, BorderGSM and BorderColor are optional — send null if not provided
+      BorderGSM:
+        p.ProductType === 'Machine'
+          ? p.BorderGSM
+            ? Number(p.BorderGSM)
+            : null
+          : Number(p.BorderGSM),
+      BorderColor:
+        p.ProductType === 'Machine'
+          ? p.BorderColor
+            ? pickValueOrOther(p.BorderColor, p.BorderColorCustom)
+            : null
+          : pickValueOrOther(p.BorderColor, p.BorderColorCustom),
       HandleType: p.HandleType,
       HandleColor: pickValueOrOther(p.HandleColor, p.HandleColorCustom),
       HandleGSM: Number(p.HandleGSM),
@@ -1154,7 +1159,6 @@ export default function Order() {
     }
   };
 
-  // Recalculates ProductAmount from Rate × Quantity, then updates TotalAmount
   const handleRateOrQuantityChange = (fieldName) => {
     const products = form.getFieldValue('Products') || [];
     const productIndex = parseInt(fieldName.split('_')[0]);
@@ -1179,7 +1183,6 @@ export default function Order() {
     }
   };
 
-  // When ProductAmount is manually edited, only recalc TotalAmount
   const handleProductAmountChange = (fieldName) => {
     const products = form.getFieldValue('Products') || [];
     const productIndex = parseInt(fieldName.split('_')[0]);
@@ -1413,7 +1416,6 @@ export default function Order() {
     setPagination((p) => ({ ...p, current: 1 }));
   };
 
-  // ── Shared order list item renderer ──────────────────────────
   const renderOrderListItem = ({
     order,
     onSelect,
@@ -2185,12 +2187,17 @@ export default function Order() {
                           <Descriptions.Item label="Sheet Colour">
                             {product.SheetColor}
                           </Descriptions.Item>
-                          <Descriptions.Item label="Border GSM">
-                            {product.BorderGSM}
-                          </Descriptions.Item>
-                          <Descriptions.Item label="Border Colour">
-                            {product.BorderColor}
-                          </Descriptions.Item>
+                          {/* ✅ Only show Border info in view modal if not Machine type */}
+                          {product.ProductType !== 'Machine' && (
+                            <>
+                              <Descriptions.Item label="Border GSM">
+                                {product.BorderGSM}
+                              </Descriptions.Item>
+                              <Descriptions.Item label="Border Colour">
+                                {product.BorderColor}
+                              </Descriptions.Item>
+                            </>
+                          )}
                           <Descriptions.Item label="Handle Type">
                             {product.HandleType}
                           </Descriptions.Item>
@@ -2595,7 +2602,6 @@ export default function Order() {
                       />
                     ) : (
                       fields.map((field, idx) => {
-                        // Use shouldUpdate wrapper to get live product values
                         return (
                           <Form.Item key={field.key} noStyle shouldUpdate>
                             {() => {
@@ -2609,6 +2615,9 @@ export default function Order() {
                                 productType,
                                 productCategory,
                               );
+
+                              // ✅ Hide Border GSM & Border Colour when Product Type is Machine
+                              const isMachine = productType === 'Machine';
 
                               return (
                                 <Card
@@ -2819,7 +2828,6 @@ export default function Order() {
                                       </Form.Item>
                                     </Col>
                                     <Col span={12}>
-                                      {/* ── Sheet Colour with inline Other ── */}
                                       <OtherSelectField
                                         fieldName={field.name}
                                         selectFieldKey="SheetColor"
@@ -2828,45 +2836,56 @@ export default function Order() {
                                         options={DROPDOWN_OPTIONS.sheetColors}
                                         disabled={isRepeatOrder}
                                         form={form}
+                                        required={true}
                                       />
                                     </Col>
                                   </Row>
 
-                                  {/* ── Border ── */}
-                                  <SubHeading>Border Information</SubHeading>
-                                  <Row gutter={12}>
-                                    <Col span={12}>
-                                      <Form.Item
-                                        label="Border GSM"
-                                        name={[field.name, 'BorderGSM']}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message:
-                                              'Please select Border GSM.',
-                                          },
-                                        ]}
-                                      >
-                                        <Select
-                                          placeholder="Select Border GSM"
-                                          options={DROPDOWN_OPTIONS.borderGSMs}
-                                          disabled={isRepeatOrder}
-                                        />
-                                      </Form.Item>
-                                    </Col>
-                                    <Col span={12}>
-                                      {/* ── Border Colour with inline Other ── */}
-                                      <OtherSelectField
-                                        fieldName={field.name}
-                                        selectFieldKey="BorderColor"
-                                        customFieldKey="BorderColorCustom"
-                                        label="Border Colour"
-                                        options={DROPDOWN_OPTIONS.borderColors}
-                                        disabled={isRepeatOrder}
-                                        form={form}
-                                      />
-                                    </Col>
-                                  </Row>
+                                  {/* ── Border — hidden for Machine type ✅ ── */}
+                                  {!isMachine && (
+                                    <>
+                                      <SubHeading>
+                                        Border Information
+                                      </SubHeading>
+                                      <Row gutter={12}>
+                                        <Col span={12}>
+                                          <Form.Item
+                                            label="Border GSM"
+                                            name={[field.name, 'BorderGSM']}
+                                            rules={[
+                                              {
+                                                required: true,
+                                                message:
+                                                  'Please select Border GSM.',
+                                              },
+                                            ]}
+                                          >
+                                            <Select
+                                              placeholder="Select Border GSM"
+                                              options={
+                                                DROPDOWN_OPTIONS.borderGSMs
+                                              }
+                                              disabled={isRepeatOrder}
+                                            />
+                                          </Form.Item>
+                                        </Col>
+                                        <Col span={12}>
+                                          <OtherSelectField
+                                            fieldName={field.name}
+                                            selectFieldKey="BorderColor"
+                                            customFieldKey="BorderColorCustom"
+                                            label="Border Colour"
+                                            options={
+                                              DROPDOWN_OPTIONS.borderColors
+                                            }
+                                            disabled={isRepeatOrder}
+                                            form={form}
+                                            required={true}
+                                          />
+                                        </Col>
+                                      </Row>
+                                    </>
+                                  )}
 
                                   {/* ── Handle ── */}
                                   <SubHeading>Handle Information</SubHeading>
@@ -2891,7 +2910,6 @@ export default function Order() {
                                       </Form.Item>
                                     </Col>
                                     <Col span={8}>
-                                      {/* ── Handle Colour with inline Other ── */}
                                       <OtherSelectField
                                         fieldName={field.name}
                                         selectFieldKey="HandleColor"
@@ -2900,6 +2918,7 @@ export default function Order() {
                                         options={DROPDOWN_OPTIONS.handleColors}
                                         disabled={isRepeatOrder}
                                         form={form}
+                                        required={true}
                                       />
                                     </Col>
                                     <Col span={8}>
@@ -2972,7 +2991,6 @@ export default function Order() {
                                   <SubHeading>Other Information</SubHeading>
                                   <Row gutter={12}>
                                     <Col span={12}>
-                                      {/* ── Colour with inline Other ── */}
                                       <OtherSelectField
                                         fieldName={field.name}
                                         selectFieldKey="Color"
@@ -2981,6 +2999,7 @@ export default function Order() {
                                         options={DROPDOWN_OPTIONS.colors}
                                         disabled={isRepeatOrder}
                                         form={form}
+                                        required={true}
                                       />
                                     </Col>
                                     <Col span={12}>
@@ -3054,7 +3073,6 @@ export default function Order() {
                                       </Form.Item>
                                     </Col>
                                     <Col span={12}>
-                                      {/* ── ProductAmount is NOW editable ── */}
                                       <Form.Item
                                         label="Product Amount"
                                         name={[field.name, 'ProductAmount']}
