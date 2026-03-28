@@ -460,7 +460,7 @@ export default function Order() {
   };
 
   const validateEmail = (_, value) => {
-    if (!value) return Promise.resolve();
+    if (!value) return Promise.resolve(); // ✅ empty is now allowed
     if (emailRegex.test(value)) return Promise.resolve();
     return Promise.reject(
       new Error('Please enter a valid email address (e.g., user@example.com)'),
@@ -512,7 +512,6 @@ export default function Order() {
       const updated = [...products];
       updated[productIndex].ProductSize = undefined;
       updated[productIndex].ProductCategory = undefined;
-      // ✅ Clear border fields when product type changes
       updated[productIndex].BorderGSM = undefined;
       updated[productIndex].BorderColor = undefined;
       updated[productIndex].BorderColorCustom = undefined;
@@ -669,7 +668,7 @@ export default function Order() {
       const state = partyData?.state || partyData?.State || order.State || null;
       setSelectedState(state);
       form.resetFields();
-      form.setFieldsValue({
+      form.setFieldsValues({
         AgentId: order.AgentId,
         Party_Name:
           partyData?.partyName ||
@@ -701,6 +700,7 @@ export default function Order() {
           partyData?.mobile1 || partyData?.Mobile1 || order.Mobile1 || '',
         Mobile2:
           partyData?.mobile2 || partyData?.Mobile2 || order.Mobile2 || '',
+        // ✅ Email is optional — prefill if available, else leave empty
         Email: partyData?.email || partyData?.Email || order.Email || '',
         Products: [{ ...emptyProduct }],
         TotalAmount: 0,
@@ -839,7 +839,7 @@ export default function Order() {
       });
 
       form.resetFields();
-      form.setFieldsValue({
+      form.setFieldsValues({
         AgentId: order.AgentId,
         Party_Name: order.Party_Name || '',
         AliasOrCompanyName: order.AliasOrCompanyName || '',
@@ -851,6 +851,7 @@ export default function Order() {
         Contact_Person2: order.Contact_Person2 || '',
         Mobile1: order.Mobile1 || '',
         Mobile2: order.Mobile2 || '',
+        // ✅ Email is optional
         Email: order.Email || '',
         Products: copiedProducts,
         TotalAmount: order.TotalAmount || 0,
@@ -892,7 +893,7 @@ export default function Order() {
     );
   }, [repeatOrdersForAgent, repeatOrderSearch]);
 
-  // ── Order Type & Add / Edit ────────────────────────────────────
+  // ── Order Type & Add / Edit ─────────────���──────────────────────
   const handleOrderTypeSelect = async (values) => {
     try {
       const orderType = values.orderType;
@@ -987,7 +988,8 @@ export default function Order() {
       Contact_Person2: record.Contact_Person2,
       Mobile1: record.Mobile1,
       Mobile2: record.Mobile2,
-      Email: record.Email,
+      // ✅ Email is optional — may be null/undefined for existing orders
+      Email: record.Email || '',
       Products: normalisedProducts,
       TotalAmount: record.TotalAmount || 0,
     });
@@ -1025,7 +1027,8 @@ export default function Order() {
           agentId: values.AgentId ? parseInt(values.AgentId) : null,
           contact_Person1: values.Contact_Person1,
           contact_Person2: values.Contact_Person2 || null,
-          email: values.Email,
+          // ✅ Email is optional
+          email: values.Email || null,
           mobile1: String(values.Mobile1),
           mobile2: values.Mobile2 ? String(values.Mobile2) : null,
           orderId: orderId ? String(orderId) : null,
@@ -1057,7 +1060,6 @@ export default function Order() {
       Quantity: p.Quantity,
       SheetGSM: Number(p.SheetGSM),
       SheetColor: pickValueOrOther(p.SheetColor, p.SheetColorCustom),
-      // ✅ For Machine type, BorderGSM and BorderColor are optional — send null if not provided
       BorderGSM:
         p.ProductType === 'Machine'
           ? p.BorderGSM
@@ -1104,7 +1106,8 @@ export default function Order() {
         Contact_Person2: values.Contact_Person2 || null,
         Mobile1: values.Mobile1,
         Mobile2: values.Mobile2 || null,
-        Email: values.Email,
+        // ✅ Send null when email is empty
+        Email: values.Email || null,
         TotalAmount: parseFloat(totalAmount),
         Products: buildProductsPayload(values.Products),
       }),
@@ -1137,7 +1140,8 @@ export default function Order() {
         Contact_Person2: values.Contact_Person2 || null,
         Mobile1: values.Mobile1,
         Mobile2: values.Mobile2 || null,
-        Email: values.Email,
+        // ✅ Send null when email is empty
+        Email: values.Email || null,
         TotalAmount: parseFloat(totalAmount),
         Products: buildProductsPayload(values.Products),
       }),
@@ -1307,7 +1311,7 @@ export default function Order() {
       width: 180,
       sorter: (a, b) => compareText(a, b, 'Email'),
       sortDirections: ['ascend', 'descend'],
-      render: (v) => <span style={{ color: '#595959' }}>{v}</span>,
+      render: (v) => <span style={{ color: '#595959' }}>{v || '-'}</span>,
     },
     {
       title: 'Products',
@@ -2127,7 +2131,8 @@ export default function Order() {
                     {viewingOrder.Mobile2 || '-'}
                   </Descriptions.Item>
                   <Descriptions.Item label="Email" span={2}>
-                    {viewingOrder.Email}
+                    {/* ✅ Show dash when email is absent */}
+                    {viewingOrder.Email || '-'}
                   </Descriptions.Item>
                 </Descriptions>
               </SectionBox>
@@ -2187,7 +2192,6 @@ export default function Order() {
                           <Descriptions.Item label="Sheet Colour">
                             {product.SheetColor}
                           </Descriptions.Item>
-                          {/* ✅ Only show Border info in view modal if not Machine type */}
                           {product.ProductType !== 'Machine' && (
                             <>
                               <Descriptions.Item label="Border GSM">
@@ -2318,7 +2322,6 @@ export default function Order() {
           }}
         >
           <Form form={form} layout="vertical">
-            {/* Banner */}
             {isRepeatOrder ? (
               <div
                 style={{
@@ -2564,16 +2567,14 @@ export default function Order() {
                   </Form.Item>
                 </Col>
                 <Col span={8}>
+                  {/* ✅ Email is now optional — removed required rule, kept format validation only */}
                   <Form.Item
-                    label="Email"
+                    label="Email (Optional)"
                     name="Email"
-                    rules={[
-                      { required: true, message: 'Please enter Email.' },
-                      { validator: validateEmail },
-                    ]}
+                    rules={[{ validator: validateEmail }]}
                   >
                     <Input
-                      placeholder="e.g., rajesh@abcpack.com"
+                      placeholder="e.g., rajesh@abcpack.com (optional)"
                       disabled={isRepeatOrder}
                     />
                   </Form.Item>
@@ -2615,8 +2616,6 @@ export default function Order() {
                                 productType,
                                 productCategory,
                               );
-
-                              // ✅ Hide Border GSM & Border Colour when Product Type is Machine
                               const isMachine = productType === 'Machine';
 
                               return (
@@ -2662,7 +2661,6 @@ export default function Order() {
                                     )
                                   }
                                 >
-                                  {/* Type / Category / Size */}
                                   <Row gutter={12}>
                                     <Col
                                       span={productType === 'Machine' ? 8 : 12}
@@ -2806,7 +2804,6 @@ export default function Order() {
                                     </Col>
                                   </Row>
 
-                                  {/* ── Sheet ── */}
                                   <SubHeading>Sheet Information</SubHeading>
                                   <Row gutter={12}>
                                     <Col span={12}>
@@ -2841,7 +2838,6 @@ export default function Order() {
                                     </Col>
                                   </Row>
 
-                                  {/* ── Border — hidden for Machine type ✅ ── */}
                                   {!isMachine && (
                                     <>
                                       <SubHeading>
@@ -2887,7 +2883,6 @@ export default function Order() {
                                     </>
                                   )}
 
-                                  {/* ── Handle ── */}
                                   <SubHeading>Handle Information</SubHeading>
                                   <Row gutter={12}>
                                     <Col span={8}>
@@ -2942,7 +2937,6 @@ export default function Order() {
                                     </Col>
                                   </Row>
 
-                                  {/* ── Printing ── */}
                                   <SubHeading>Printing Information</SubHeading>
                                   <Row gutter={12}>
                                     <Col span={12}>
@@ -2987,7 +2981,6 @@ export default function Order() {
                                     </Col>
                                   </Row>
 
-                                  {/* ── Other ── */}
                                   <SubHeading>Other Information</SubHeading>
                                   <Row gutter={12}>
                                     <Col span={12}>
@@ -3015,7 +3008,6 @@ export default function Order() {
                                     </Col>
                                   </Row>
 
-                                  {/* ── Plate ── */}
                                   <SubHeading>Plate Information</SubHeading>
                                   <Row gutter={12}>
                                     <Col span={12}>
@@ -3045,7 +3037,6 @@ export default function Order() {
                                     </Col>
                                   </Row>
 
-                                  {/* ── Pricing ── */}
                                   <SubHeading>Pricing</SubHeading>
                                   <Row gutter={12}>
                                     <Col span={12}>
