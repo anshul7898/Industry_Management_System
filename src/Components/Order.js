@@ -63,6 +63,16 @@ const DROPDOWN_OPTIONS = {
     { label: 'Cake Bag - New Pattern', value: 'Cake Bag - New Pattern' },
     { label: 'Side Gaget Bag', value: 'Side Gaget Bag' },
     { label: 'Bottom Gaget Bag', value: 'Bottom Gaget Bag' },
+    { label: 'Box Bag', value: 'Box Bag' },
+    { label: 'Handle Bag', value: 'Handle Bag' },
+  ],
+  // ✅ Handle Bag sizes
+  handle_bag_Size: [
+    { label: '10 X 14', value: '10 X 14' },
+    { label: '12 X 16', value: '12 X 16' },
+    { label: '14 X 18', value: '14 X 18' },
+    { label: '16 X 16', value: '16 X 16' },
+    { label: '16 X 19', value: '16 X 19' },
   ],
   d_Cut_Bag_Size: [
     { label: '9 X 12', value: '9 X 12' },
@@ -460,7 +470,7 @@ export default function Order() {
   };
 
   const validateEmail = (_, value) => {
-    if (!value) return Promise.resolve(); // ✅ empty is now allowed
+    if (!value) return Promise.resolve();
     if (emailRegex.test(value)) return Promise.resolve();
     return Promise.reject(
       new Error('Please enter a valid email address (e.g., user@example.com)'),
@@ -479,6 +489,7 @@ export default function Order() {
     return v || null;
   };
 
+  // ✅ Added 'Handle Bag' case to return handle_bag_Size options
   const getProductSizeOptions = (productType, productCategory) => {
     if (productType === 'Stitching')
       return DROPDOWN_OPTIONS.productSizeStitching;
@@ -498,6 +509,8 @@ export default function Order() {
           return DROPDOWN_OPTIONS.Side_Gaget_Bag_Size;
         case 'Bottom Gaget Bag':
           return DROPDOWN_OPTIONS.Bottom_Gaget_Bag_Size;
+        case 'Handle Bag': // ✅ NEW
+          return DROPDOWN_OPTIONS.handle_bag_Size; // ✅ NEW
         default:
           return [];
       }
@@ -668,7 +681,8 @@ export default function Order() {
       const state = partyData?.state || partyData?.State || order.State || null;
       setSelectedState(state);
       form.resetFields();
-      form.setFieldsValues({
+      // ✅ Fixed typo: setFieldsValues → setFieldsValue
+      form.setFieldsValue({
         AgentId: order.AgentId,
         Party_Name:
           partyData?.partyName ||
@@ -700,7 +714,6 @@ export default function Order() {
           partyData?.mobile1 || partyData?.Mobile1 || order.Mobile1 || '',
         Mobile2:
           partyData?.mobile2 || partyData?.Mobile2 || order.Mobile2 || '',
-        // ✅ Email is optional — prefill if available, else leave empty
         Email: partyData?.email || partyData?.Email || order.Email || '',
         Products: [{ ...emptyProduct }],
         TotalAmount: 0,
@@ -839,7 +852,8 @@ export default function Order() {
       });
 
       form.resetFields();
-      form.setFieldsValues({
+      // ✅ Fixed typo: setFieldsValues → setFieldsValue
+      form.setFieldsValue({
         AgentId: order.AgentId,
         Party_Name: order.Party_Name || '',
         AliasOrCompanyName: order.AliasOrCompanyName || '',
@@ -851,7 +865,6 @@ export default function Order() {
         Contact_Person2: order.Contact_Person2 || '',
         Mobile1: order.Mobile1 || '',
         Mobile2: order.Mobile2 || '',
-        // ✅ Email is optional
         Email: order.Email || '',
         Products: copiedProducts,
         TotalAmount: order.TotalAmount || 0,
@@ -893,7 +906,7 @@ export default function Order() {
     );
   }, [repeatOrdersForAgent, repeatOrderSearch]);
 
-  // ── Order Type & Add / Edit ─────────────���──────────────────────
+  // ── Order Type & Add / Edit ────────────────────────────────────
   const handleOrderTypeSelect = async (values) => {
     try {
       const orderType = values.orderType;
@@ -988,7 +1001,6 @@ export default function Order() {
       Contact_Person2: record.Contact_Person2,
       Mobile1: record.Mobile1,
       Mobile2: record.Mobile2,
-      // ✅ Email is optional — may be null/undefined for existing orders
       Email: record.Email || '',
       Products: normalisedProducts,
       TotalAmount: record.TotalAmount || 0,
@@ -1027,7 +1039,6 @@ export default function Order() {
           agentId: values.AgentId ? parseInt(values.AgentId) : null,
           contact_Person1: values.Contact_Person1,
           contact_Person2: values.Contact_Person2 || null,
-          // ✅ Email is optional
           email: values.Email || null,
           mobile1: String(values.Mobile1),
           mobile2: values.Mobile2 ? String(values.Mobile2) : null,
@@ -1106,7 +1117,6 @@ export default function Order() {
         Contact_Person2: values.Contact_Person2 || null,
         Mobile1: values.Mobile1,
         Mobile2: values.Mobile2 || null,
-        // ✅ Send null when email is empty
         Email: values.Email || null,
         TotalAmount: parseFloat(totalAmount),
         Products: buildProductsPayload(values.Products),
@@ -1140,7 +1150,6 @@ export default function Order() {
         Contact_Person2: values.Contact_Person2 || null,
         Mobile1: values.Mobile1,
         Mobile2: values.Mobile2 || null,
-        // ✅ Send null when email is empty
         Email: values.Email || null,
         TotalAmount: parseFloat(totalAmount),
         Products: buildProductsPayload(values.Products),
@@ -2131,7 +2140,6 @@ export default function Order() {
                     {viewingOrder.Mobile2 || '-'}
                   </Descriptions.Item>
                   <Descriptions.Item label="Email" span={2}>
-                    {/* ✅ Show dash when email is absent */}
                     {viewingOrder.Email || '-'}
                   </Descriptions.Item>
                 </Descriptions>
@@ -2567,7 +2575,7 @@ export default function Order() {
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  {/* ✅ Email is now optional — removed required rule, kept format validation only */}
+                  {/* ✅ Email is optional */}
                   <Form.Item
                     label="Email (Optional)"
                     name="Email"
@@ -2838,6 +2846,7 @@ export default function Order() {
                                     </Col>
                                   </Row>
 
+                                  {/* ✅ Hide Border section for Machine type */}
                                   {!isMachine && (
                                     <>
                                       <SubHeading>
