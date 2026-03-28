@@ -59,8 +59,8 @@ const DROPDOWN_OPTIONS = {
     { label: 'Leader Bag', value: 'Leader Bag' },
     { label: 'D-Cut Bag', value: 'D-Cut Bag' },
     { label: 'U-Cut Bag', value: 'U-Cut Bag' },
-    { label: 'Cake bag - old Pattern', value: 'Cake bag - old Pattern' },
-    { label: 'Cake bag - New Pattern', value: 'Cake bag - New Pattern' },
+    { label: 'Cake Bag - Old Pattern', value: 'Cake Bag - Old Pattern' },
+    { label: 'Cake Bag - New Pattern', value: 'Cake Bag - New Pattern' },
     { label: 'Side Gaget Bag', value: 'Side Gaget Bag' },
     { label: 'Bottom Gaget Bag', value: 'Bottom Gaget Bag' },
   ],
@@ -389,6 +389,7 @@ export default function Order() {
     return v || null;
   };
 
+  // ── FIX: case strings now match the productCategory dropdown values ──
   const getProductSizeOptions = (productType, productCategory) => {
     if (productType === 'Stitching')
       return DROPDOWN_OPTIONS.productSizeStitching;
@@ -400,9 +401,9 @@ export default function Order() {
           return DROPDOWN_OPTIONS.d_Cut_Bag_Size;
         case 'U-Cut Bag':
           return DROPDOWN_OPTIONS.u_Cut_Bag_Size;
-        case 'Cake bag - old Pattern':
+        case 'Cake Bag - Old Pattern': // ← fixed (was 'Cake bag - old Pattern')
           return DROPDOWN_OPTIONS.cake_Bag_Old_Pattern_Size;
-        case 'Cake bag - New Pattern':
+        case 'Cake Bag - New Pattern': // ← fixed (was 'Cake bag - New Pattern')
           return DROPDOWN_OPTIONS.cake_Bag_New_Pattern_Size;
         case 'Side Gaget Bag':
           return DROPDOWN_OPTIONS.Side_Gaget_Bag_Size;
@@ -866,7 +867,7 @@ export default function Order() {
     setViewingOrder(null);
   };
 
-  const addPartyFromOrder = async (values) => {
+  const addPartyFromOrder = async (values, orderId) => {
     try {
       const res = await fetch('/api/party', {
         method: 'POST',
@@ -884,7 +885,7 @@ export default function Order() {
           email: values.Email,
           mobile1: String(values.Mobile1),
           mobile2: values.Mobile2 ? String(values.Mobile2) : null,
-          orderId: null,
+          orderId: orderId ? String(orderId) : null,
         }),
       });
       if (!res.ok) {
@@ -959,7 +960,6 @@ export default function Order() {
       throw new Error(`Failed to create order (${res.status}): ${text}`);
     }
     const orderResult = await res.json().catch(() => null);
-    await addPartyFromOrder(values);
     return orderResult;
   };
 
@@ -1053,6 +1053,7 @@ export default function Order() {
       }
       if (modalMode === 'add') {
         const created = await handleAdd(values);
+        await addPartyFromOrder(values, created?.OrderId ?? null);
         message.success(
           created?.OrderId
             ? `Created order ${created.OrderId} with ${values.Products.length} product(s)`
@@ -1328,7 +1329,6 @@ export default function Order() {
       <Navbar />
 
       <style>{`
-        /* ── Table header ─────────────────────────────────────── */
         .orders-table .ant-table-thead > tr > th {
           background: #1f2937 !important;
           color: #ffffff !important;
@@ -1341,40 +1341,33 @@ export default function Order() {
         .orders-table .ant-table-thead > tr > th .ant-table-column-sorter-down {
           color: rgba(255,255,255,0.85);
         }
-        /* ── Table rows ───────────────────────────────────────── */
         .orders-table .table-row-light { background-color: #ffffff !important; }
         .orders-table .table-row-dark  { background-color: #f8f9fc !important; }
         .orders-table .ant-table-row:hover > td { background-color: #e6f4ff !important; }
         .orders-table .ant-table-cell { font-size: 13px; }
-        /* ── Table card ───────────────────────────────────────── */
         .orders-table-card { border-radius: 12px !important; overflow: hidden; }
         .orders-table-card .ant-card-body { padding: 0 !important; }
-        /* ── Order list hover ─────────────────────────────────── */
         .order-list-item:hover {
           background: #f0f5ff !important;
           border-color: #1677ff !important;
           transform: translateY(-1px);
           box-shadow: 0 4px 12px rgba(22,119,255,0.10);
         }
-        /* ── Descriptions ─────────────────────────────────────── */
         .ant-descriptions-item-label { font-weight: 600; color: #374151; background: #f9fafb; }
-        /* ── Form labels ──────────────────────────────────────── */
         .ant-form-item-label > label { font-size: 12px; font-weight: 600; color: #374151; }
-        /* ── Product card inside modal ────────────────────────── */
         .product-card .ant-card-head {
           background: linear-gradient(90deg, #1677ff18 0%, #f0f5ff 100%);
           border-bottom: 1px solid #d6e4ff;
           font-weight: 700;
           font-size: 13px;
         }
-        /* ── Modal footer ─────────────────────────────────────── */
         .order-modal .ant-modal-footer .ant-btn-primary { background: #1677ff; border-radius: 8px; font-weight: 600; }
         .order-modal .ant-modal-header { border-bottom: 2px solid #f0f0f0; }
         .order-modal .ant-modal-title { font-size: 16px; font-weight: 700; }
       `}</style>
 
       <div style={{ maxWidth: 1440, margin: '24px auto', padding: '0 20px' }}>
-        {/* ── Page header ────────────────────────────────────── */}
+        {/* ── Page header ── */}
         <div
           style={{
             display: 'flex',
@@ -1430,7 +1423,7 @@ export default function Order() {
           />
         </div>
 
-        {/* ── Toolbar ────────────────────────────────────────── */}
+        {/* ── Toolbar ── */}
         <Card
           style={{
             borderRadius: 12,
@@ -1481,7 +1474,7 @@ export default function Order() {
           </Row>
         </Card>
 
-        {/* ── Table ──────────────────────────────────────────── */}
+        {/* ── Table ── */}
         <Card
           className="orders-table-card"
           style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
@@ -1513,10 +1506,6 @@ export default function Order() {
             }
           />
         </Card>
-
-        {/* ═══════════════════════════════════════════════════════
-            MODALS
-        ═════════════════════════════════���══════════════════════ */}
 
         {/* ── Order Type Selection ── */}
         <Modal
@@ -2162,7 +2151,6 @@ export default function Order() {
           }}
         >
           <Form form={form} layout="vertical">
-            {/* Banner */}
             {isRepeatOrder ? (
               <div
                 style={{
@@ -2199,7 +2187,6 @@ export default function Order() {
               </div>
             )}
 
-            {/* Party Information */}
             <SectionBox
               title="Party Information"
               lockedTag={isRepeatOrder}
@@ -2334,7 +2321,6 @@ export default function Order() {
               </Row>
             </SectionBox>
 
-            {/* Contact Information */}
             <SectionBox
               title="Contact Information"
               lockedTag={isRepeatOrder}
@@ -2425,7 +2411,6 @@ export default function Order() {
               </Row>
             </SectionBox>
 
-            {/* Products Section */}
             <SectionBox
               title="Products"
               lockedTag={isRepeatOrder}
@@ -2495,7 +2480,6 @@ export default function Order() {
                               )
                             }
                           >
-                            {/* Type / Category / Size */}
                             <Row gutter={12}>
                               <Col span={productType === 'Machine' ? 8 : 12}>
                                 <Form.Item
@@ -2628,7 +2612,6 @@ export default function Order() {
                               </Col>
                             </Row>
 
-                            {/* Sheet */}
                             <SubHeading>Sheet Information</SubHeading>
                             <Row gutter={12}>
                               <Col span={12}>
@@ -2687,7 +2670,6 @@ export default function Order() {
                               </Form.Item>
                             )}
 
-                            {/* Border */}
                             <SubHeading>Border Information</SubHeading>
                             <Row gutter={12}>
                               <Col span={12}>
@@ -2746,7 +2728,6 @@ export default function Order() {
                               </Form.Item>
                             )}
 
-                            {/* Handle */}
                             <SubHeading>Handle Information</SubHeading>
                             <Row gutter={12}>
                               <Col span={8}>
@@ -2823,7 +2804,6 @@ export default function Order() {
                               </Form.Item>
                             )}
 
-                            {/* Printing */}
                             <SubHeading>Printing Information</SubHeading>
                             <Row gutter={12}>
                               <Col span={12}>
@@ -2864,7 +2844,6 @@ export default function Order() {
                               </Col>
                             </Row>
 
-                            {/* Other */}
                             <SubHeading>Other Information</SubHeading>
                             <Row gutter={12}>
                               <Col span={12}>
@@ -2915,7 +2894,6 @@ export default function Order() {
                               </Form.Item>
                             )}
 
-                            {/* Plate */}
                             <SubHeading>Plate Information</SubHeading>
                             <Row gutter={12}>
                               <Col span={12}>
@@ -2943,7 +2921,6 @@ export default function Order() {
                               </Col>
                             </Row>
 
-                            {/* Rate & Amount */}
                             <SubHeading>Pricing</SubHeading>
                             <Row gutter={12}>
                               <Col span={12}>
@@ -3016,7 +2993,6 @@ export default function Order() {
               )}
             </SectionBox>
 
-            {/* Total Amount */}
             <div
               style={{
                 display: 'flex',
