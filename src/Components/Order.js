@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   Table,
   Input,
@@ -38,6 +38,32 @@ import { getStateOptions } from '../data/states';
 import { getCityOptions } from '../data/cities';
 
 const OTHER_OPTION_VALUE = '__OTHER__';
+const OTHER_SIZE_VALUE = '__OTHER_SIZE__';
+
+const getSizeKey = (productType, productCategory) => {
+  if (productType === 'Stitching') return 'stitching';
+  if (productType === 'Machine') {
+    switch (productCategory) {
+      case 'D-Cut Bag':
+        return 'd-cut';
+      case 'U-Cut Bag':
+        return 'u-cut';
+      case 'Cake Bag - Old Pattern':
+        return 'cake-bag-old';
+      case 'Cake Bag - New Pattern':
+        return 'cake-bag-new';
+      case 'Side Gaget Bag':
+        return 'side-gaget';
+      case 'Bottom Gaget Bag':
+        return 'bottom-gaget';
+      case 'Handle Bag':
+        return 'handle-bag';
+      default:
+        return null;
+    }
+  }
+  return null;
+};
 
 const DROPDOWN_OPTIONS = {
   plateBlockNumbers: [
@@ -163,6 +189,7 @@ const emptyProduct = {
   ProductId: undefined,
   ProductCategory: undefined,
   ProductSize: undefined,
+  ProductSizeCustom: undefined,
   BagMaterial: undefined,
   Quantity: undefined,
   SheetGSM: undefined,
@@ -335,6 +362,159 @@ const OtherSelectField = ({
   </Form.Item>
 );
 
+// ── ProductSizeField ──────────────────────────────────────────────
+// FIX: Uses sizeKey (slug) directly in the POST URL — matches sizes.py
+const ProductSizeField = ({
+  fieldName,
+  productType,
+  productCategory,
+  sizeOptions,
+  onNewSizeAdded,
+  disabled,
+  form,
+  required = true,
+}) => {
+  const sizeKey = getSizeKey(productType, productCategory);
+  const baseOptions = sizeKey ? sizeOptions[sizeKey] || [] : [];
+  const options = [...baseOptions, { label: 'Other', value: OTHER_SIZE_VALUE }];
+
+  return (
+    <Form.Item
+      noStyle
+      shouldUpdate={(prev, cur) => {
+        const prevVal = prev.Products?.[fieldName]?.ProductSize;
+        const curVal = cur.Products?.[fieldName]?.ProductSize;
+        return prevVal !== curVal;
+      }}
+    >
+      {() => {
+        const selectedValue = form.getFieldValue([
+          'Products',
+          fieldName,
+          'ProductSize',
+        ]);
+        const isOther = selectedValue === OTHER_SIZE_VALUE;
+
+        const handleSaveCustomSize = async () => {
+          const customVal = String(
+            form.getFieldValue(['Products', fieldName, 'ProductSizeCustom']) ||
+              '',
+          ).trim();
+          if (!customVal || !sizeKey) return;
+
+          try {
+            // ✅ FIX: use sizeKey (e.g. "cake-bag-new") not the table name
+            const res = await fetch(
+              `/api/sizes/${encodeURIComponent(sizeKey)}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ size: customVal }),
+              },
+            );
+            if (!res.ok) {
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(errData.detail || 'Failed to save new size');
+            }
+            // Update local dropdown immediately
+            onNewSizeAdded(sizeKey, customVal);
+            // Replace sentinel with the saved value in the form
+            const products = form.getFieldValue('Products') || [];
+            const updated = [...products];
+            updated[fieldName] = {
+              ...updated[fieldName],
+              ProductSize: customVal,
+              ProductSizeCustom: undefined,
+            };
+            form.setFieldValue('Products', updated);
+            message.success(`Size "${customVal}" saved and added to the list.`);
+          } catch (err) {
+            message.error(err?.message || 'Failed to save custom size');
+          }
+        };
+
+        return (
+          <Row gutter={8} align="middle" style={{ marginBottom: 0 }}>
+            <Col flex={isOther ? '140px' : 'auto'}>
+              <Form.Item
+                label="Product Size"
+                name={[fieldName, 'ProductSize']}
+                rules={
+                  required
+                    ? [
+                        {
+                          required: true,
+                          message: 'Please select Product Size.',
+                        },
+                      ]
+                    : []
+                }
+                style={{ marginBottom: 0 }}
+              >
+                <Select
+                  placeholder="Select Product Size"
+                  options={options}
+                  disabled={disabled || (!sizeKey && !isOther)}
+                  onChange={(val) => {
+                    if (val !== OTHER_SIZE_VALUE) {
+                      const products = form.getFieldValue('Products') || [];
+                      const updated = [...products];
+                      if (updated[fieldName]) {
+                        updated[fieldName].ProductSizeCustom = undefined;
+                        form.setFieldValue('Products', updated);
+                      }
+                    }
+                  }}
+                />
+              </Form.Item>
+            </Col>
+            {isOther && (
+              <Col flex="auto">
+                <Form.Item
+                  label="Custom Size"
+                  name={[fieldName, 'ProductSizeCustom']}
+                  rules={[
+                    { required: true, message: 'Please enter a custom size.' },
+                    {
+                      validator: (_, value) => {
+                        const v = String(value || '').trim();
+                        if (!v)
+                          return Promise.reject(
+                            new Error('Please enter a custom size.'),
+                          );
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                  style={{ marginBottom: 0 }}
+                >
+                  <Input
+                    placeholder="e.g., 12x16"
+                    allowClear
+                    disabled={disabled}
+                    onBlur={handleSaveCustomSize}
+                    onPressEnter={handleSaveCustomSize}
+                    suffix={
+                      <Button
+                        size="small"
+                        type="link"
+                        style={{ padding: 0, height: 'auto', fontSize: 12 }}
+                        onClick={handleSaveCustomSize}
+                      >
+                        Save
+                      </Button>
+                    }
+                  />
+                </Form.Item>
+              </Col>
+            )}
+          </Row>
+        );
+      }}
+    </Form.Item>
+  );
+};
+
 export default function Order() {
   const [searchText, setSearchText] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 5 });
@@ -350,7 +530,6 @@ export default function Order() {
   const [selectedOrderType, setSelectedOrderType] = useState(null);
   const [selectedState, setSelectedState] = useState(null);
 
-  // ── Dynamic size options fetched from DynamoDB ─────────────────
   const [sizeOptions, setSizeOptions] = useState({
     stitching: [],
     'd-cut': [],
@@ -390,6 +569,17 @@ export default function Order() {
     () => getCityOptions(selectedState),
     [selectedState],
   );
+
+  const handleNewSizeAdded = useCallback((sizeKey, newValue) => {
+    setSizeOptions((prev) => {
+      const existing = prev[sizeKey] || [];
+      if (existing.some((o) => o.value === newValue)) return prev;
+      return {
+        ...prev,
+        [sizeKey]: [...existing, { label: newValue, value: newValue }],
+      };
+    });
+  }, []);
 
   const handleStateChange = (value) => {
     setSelectedState(value);
@@ -443,7 +633,6 @@ export default function Order() {
     return v || null;
   };
 
-  // ── Fetch all size options from API on mount ───────────────────
   useEffect(() => {
     async function loadSizes() {
       try {
@@ -467,40 +656,13 @@ export default function Order() {
     loadSizes();
   }, []);
 
-  // ── Return size options dynamically from fetched state ─────────
-  const getProductSizeOptions = (productType, productCategory) => {
-    if (productType === 'Stitching') return sizeOptions['stitching'] || [];
-    if (productType === 'Machine') {
-      switch (productCategory) {
-        case 'Leader Bag':
-          return [];
-        case 'D-Cut Bag':
-          return sizeOptions['d-cut'] || [];
-        case 'U-Cut Bag':
-          return sizeOptions['u-cut'] || [];
-        case 'Cake Bag - Old Pattern':
-          return sizeOptions['cake-bag-old'] || [];
-        case 'Cake Bag - New Pattern':
-          return sizeOptions['cake-bag-new'] || [];
-        case 'Side Gaget Bag':
-          return sizeOptions['side-gaget'] || [];
-        case 'Bottom Gaget Bag':
-          return sizeOptions['bottom-gaget'] || [];
-        case 'Handle Bag':
-          return sizeOptions['handle-bag'] || [];
-        default:
-          return [];
-      }
-    }
-    return [];
-  };
-
   const handleProductTypeChange = (fieldName) => {
     const products = form.getFieldValue('Products') || [];
     const productIndex = parseInt(fieldName.split('_')[0]);
     if (productIndex >= 0 && productIndex < products.length) {
       const updated = [...products];
       updated[productIndex].ProductSize = undefined;
+      updated[productIndex].ProductSizeCustom = undefined;
       updated[productIndex].ProductCategory = undefined;
       updated[productIndex].BorderGSM = undefined;
       updated[productIndex].BorderColor = undefined;
@@ -515,6 +677,7 @@ export default function Order() {
     if (productIndex >= 0 && productIndex < products.length) {
       const updated = [...products];
       updated[productIndex].ProductSize = undefined;
+      updated[productIndex].ProductSizeCustom = undefined;
       form.setFieldValue('Products', updated);
     }
   };
@@ -803,6 +966,7 @@ export default function Order() {
           ProductId: p.ProductId,
           ProductCategory: p.ProductCategory,
           ProductSize: p.ProductSize,
+          ProductSizeCustom: undefined,
           BagMaterial: p.BagMaterial,
           Quantity: p.Quantity,
           SheetGSM: p.SheetGSM,
@@ -952,6 +1116,7 @@ export default function Order() {
         return {
           ...emptyProduct,
           ...p,
+          ProductSizeCustom: undefined,
           SheetColor: sc.selected,
           SheetColorCustom: sc.custom ?? p.SheetColorCustom ?? undefined,
           BorderColor: bc.selected,
@@ -1041,7 +1206,10 @@ export default function Order() {
       ProductType: p.ProductType,
       ProductId: p.ProductId,
       ProductCategory: p.ProductCategory,
-      ProductSize: p.ProductSize,
+      ProductSize:
+        p.ProductSize === OTHER_SIZE_VALUE
+          ? String(p.ProductSizeCustom || '').trim() || null
+          : p.ProductSize,
       BagMaterial: p.BagMaterial,
       Quantity: p.Quantity,
       SheetGSM: Number(p.SheetGSM),
@@ -1473,20 +1641,14 @@ export default function Order() {
   return (
     <div style={{ width: '100%', background: '#f4f6fb', minHeight: '100vh' }}>
       <Navbar />
-
       <style>{`
         .orders-table .ant-table-thead > tr > th {
-          background: #1f2937 !important;
-          color: #ffffff !important;
-          font-weight: 600;
-          font-size: 13px;
-          border-bottom: none !important;
+          background: #1f2937 !important; color: #ffffff !important;
+          font-weight: 600; font-size: 13px; border-bottom: none !important;
         }
         .orders-table .ant-table-thead > tr > th .ant-table-column-sorter,
         .orders-table .ant-table-thead > tr > th .ant-table-column-sorter-up,
-        .orders-table .ant-table-thead > tr > th .ant-table-column-sorter-down {
-          color: rgba(255,255,255,0.85);
-        }
+        .orders-table .ant-table-thead > tr > th .ant-table-column-sorter-down { color: rgba(255,255,255,0.85); }
         .orders-table .table-row-light { background-color: #ffffff !important; }
         .orders-table .table-row-dark  { background-color: #f8f9fc !important; }
         .orders-table .ant-table-row:hover > td { background-color: #e6f4ff !important; }
@@ -1494,18 +1656,14 @@ export default function Order() {
         .orders-table-card { border-radius: 12px !important; overflow: hidden; }
         .orders-table-card .ant-card-body { padding: 0 !important; }
         .order-list-item:hover {
-          background: #f0f5ff !important;
-          border-color: #1677ff !important;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(22,119,255,0.10);
+          background: #f0f5ff !important; border-color: #1677ff !important;
+          transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22,119,255,0.10);
         }
         .ant-descriptions-item-label { font-weight: 600; color: #374151; background: #f9fafb; }
         .ant-form-item-label > label { font-size: 12px; font-weight: 600; color: #374151; }
         .product-card .ant-card-head {
           background: linear-gradient(90deg, #1677ff18 0%, #f0f5ff 100%);
-          border-bottom: 1px solid #d6e4ff;
-          font-weight: 700;
-          font-size: 13px;
+          border-bottom: 1px solid #d6e4ff; font-weight: 700; font-size: 13px;
         }
         .order-modal .ant-modal-footer .ant-btn-primary { background: #1677ff; border-radius: 8px; font-weight: 600; }
         .order-modal .ant-modal-header { border-bottom: 2px solid #f0f0f0; }
@@ -1652,10 +1810,6 @@ export default function Order() {
             }
           />
         </Card>
-
-        {/* ══════════════════════════════════════════
-            MODALS
-        ══════════════════════════════════════════ */}
 
         {/* ── Order Type Selection ── */}
         <Modal
@@ -2099,7 +2253,6 @@ export default function Order() {
                   </Descriptions.Item>
                 </Descriptions>
               </SectionBox>
-
               <SectionBox title="Contact Information" accent="#13c2c2">
                 <Descriptions bordered size="small" column={2}>
                   <Descriptions.Item label="Contact Person 1">
@@ -2119,7 +2272,6 @@ export default function Order() {
                   </Descriptions.Item>
                 </Descriptions>
               </SectionBox>
-
               <SectionBox
                 title={`Products (${viewingOrder.Products?.length || 0})`}
                 accent="#52c41a"
@@ -2584,496 +2736,468 @@ export default function Order() {
                         style={{ marginBottom: 12 }}
                       />
                     ) : (
-                      fields.map((field, idx) => {
-                        return (
-                          <Form.Item key={field.key} noStyle shouldUpdate>
-                            {() => {
-                              const productType =
-                                form.getFieldValue('Products')?.[idx]
-                                  ?.ProductType;
-                              const productCategory =
-                                form.getFieldValue('Products')?.[idx]
-                                  ?.ProductCategory;
-                              const productSizeOptions = getProductSizeOptions(
-                                productType,
-                                productCategory,
-                              );
-                              const isMachine = productType === 'Machine';
+                      fields.map((field, idx) => (
+                        <Form.Item key={field.key} noStyle shouldUpdate>
+                          {() => {
+                            const productType =
+                              form.getFieldValue('Products')?.[idx]
+                                ?.ProductType;
+                            const productCategory =
+                              form.getFieldValue('Products')?.[idx]
+                                ?.ProductCategory;
+                            const isMachine = productType === 'Machine';
 
-                              return (
-                                <Card
-                                  className="product-card"
-                                  style={{
-                                    marginBottom: 16,
-                                    borderRadius: 10,
-                                    border: '1px solid #e8eaf0',
-                                    boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-                                  }}
-                                  title={
-                                    <Space>
-                                      <span style={{ fontWeight: 700 }}>
-                                        Product {idx + 1}
-                                      </span>
-                                      {productType && (
-                                        <Tag color="geekblue">
-                                          {productType}
-                                        </Tag>
-                                      )}
-                                      {productCategory && (
-                                        <Tag
-                                          color="cyan"
-                                          style={{ fontSize: 11 }}
-                                        >
-                                          {productCategory}
-                                        </Tag>
-                                      )}
-                                    </Space>
-                                  }
-                                  extra={
-                                    !isRepeatOrder && (
-                                      <Button
-                                        danger
-                                        size="small"
-                                        icon={<DeleteOutlined />}
-                                        onClick={() => remove(field.name)}
-                                        style={{ borderRadius: 6 }}
+                            return (
+                              <Card
+                                className="product-card"
+                                style={{
+                                  marginBottom: 16,
+                                  borderRadius: 10,
+                                  border: '1px solid #e8eaf0',
+                                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                                }}
+                                title={
+                                  <Space>
+                                    <span style={{ fontWeight: 700 }}>
+                                      Product {idx + 1}
+                                    </span>
+                                    {productType && (
+                                      <Tag color="geekblue">{productType}</Tag>
+                                    )}
+                                    {productCategory && (
+                                      <Tag
+                                        color="cyan"
+                                        style={{ fontSize: 11 }}
                                       >
-                                        Remove
-                                      </Button>
-                                    )
-                                  }
-                                >
-                                  <Row gutter={12}>
-                                    <Col
-                                      span={productType === 'Machine' ? 8 : 12}
+                                        {productCategory}
+                                      </Tag>
+                                    )}
+                                  </Space>
+                                }
+                                extra={
+                                  !isRepeatOrder && (
+                                    <Button
+                                      danger
+                                      size="small"
+                                      icon={<DeleteOutlined />}
+                                      onClick={() => remove(field.name)}
+                                      style={{ borderRadius: 6 }}
                                     >
+                                      Remove
+                                    </Button>
+                                  )
+                                }
+                              >
+                                <Row gutter={12}>
+                                  <Col
+                                    span={productType === 'Machine' ? 8 : 12}
+                                  >
+                                    <Form.Item
+                                      label="Product Type"
+                                      name={[field.name, 'ProductType']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message:
+                                            'Please select Product Type.',
+                                        },
+                                      ]}
+                                    >
+                                      <Select
+                                        placeholder="Select Product Type"
+                                        options={DROPDOWN_OPTIONS.productTypes}
+                                        disabled={isRepeatOrder}
+                                        onChange={() =>
+                                          handleProductTypeChange(
+                                            `${idx}_ProductType`,
+                                          )
+                                        }
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                  {productType === 'Machine' && (
+                                    <Col span={8}>
                                       <Form.Item
-                                        label="Product Type"
-                                        name={[field.name, 'ProductType']}
+                                        label="Product Category"
+                                        name={[field.name, 'ProductCategory']}
                                         rules={[
                                           {
                                             required: true,
                                             message:
-                                              'Please select Product Type.',
+                                              'Please select Product Category.',
                                           },
                                         ]}
                                       >
                                         <Select
-                                          placeholder="Select Product Type"
+                                          placeholder="Select Product Category"
                                           options={
-                                            DROPDOWN_OPTIONS.productTypes
+                                            DROPDOWN_OPTIONS.productCategory
                                           }
                                           disabled={isRepeatOrder}
                                           onChange={() =>
-                                            handleProductTypeChange(
-                                              `${idx}_ProductType`,
+                                            handleProductCategoryChange(
+                                              `${idx}_ProductCategory`,
                                             )
                                           }
                                         />
                                       </Form.Item>
                                     </Col>
-                                    {productType === 'Machine' && (
-                                      <Col span={8}>
+                                  )}
+                                  {/* ── Product Size with "Other" support — uses sizeKey slug ── */}
+                                  <Col
+                                    span={productType === 'Machine' ? 8 : 12}
+                                  >
+                                    <ProductSizeField
+                                      fieldName={field.name}
+                                      productType={productType}
+                                      productCategory={productCategory}
+                                      sizeOptions={sizeOptions}
+                                      onNewSizeAdded={handleNewSizeAdded}
+                                      disabled={isRepeatOrder}
+                                      form={form}
+                                      required={true}
+                                    />
+                                  </Col>
+                                </Row>
+
+                                <Row gutter={12}>
+                                  <Col span={12}>
+                                    <Form.Item
+                                      label="Bag Material"
+                                      name={[field.name, 'BagMaterial']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message:
+                                            'Please select Bag Material.',
+                                        },
+                                      ]}
+                                    >
+                                      <Select
+                                        placeholder="Select Bag Material"
+                                        options={DROPDOWN_OPTIONS.bagMaterials}
+                                        disabled={isRepeatOrder}
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={12}>
+                                    <Form.Item
+                                      label={
+                                        isRepeatOrder ? (
+                                          <span>
+                                            Quantity{' '}
+                                            <Tag
+                                              color="green"
+                                              style={{ fontSize: 11 }}
+                                            >
+                                              ✏️ Editable
+                                            </Tag>
+                                          </span>
+                                        ) : (
+                                          'Quantity'
+                                        )
+                                      }
+                                      name={[field.name, 'Quantity']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message: 'Please enter Quantity.',
+                                        },
+                                      ]}
+                                    >
+                                      <Input
+                                        placeholder="e.g., 1000"
+                                        onInput={handleNumbersOnlyInput}
+                                        onChange={() =>
+                                          handleRateOrQuantityChange(
+                                            `${idx}_Quantity`,
+                                          )
+                                        }
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                </Row>
+
+                                <SubHeading>Sheet Information</SubHeading>
+                                <Row gutter={12}>
+                                  <Col span={12}>
+                                    <Form.Item
+                                      label="Sheet GSM"
+                                      name={[field.name, 'SheetGSM']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message: 'Please select Sheet GSM.',
+                                        },
+                                      ]}
+                                    >
+                                      <Select
+                                        placeholder="Select Sheet GSM"
+                                        options={DROPDOWN_OPTIONS.sheetGSMs}
+                                        disabled={isRepeatOrder}
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={12}>
+                                    <OtherSelectField
+                                      fieldName={field.name}
+                                      selectFieldKey="SheetColor"
+                                      customFieldKey="SheetColorCustom"
+                                      label="Sheet Colour"
+                                      options={DROPDOWN_OPTIONS.sheetColors}
+                                      disabled={isRepeatOrder}
+                                      form={form}
+                                      required={true}
+                                    />
+                                  </Col>
+                                </Row>
+
+                                {!isMachine && (
+                                  <>
+                                    <SubHeading>Border Information</SubHeading>
+                                    <Row gutter={12}>
+                                      <Col span={12}>
                                         <Form.Item
-                                          label="Product Category"
-                                          name={[field.name, 'ProductCategory']}
+                                          label="Border GSM"
+                                          name={[field.name, 'BorderGSM']}
                                           rules={[
                                             {
                                               required: true,
                                               message:
-                                                'Please select Product Category.',
+                                                'Please select Border GSM.',
                                             },
                                           ]}
                                         >
                                           <Select
-                                            placeholder="Select Product Category"
+                                            placeholder="Select Border GSM"
                                             options={
-                                              DROPDOWN_OPTIONS.productCategory
+                                              DROPDOWN_OPTIONS.borderGSMs
                                             }
                                             disabled={isRepeatOrder}
-                                            onChange={() =>
-                                              handleProductCategoryChange(
-                                                `${idx}_ProductCategory`,
-                                              )
-                                            }
                                           />
                                         </Form.Item>
                                       </Col>
-                                    )}
-                                    <Col
-                                      span={productType === 'Machine' ? 8 : 12}
-                                    >
-                                      <Form.Item
-                                        label="Product Size"
-                                        name={[field.name, 'ProductSize']}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message:
-                                              'Please select Product Size.',
-                                          },
-                                        ]}
-                                      >
-                                        <Select
-                                          placeholder="Select Product Size"
-                                          options={productSizeOptions}
-                                          disabled={
-                                            isRepeatOrder ||
-                                            productSizeOptions.length === 0
-                                          }
-                                        />
-                                      </Form.Item>
-                                    </Col>
-                                  </Row>
-
-                                  <Row gutter={12}>
-                                    <Col span={12}>
-                                      <Form.Item
-                                        label="Bag Material"
-                                        name={[field.name, 'BagMaterial']}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message:
-                                              'Please select Bag Material.',
-                                          },
-                                        ]}
-                                      >
-                                        <Select
-                                          placeholder="Select Bag Material"
+                                      <Col span={12}>
+                                        <OtherSelectField
+                                          fieldName={field.name}
+                                          selectFieldKey="BorderColor"
+                                          customFieldKey="BorderColorCustom"
+                                          label="Border Colour"
                                           options={
-                                            DROPDOWN_OPTIONS.bagMaterials
+                                            DROPDOWN_OPTIONS.borderColors
                                           }
                                           disabled={isRepeatOrder}
+                                          form={form}
+                                          required={true}
                                         />
-                                      </Form.Item>
-                                    </Col>
-                                    <Col span={12}>
-                                      <Form.Item
-                                        label={
-                                          isRepeatOrder ? (
-                                            <span>
-                                              Quantity{' '}
-                                              <Tag
-                                                color="green"
-                                                style={{ fontSize: 11 }}
-                                              >
-                                                ✏️ Editable
-                                              </Tag>
-                                            </span>
-                                          ) : (
-                                            'Quantity'
+                                      </Col>
+                                    </Row>
+                                  </>
+                                )}
+
+                                <SubHeading>Handle Information</SubHeading>
+                                <Row gutter={12}>
+                                  <Col span={8}>
+                                    <Form.Item
+                                      label="Handle Type"
+                                      name={[field.name, 'HandleType']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message: 'Please select Handle Type.',
+                                        },
+                                      ]}
+                                    >
+                                      <Select
+                                        placeholder="Select Handle Type"
+                                        options={DROPDOWN_OPTIONS.handleTypes}
+                                        disabled={isRepeatOrder}
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={8}>
+                                    <OtherSelectField
+                                      fieldName={field.name}
+                                      selectFieldKey="HandleColor"
+                                      customFieldKey="HandleColorCustom"
+                                      label="Handle Colour"
+                                      options={DROPDOWN_OPTIONS.handleColors}
+                                      disabled={isRepeatOrder}
+                                      form={form}
+                                      required={true}
+                                    />
+                                  </Col>
+                                  <Col span={8}>
+                                    <Form.Item
+                                      label="Handle GSM"
+                                      name={[field.name, 'HandleGSM']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message: 'Please select Handle GSM.',
+                                        },
+                                      ]}
+                                    >
+                                      <Select
+                                        placeholder="Select Handle GSM"
+                                        options={DROPDOWN_OPTIONS.handleGSMs}
+                                        disabled={isRepeatOrder}
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                </Row>
+
+                                <SubHeading>Printing Information</SubHeading>
+                                <Row gutter={12}>
+                                  <Col span={12}>
+                                    <Form.Item
+                                      label="Printing Type"
+                                      name={[field.name, 'PrintingType']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message:
+                                            'Please select Printing Type.',
+                                        },
+                                      ]}
+                                    >
+                                      <Select
+                                        placeholder="Select Printing Type"
+                                        options={DROPDOWN_OPTIONS.printingTypes}
+                                        disabled={isRepeatOrder}
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={12}>
+                                    <Form.Item
+                                      label="Print Colour"
+                                      name={[field.name, 'PrintColor']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message:
+                                            'Please select Print Colour.',
+                                        },
+                                      ]}
+                                    >
+                                      <Select
+                                        placeholder="Select Print Colour"
+                                        options={DROPDOWN_OPTIONS.printColors}
+                                        disabled={isRepeatOrder}
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                </Row>
+
+                                <SubHeading>Other Information</SubHeading>
+                                <Row gutter={12}>
+                                  <Col span={12}>
+                                    <OtherSelectField
+                                      fieldName={field.name}
+                                      selectFieldKey="Color"
+                                      customFieldKey="ColorCustom"
+                                      label="Colour"
+                                      options={DROPDOWN_OPTIONS.colors}
+                                      disabled={isRepeatOrder}
+                                      form={form}
+                                      required={true}
+                                    />
+                                  </Col>
+                                  <Col span={12}>
+                                    <Form.Item
+                                      label="Design"
+                                      name={[field.name, 'Design']}
+                                      valuePropName="checked"
+                                    >
+                                      <Checkbox disabled={isRepeatOrder}>
+                                        Include Design
+                                      </Checkbox>
+                                    </Form.Item>
+                                  </Col>
+                                </Row>
+
+                                <SubHeading>Plate Information</SubHeading>
+                                <Row gutter={12}>
+                                  <Col span={12}>
+                                    <Form.Item
+                                      label="Plate Available"
+                                      name={[field.name, 'PlateAvailable']}
+                                      valuePropName="checked"
+                                    >
+                                      <Checkbox disabled={isRepeatOrder}>
+                                        Plate Available
+                                      </Checkbox>
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={12}>
+                                    <Form.Item
+                                      label="Plate Block Number"
+                                      name={[field.name, 'PlateBlockNumber']}
+                                    >
+                                      <Select
+                                        placeholder="Select Plate Block Number"
+                                        options={
+                                          DROPDOWN_OPTIONS.plateBlockNumbers
+                                        }
+                                        disabled={isRepeatOrder}
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                </Row>
+
+                                <SubHeading>Pricing</SubHeading>
+                                <Row gutter={12}>
+                                  <Col span={12}>
+                                    <Form.Item
+                                      label="Rate"
+                                      name={[field.name, 'Rate']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message: 'Please enter Rate.',
+                                        },
+                                      ]}
+                                    >
+                                      <Input
+                                        placeholder="e.g., 100.50"
+                                        onInput={handleDecimalInput}
+                                        onChange={() =>
+                                          handleRateOrQuantityChange(
+                                            `${idx}_Rate`,
                                           )
                                         }
-                                        name={[field.name, 'Quantity']}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message: 'Please enter Quantity.',
-                                          },
-                                        ]}
-                                      >
-                                        <Input
-                                          placeholder="e.g., 1000"
-                                          onInput={handleNumbersOnlyInput}
-                                          onChange={() =>
-                                            handleRateOrQuantityChange(
-                                              `${idx}_Quantity`,
-                                            )
-                                          }
-                                        />
-                                      </Form.Item>
-                                    </Col>
-                                  </Row>
-
-                                  <SubHeading>Sheet Information</SubHeading>
-                                  <Row gutter={12}>
-                                    <Col span={12}>
-                                      <Form.Item
-                                        label="Sheet GSM"
-                                        name={[field.name, 'SheetGSM']}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message: 'Please select Sheet GSM.',
-                                          },
-                                        ]}
-                                      >
-                                        <Select
-                                          placeholder="Select Sheet GSM"
-                                          options={DROPDOWN_OPTIONS.sheetGSMs}
-                                          disabled={isRepeatOrder}
-                                        />
-                                      </Form.Item>
-                                    </Col>
-                                    <Col span={12}>
-                                      <OtherSelectField
-                                        fieldName={field.name}
-                                        selectFieldKey="SheetColor"
-                                        customFieldKey="SheetColorCustom"
-                                        label="Sheet Colour"
-                                        options={DROPDOWN_OPTIONS.sheetColors}
                                         disabled={isRepeatOrder}
-                                        form={form}
-                                        required={true}
+                                        prefix="₹"
                                       />
-                                    </Col>
-                                  </Row>
-
-                                  {/* Hide Border section for Machine type */}
-                                  {!isMachine && (
-                                    <>
-                                      <SubHeading>
-                                        Border Information
-                                      </SubHeading>
-                                      <Row gutter={12}>
-                                        <Col span={12}>
-                                          <Form.Item
-                                            label="Border GSM"
-                                            name={[field.name, 'BorderGSM']}
-                                            rules={[
-                                              {
-                                                required: true,
-                                                message:
-                                                  'Please select Border GSM.',
-                                              },
-                                            ]}
-                                          >
-                                            <Select
-                                              placeholder="Select Border GSM"
-                                              options={
-                                                DROPDOWN_OPTIONS.borderGSMs
-                                              }
-                                              disabled={isRepeatOrder}
-                                            />
-                                          </Form.Item>
-                                        </Col>
-                                        <Col span={12}>
-                                          <OtherSelectField
-                                            fieldName={field.name}
-                                            selectFieldKey="BorderColor"
-                                            customFieldKey="BorderColorCustom"
-                                            label="Border Colour"
-                                            options={
-                                              DROPDOWN_OPTIONS.borderColors
-                                            }
-                                            disabled={isRepeatOrder}
-                                            form={form}
-                                            required={true}
-                                          />
-                                        </Col>
-                                      </Row>
-                                    </>
-                                  )}
-
-                                  <SubHeading>Handle Information</SubHeading>
-                                  <Row gutter={12}>
-                                    <Col span={8}>
-                                      <Form.Item
-                                        label="Handle Type"
-                                        name={[field.name, 'HandleType']}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message:
-                                              'Please select Handle Type.',
-                                          },
-                                        ]}
-                                      >
-                                        <Select
-                                          placeholder="Select Handle Type"
-                                          options={DROPDOWN_OPTIONS.handleTypes}
-                                          disabled={isRepeatOrder}
-                                        />
-                                      </Form.Item>
-                                    </Col>
-                                    <Col span={8}>
-                                      <OtherSelectField
-                                        fieldName={field.name}
-                                        selectFieldKey="HandleColor"
-                                        customFieldKey="HandleColorCustom"
-                                        label="Handle Colour"
-                                        options={DROPDOWN_OPTIONS.handleColors}
-                                        disabled={isRepeatOrder}
-                                        form={form}
-                                        required={true}
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={12}>
+                                    <Form.Item
+                                      label="Product Amount"
+                                      name={[field.name, 'ProductAmount']}
+                                    >
+                                      <Input
+                                        placeholder="Auto calculated (editable)"
+                                        onInput={handleDecimalInput}
+                                        onChange={() =>
+                                          handleProductAmountChange(
+                                            `${idx}_ProductAmount`,
+                                          )
+                                        }
+                                        prefix="₹"
+                                        style={{
+                                          fontWeight: 600,
+                                          color: '#389e0d',
+                                        }}
                                       />
-                                    </Col>
-                                    <Col span={8}>
-                                      <Form.Item
-                                        label="Handle GSM"
-                                        name={[field.name, 'HandleGSM']}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message:
-                                              'Please select Handle GSM.',
-                                          },
-                                        ]}
-                                      >
-                                        <Select
-                                          placeholder="Select Handle GSM"
-                                          options={DROPDOWN_OPTIONS.handleGSMs}
-                                          disabled={isRepeatOrder}
-                                        />
-                                      </Form.Item>
-                                    </Col>
-                                  </Row>
-
-                                  <SubHeading>Printing Information</SubHeading>
-                                  <Row gutter={12}>
-                                    <Col span={12}>
-                                      <Form.Item
-                                        label="Printing Type"
-                                        name={[field.name, 'PrintingType']}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message:
-                                              'Please select Printing Type.',
-                                          },
-                                        ]}
-                                      >
-                                        <Select
-                                          placeholder="Select Printing Type"
-                                          options={
-                                            DROPDOWN_OPTIONS.printingTypes
-                                          }
-                                          disabled={isRepeatOrder}
-                                        />
-                                      </Form.Item>
-                                    </Col>
-                                    <Col span={12}>
-                                      <Form.Item
-                                        label="Print Colour"
-                                        name={[field.name, 'PrintColor']}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message:
-                                              'Please select Print Colour.',
-                                          },
-                                        ]}
-                                      >
-                                        <Select
-                                          placeholder="Select Print Colour"
-                                          options={DROPDOWN_OPTIONS.printColors}
-                                          disabled={isRepeatOrder}
-                                        />
-                                      </Form.Item>
-                                    </Col>
-                                  </Row>
-
-                                  <SubHeading>Other Information</SubHeading>
-                                  <Row gutter={12}>
-                                    <Col span={12}>
-                                      <OtherSelectField
-                                        fieldName={field.name}
-                                        selectFieldKey="Color"
-                                        customFieldKey="ColorCustom"
-                                        label="Colour"
-                                        options={DROPDOWN_OPTIONS.colors}
-                                        disabled={isRepeatOrder}
-                                        form={form}
-                                        required={true}
-                                      />
-                                    </Col>
-                                    <Col span={12}>
-                                      <Form.Item
-                                        label="Design"
-                                        name={[field.name, 'Design']}
-                                        valuePropName="checked"
-                                      >
-                                        <Checkbox disabled={isRepeatOrder}>
-                                          Include Design
-                                        </Checkbox>
-                                      </Form.Item>
-                                    </Col>
-                                  </Row>
-
-                                  <SubHeading>Plate Information</SubHeading>
-                                  <Row gutter={12}>
-                                    <Col span={12}>
-                                      <Form.Item
-                                        label="Plate Available"
-                                        name={[field.name, 'PlateAvailable']}
-                                        valuePropName="checked"
-                                      >
-                                        <Checkbox disabled={isRepeatOrder}>
-                                          Plate Available
-                                        </Checkbox>
-                                      </Form.Item>
-                                    </Col>
-                                    <Col span={12}>
-                                      <Form.Item
-                                        label="Plate Block Number"
-                                        name={[field.name, 'PlateBlockNumber']}
-                                      >
-                                        <Select
-                                          placeholder="Select Plate Block Number"
-                                          options={
-                                            DROPDOWN_OPTIONS.plateBlockNumbers
-                                          }
-                                          disabled={isRepeatOrder}
-                                        />
-                                      </Form.Item>
-                                    </Col>
-                                  </Row>
-
-                                  <SubHeading>Pricing</SubHeading>
-                                  <Row gutter={12}>
-                                    <Col span={12}>
-                                      <Form.Item
-                                        label="Rate"
-                                        name={[field.name, 'Rate']}
-                                        rules={[
-                                          {
-                                            required: true,
-                                            message: 'Please enter Rate.',
-                                          },
-                                        ]}
-                                      >
-                                        <Input
-                                          placeholder="e.g., 100.50"
-                                          onInput={handleDecimalInput}
-                                          onChange={() =>
-                                            handleRateOrQuantityChange(
-                                              `${idx}_Rate`,
-                                            )
-                                          }
-                                          disabled={isRepeatOrder}
-                                          prefix="₹"
-                                        />
-                                      </Form.Item>
-                                    </Col>
-                                    <Col span={12}>
-                                      <Form.Item
-                                        label="Product Amount"
-                                        name={[field.name, 'ProductAmount']}
-                                      >
-                                        <Input
-                                          placeholder="Auto calculated (editable)"
-                                          onInput={handleDecimalInput}
-                                          onChange={() =>
-                                            handleProductAmountChange(
-                                              `${idx}_ProductAmount`,
-                                            )
-                                          }
-                                          prefix="₹"
-                                          style={{
-                                            fontWeight: 600,
-                                            color: '#389e0d',
-                                          }}
-                                        />
-                                      </Form.Item>
-                                    </Col>
-                                  </Row>
-                                </Card>
-                              );
-                            }}
-                          </Form.Item>
-                        );
-                      })
+                                    </Form.Item>
+                                  </Col>
+                                </Row>
+                              </Card>
+                            );
+                          }}
+                        </Form.Item>
+                      ))
                     )}
                   </>
                 )}
