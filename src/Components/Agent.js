@@ -15,6 +15,7 @@ import {
   Avatar,
   Tag,
   Spin,
+  Descriptions,
 } from 'antd';
 import {
   EditOutlined,
@@ -45,6 +46,10 @@ export default function Agent() {
   const [agentOrders, setAgentOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersSearch, setOrdersSearch] = useState('');
+
+  // ── View Single Order state ──
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isViewOrderModalOpen, setIsViewOrderModalOpen] = useState(false);
 
   // ---------------- FETCH ----------------
   async function fetchAgents() {
@@ -80,12 +85,9 @@ export default function Agent() {
     setIsOrdersModalOpen(true);
     setOrdersLoading(true);
     try {
-      // Fetch all orders then filter by AgentId client-side
-      // (backend GET /api/orders returns all orders)
       const res = await fetch('/api/orders');
       if (!res.ok) throw new Error('Failed to fetch orders');
       const allOrders = await res.json();
-      // Filter by matching AgentId (PascalCase from backend)
       const filtered = allOrders.filter(
         (o) => String(o.AgentId) === String(record.agentId),
       );
@@ -96,6 +98,17 @@ export default function Agent() {
       setOrdersLoading(false);
     }
   }, []);
+
+  // ---------------- OPEN SINGLE ORDER ----------------
+  const openViewOrderModal = (order) => {
+    setSelectedOrder(order);
+    setIsViewOrderModalOpen(true);
+  };
+
+  const closeViewOrderModal = () => {
+    setIsViewOrderModalOpen(false);
+    setSelectedOrder(null);
+  };
 
   // ---------------- INPUT VALIDATORS ----------------
   const handleNameChange = (e) => {
@@ -296,7 +309,6 @@ export default function Agent() {
     );
   }, [agentOrders, ordersSearch]);
 
-  // Consistent avatar colour keyed on first letter
   const avatarColor = (name) => {
     const colors = [
       '#6c5ce7',
@@ -428,6 +440,222 @@ export default function Agent() {
     },
   ];
 
+  // ---------------- VIEW ORDER MODAL CONTENT ----------------
+  const renderViewOrderModal = () => {
+    if (!selectedOrder) return null;
+
+    const agentName = ordersAgent?.name ?? '—';
+    const partyName = selectedOrder.Party_Name ?? '—';
+    const alias = selectedOrder.AliasOrCompanyName ?? '—';
+    const address = selectedOrder.Address ?? '—';
+    const state = selectedOrder.State ?? '—';
+    const city = selectedOrder.City ?? '—';
+    const pincode = selectedOrder.Pincode ?? '—';
+    const contactP1 = selectedOrder.Contact_Person1 ?? '—';
+    const contactP2 = selectedOrder.Contact_Person2 ?? '—';
+    const mobile1 = selectedOrder.Mobile1 ? String(selectedOrder.Mobile1) : '—';
+    const mobile2 = selectedOrder.Mobile2 ? String(selectedOrder.Mobile2) : '—';
+    const email = selectedOrder.Email ?? '—';
+    const products = Array.isArray(selectedOrder.Products)
+      ? selectedOrder.Products
+      : [];
+
+    const sectionStyle = {
+      background: '#f0f4ff',
+      borderRadius: 10,
+      padding: '10px 16px',
+      marginBottom: 8,
+      fontWeight: 700,
+      fontSize: 14,
+      color: '#1a1a2e',
+    };
+
+    const tableStyle = {
+      width: '100%',
+      borderCollapse: 'collapse',
+      marginBottom: 16,
+      background: '#fff',
+      borderRadius: 10,
+      overflow: 'hidden',
+      border: '1px solid #e8e8e8',
+    };
+
+    const tdStyle = {
+      padding: '10px 14px',
+      borderBottom: '1px solid #f0f0f0',
+      fontSize: 13,
+      color: '#555',
+      width: '25%',
+    };
+
+    const tdValueStyle = {
+      ...tdStyle,
+      color: '#1a1a2e',
+      fontWeight: 500,
+    };
+
+    return (
+      <div style={{ maxHeight: '65vh', overflowY: 'auto', paddingRight: 4 }}>
+        {/* Party Information */}
+        <div style={sectionStyle}>Party Information</div>
+        <table style={tableStyle}>
+          <tbody>
+            <tr>
+              <td style={tdStyle}>Agent</td>
+              <td style={tdValueStyle}>{agentName}</td>
+              <td style={tdStyle}>Party Name</td>
+              <td style={tdValueStyle}>{partyName}</td>
+            </tr>
+            <tr>
+              <td style={tdStyle}>Alias / Company Name</td>
+              <td style={tdValueStyle}>{alias}</td>
+              <td style={tdStyle}>Address</td>
+              <td style={tdValueStyle}>{address}</td>
+            </tr>
+            <tr>
+              <td style={tdStyle}>State</td>
+              <td style={tdValueStyle}>{state}</td>
+              <td style={tdStyle}>City</td>
+              <td style={tdValueStyle}>{city}</td>
+            </tr>
+            <tr>
+              <td style={tdStyle}>Pincode</td>
+              <td style={tdValueStyle}>{pincode}</td>
+              <td style={tdStyle}></td>
+              <td style={tdValueStyle}></td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Contact Information */}
+        <div style={sectionStyle}>Contact Information</div>
+        <table style={tableStyle}>
+          <tbody>
+            <tr>
+              <td style={tdStyle}>Contact Person 1</td>
+              <td style={tdValueStyle}>{contactP1}</td>
+              <td style={tdStyle}>Contact Person 2</td>
+              <td style={tdValueStyle}>{contactP2}</td>
+            </tr>
+            <tr>
+              <td style={tdStyle}>Mobile 1</td>
+              <td style={tdValueStyle}>{mobile1}</td>
+              <td style={tdStyle}>Mobile 2</td>
+              <td style={tdValueStyle}>{mobile2}</td>
+            </tr>
+            <tr>
+              <td style={tdStyle}>Email</td>
+              <td style={tdValueStyle} colSpan={3}>
+                {email}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Products */}
+        <div style={sectionStyle}>Products ({products.length})</div>
+        {products.length === 0 ? (
+          <div
+            style={{
+              color: '#999',
+              fontSize: 13,
+              textAlign: 'center',
+              padding: '16px 0',
+            }}
+          >
+            No products found.
+          </div>
+        ) : (
+          products.map((product, index) => {
+            const productType =
+              product.ProductType ?? product.productType ?? '—';
+            const fields = Object.entries(product).filter(
+              ([key]) => !['ProductType', 'productType'].includes(key),
+            );
+            return (
+              <div
+                key={index}
+                style={{
+                  border: '1px solid #e8e8e8',
+                  borderRadius: 10,
+                  marginBottom: 12,
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Product header */}
+                <div
+                  style={{
+                    background: '#f5f3ff',
+                    padding: '8px 16px',
+                    borderBottom: '1px solid #e8e8e8',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                  }}
+                >
+                  <span
+                    style={{ fontWeight: 700, fontSize: 13, color: '#1a1a2e' }}
+                  >
+                    Product {index + 1}
+                  </span>
+                  <Tag
+                    color="purple"
+                    style={{
+                      borderRadius: 20,
+                      fontWeight: 600,
+                      fontSize: 12,
+                      padding: '0 10px',
+                    }}
+                  >
+                    {productType}
+                  </Tag>
+                </div>
+                {/* Product fields */}
+                <table
+                  style={{ ...tableStyle, marginBottom: 0, borderRadius: 0 }}
+                >
+                  <tbody>
+                    {fields.reduce((rows, [key, val], i) => {
+                      if (i % 2 === 0) {
+                        const next = fields[i + 1];
+                        rows.push(
+                          <tr key={i}>
+                            <td style={tdStyle}>{key}</td>
+                            <td style={tdValueStyle}>
+                              {val !== null && val !== undefined
+                                ? String(val)
+                                : '—'}
+                            </td>
+                            {next ? (
+                              <>
+                                <td style={tdStyle}>{next[0]}</td>
+                                <td style={tdValueStyle}>
+                                  {next[1] !== null && next[1] !== undefined
+                                    ? String(next[1])
+                                    : '—'}
+                                </td>
+                              </>
+                            ) : (
+                              <>
+                                <td style={tdStyle}></td>
+                                <td style={tdValueStyle}></td>
+                              </>
+                            )}
+                          </tr>,
+                        );
+                      }
+                      return rows;
+                    }, [])}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{ width: '100%', background: '#f4f6fb', minHeight: '100vh' }}>
       <Navbar />
@@ -454,6 +682,7 @@ export default function Agent() {
         .agent-modal .ant-modal-footer .ant-btn-primary { border-radius: 8px; font-weight: 600; }
         .ant-form-item-label > label { font-size: 12px; font-weight: 600; color: #374151; }
         .orders-modal .ant-modal-title { font-size: 16px; font-weight: 700; }
+        .view-order-modal .ant-modal-title { font-size: 16px; font-weight: 700; }
         .order-card-item {
           display: flex;
           align-items: center;
@@ -463,25 +692,14 @@ export default function Agent() {
           border: 1px solid #e8e8e8;
           border-radius: 12px;
           margin-bottom: 10px;
-          transition: box-shadow 0.2s;
+          transition: box-shadow 0.2s, border-color 0.2s;
+          cursor: pointer;
         }
-        .order-card-item:hover { box-shadow: 0 2px 10px rgba(108,92,231,0.12); }
+        .order-card-item:hover { box-shadow: 0 2px 10px rgba(108,92,231,0.18); border-color: #b39ddb; }
         .order-card-item .order-info { flex: 1; min-width: 0; }
-        .order-card-item .order-party {
-          font-weight: 700;
-          font-size: 15px;
-          color: #1a1a2e;
-        }
-        .order-card-item .order-meta {
-          color: #888;
-          font-size: 13px;
-          margin-top: 3px;
-        }
-        .order-card-item .order-amount {
-          color: #00b894;
-          font-weight: 700;
-          font-size: 14px;
-        }
+        .order-card-item .order-party { font-weight: 700; font-size: 15px; color: #1a1a2e; }
+        .order-card-item .order-meta { color: #888; font-size: 13px; margin-top: 3px; }
+        .order-card-item .order-amount { color: #00b894; font-weight: 700; font-size: 14px; }
       `}</style>
 
       <div style={{ maxWidth: 1440, margin: '24px auto', padding: '0 20px' }}>
@@ -677,7 +895,6 @@ export default function Agent() {
               style={{ borderRadius: 8 }}
             />
           </Form.Item>
-
           <Form.Item
             name="mobile"
             label="Mobile Number"
@@ -698,7 +915,6 @@ export default function Agent() {
               style={{ borderRadius: 8 }}
             />
           </Form.Item>
-
           <Form.Item
             name="aadhar_Details"
             label="Aadhar Details"
@@ -718,7 +934,6 @@ export default function Agent() {
               style={{ borderRadius: 8, fontFamily: 'monospace' }}
             />
           </Form.Item>
-
           <Form.Item name="address" label="Address">
             <Input.TextArea
               rows={3}
@@ -769,7 +984,6 @@ export default function Agent() {
           </Space>
         }
       >
-        {/* Search */}
         <Input
           prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
           placeholder="Search by Order ID, Party Name or Contact Person..."
@@ -779,7 +993,6 @@ export default function Agent() {
           style={{ borderRadius: 8, marginBottom: 14 }}
         />
 
-        {/* Orders list */}
         <div style={{ maxHeight: 420, overflowY: 'auto', paddingRight: 2 }}>
           {ordersLoading ? (
             <div style={{ textAlign: 'center', padding: '40px 0' }}>
@@ -798,7 +1011,6 @@ export default function Agent() {
             </div>
           ) : (
             filteredOrders.map((order) => {
-              // ✅ Correct PascalCase field names matching the backend schema
               const partyName = order.Party_Name ?? '—';
               const alias = order.AliasOrCompanyName ?? '';
               const contactP1 = order.Contact_Person1 ?? '';
@@ -809,15 +1021,22 @@ export default function Agent() {
                 ? order.Products.length
                 : null;
               const orderId = order.OrderId;
-
-              // Display name: prefer AliasOrCompanyName, fall back to Party_Name
               const displayName = alias || partyName;
               const contactLine = [contactP1, contactP2]
                 .filter(Boolean)
                 .join(' / ');
 
               return (
-                <div key={orderId} className="order-card-item">
+                <div
+                  key={orderId}
+                  className="order-card-item"
+                  onClick={() => openViewOrderModal(order)} // ← click handler
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) =>
+                    e.key === 'Enter' && openViewOrderModal(order)
+                  }
+                >
                   <Avatar
                     size={48}
                     style={{
@@ -831,7 +1050,6 @@ export default function Agent() {
                   </Avatar>
 
                   <div className="order-info">
-                    {/* Row 1: display name + order ID tag + product count tag */}
                     <div
                       style={{
                         display: 'flex',
@@ -867,8 +1085,6 @@ export default function Agent() {
                         </Tag>
                       )}
                     </div>
-
-                    {/* Row 2: contact · mobile · amount */}
                     <div className="order-meta">
                       {contactLine && <span>{contactLine}</span>}
                       {contactLine && mobile && (
@@ -885,11 +1101,63 @@ export default function Agent() {
                       )}
                     </div>
                   </div>
+
+                  {/* Visual hint that the row is clickable */}
+                  <EyeOutlined
+                    style={{ color: '#b39ddb', fontSize: 18, flexShrink: 0 }}
+                  />
                 </div>
               );
             })
           )}
         </div>
+      </Modal>
+
+      {/* ── View Single Order Modal ── */}
+      <Modal
+        className="view-order-modal"
+        open={isViewOrderModalOpen}
+        onCancel={closeViewOrderModal}
+        centered
+        width={740}
+        footer={[
+          <Button
+            key="back"
+            icon={<ArrowLeftOutlined />}
+            onClick={closeViewOrderModal}
+            style={{ borderRadius: 8 }}
+          >
+            Back to Orders
+          </Button>,
+          <Button
+            key="close"
+            onClick={closeViewOrderModal}
+            style={{ borderRadius: 8 }}
+          >
+            Close
+          </Button>,
+        ]}
+        title={
+          <Space align="center">
+            <EyeOutlined style={{ color: '#1677ff', fontSize: 18 }} />
+            <span style={{ fontWeight: 700, fontSize: 16 }}>View Order</span>
+            {selectedOrder && (
+              <Tag
+                color="blue"
+                style={{
+                  borderRadius: 20,
+                  fontWeight: 700,
+                  fontSize: 12,
+                  padding: '0 10px',
+                }}
+              >
+                #{selectedOrder.OrderId}
+              </Tag>
+            )}
+          </Space>
+        }
+      >
+        {renderViewOrderModal()}
       </Modal>
     </div>
   );
