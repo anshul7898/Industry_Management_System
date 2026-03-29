@@ -12,6 +12,9 @@ import {
   Row,
   Col,
   Badge,
+  Avatar,
+  Tag,
+  Spin,
 } from 'antd';
 import {
   EditOutlined,
@@ -20,6 +23,9 @@ import {
   PlusOutlined,
   UserOutlined,
   SearchOutlined,
+  EyeOutlined,
+  FileTextOutlined,
+  ArrowLeftOutlined,
 } from '@ant-design/icons';
 import Navbar from './Navbar';
 
@@ -32,6 +38,13 @@ export default function Agent() {
   const [modalMode, setModalMode] = useState('add');
   const [editingAgentId, setEditingAgentId] = useState(null);
   const [form] = Form.useForm();
+
+  // ── View Orders state ──
+  const [isOrdersModalOpen, setIsOrdersModalOpen] = useState(false);
+  const [ordersAgent, setOrdersAgent] = useState(null);
+  const [agentOrders, setAgentOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersSearch, setOrdersSearch] = useState('');
 
   // ---------------- FETCH ----------------
   async function fetchAgents() {
@@ -58,6 +71,31 @@ export default function Agent() {
   useEffect(() => {
     refreshAgents();
   }, [refreshAgents]);
+
+  // ---------------- FETCH ORDERS FOR AGENT ----------------
+  const openOrdersModal = useCallback(async (record) => {
+    setOrdersAgent({ agentId: record.agentId, name: record.name });
+    setOrdersSearch('');
+    setAgentOrders([]);
+    setIsOrdersModalOpen(true);
+    setOrdersLoading(true);
+    try {
+      // Fetch all orders then filter by AgentId client-side
+      // (backend GET /api/orders returns all orders)
+      const res = await fetch('/api/orders');
+      if (!res.ok) throw new Error('Failed to fetch orders');
+      const allOrders = await res.json();
+      // Filter by matching AgentId (PascalCase from backend)
+      const filtered = allOrders.filter(
+        (o) => String(o.AgentId) === String(record.agentId),
+      );
+      setAgentOrders(filtered);
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, []);
 
   // ---------------- INPUT VALIDATORS ----------------
   const handleNameChange = (e) => {
@@ -234,7 +272,46 @@ export default function Agent() {
     setPagination((p) => ({ ...p, current: 1 }));
   };
 
-  // ---------------- TABLE ----------------
+  // ---------------- ORDERS MODAL FILTERED LIST ----------------
+  const filteredOrders = useMemo(() => {
+    const q = ordersSearch.toLowerCase();
+    if (!q) return agentOrders;
+    return agentOrders.filter(
+      (o) =>
+        String(o.OrderId ?? '')
+          .toLowerCase()
+          .includes(q) ||
+        String(o.Party_Name ?? '')
+          .toLowerCase()
+          .includes(q) ||
+        String(o.AliasOrCompanyName ?? '')
+          .toLowerCase()
+          .includes(q) ||
+        String(o.Contact_Person1 ?? '')
+          .toLowerCase()
+          .includes(q) ||
+        String(o.Contact_Person2 ?? '')
+          .toLowerCase()
+          .includes(q),
+    );
+  }, [agentOrders, ordersSearch]);
+
+  // Consistent avatar colour keyed on first letter
+  const avatarColor = (name) => {
+    const colors = [
+      '#6c5ce7',
+      '#0984e3',
+      '#00b894',
+      '#e17055',
+      '#fdcb6e',
+      '#e84393',
+      '#00cec9',
+    ];
+    const idx = (name?.charCodeAt(0) ?? 0) % colors.length;
+    return colors[idx];
+  };
+
+  // ---------------- TABLE COLUMNS ----------------
   const columns = [
     {
       title: 'Agent ID',
@@ -259,7 +336,7 @@ export default function Agent() {
       title: 'Mobile Number',
       dataIndex: 'mobile',
       key: 'mobile',
-      width: 180,
+      width: 160,
       sorter: (a, b) =>
         String(a.mobile || '').localeCompare(String(b.mobile || '')),
     },
@@ -267,7 +344,7 @@ export default function Agent() {
       title: 'Aadhar Details',
       dataIndex: 'aadhar_Details',
       key: 'aadhar_Details',
-      width: 200,
+      width: 180,
       sorter: (a, b) =>
         String(a.aadhar_Details || '').localeCompare(
           String(b.aadhar_Details || ''),
@@ -283,18 +360,46 @@ export default function Agent() {
       title: 'Address',
       dataIndex: 'address',
       key: 'address',
-      // no fixed width — stretches to fill remaining space
+      width: 150,
       sorter: (a, b) =>
         String(a.address || '').localeCompare(String(b.address || '')),
-      render: (v) => v || '-',
+      render: (v) =>
+        v ? (
+          <span
+            style={{
+              display: 'block',
+              maxWidth: 140,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            title={v}
+          >
+            {v}
+          </span>
+        ) : (
+          '-'
+        ),
     },
     {
       title: 'Action',
       key: 'action',
-      width: 160,
+      width: 260,
       fixed: 'right',
       render: (_, record) => (
-        <Space size={4}>
+        <Space size={4} wrap>
+          <Button
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => openOrdersModal(record)}
+            style={{
+              borderRadius: 6,
+              color: '#6c5ce7',
+              borderColor: '#6c5ce7',
+            }}
+          >
+            View Orders
+          </Button>
           <Button
             size="small"
             icon={<EditOutlined />}
@@ -348,9 +453,37 @@ export default function Agent() {
         .agent-modal .ant-modal-title { font-size: 16px; font-weight: 700; }
         .agent-modal .ant-modal-footer .ant-btn-primary { border-radius: 8px; font-weight: 600; }
         .ant-form-item-label > label { font-size: 12px; font-weight: 600; color: #374151; }
+        .orders-modal .ant-modal-title { font-size: 16px; font-weight: 700; }
+        .order-card-item {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 14px 16px;
+          background: #fff;
+          border: 1px solid #e8e8e8;
+          border-radius: 12px;
+          margin-bottom: 10px;
+          transition: box-shadow 0.2s;
+        }
+        .order-card-item:hover { box-shadow: 0 2px 10px rgba(108,92,231,0.12); }
+        .order-card-item .order-info { flex: 1; min-width: 0; }
+        .order-card-item .order-party {
+          font-weight: 700;
+          font-size: 15px;
+          color: #1a1a2e;
+        }
+        .order-card-item .order-meta {
+          color: #888;
+          font-size: 13px;
+          margin-top: 3px;
+        }
+        .order-card-item .order-amount {
+          color: #00b894;
+          font-weight: 700;
+          font-size: 14px;
+        }
       `}</style>
 
-      {/* ── maxWidth raised to 1440 to match Order/Party/Product pages ── */}
       <div style={{ maxWidth: 1440, margin: '24px auto', padding: '0 20px' }}>
         {/* ── Page Header ── */}
         <div
@@ -480,7 +613,7 @@ export default function Agent() {
                 pageSize: newPagination.pageSize,
               })
             }
-            scroll={{ x: 900 }}
+            scroll={{ x: 1000 }}
             rowClassName={(_, index) =>
               index % 2 === 0 ? 'table-row-light' : 'table-row-dark'
             }
@@ -488,7 +621,7 @@ export default function Agent() {
         </Card>
       </div>
 
-      {/* ── Modal ── */}
+      {/* ── Add / Edit Agent Modal ── */}
       <Modal
         className="agent-modal"
         title={
@@ -594,6 +727,169 @@ export default function Agent() {
             />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* ── View Orders Modal ── */}
+      <Modal
+        className="orders-modal"
+        open={isOrdersModalOpen}
+        onCancel={() => setIsOrdersModalOpen(false)}
+        centered
+        width={660}
+        footer={[
+          <Button
+            key="back"
+            icon={<ArrowLeftOutlined />}
+            onClick={() => setIsOrdersModalOpen(false)}
+            style={{ borderRadius: 8 }}
+          >
+            Back to Agents
+          </Button>,
+          <Button
+            key="close"
+            onClick={() => setIsOrdersModalOpen(false)}
+            style={{ borderRadius: 8 }}
+          >
+            Close
+          </Button>,
+        ]}
+        title={
+          <Space align="center">
+            <FileTextOutlined style={{ color: '#6c5ce7', fontSize: 18 }} />
+            <span style={{ fontWeight: 700, fontSize: 16 }}>
+              Orders for {ordersAgent?.name}
+            </span>
+            <Tag
+              color="purple"
+              style={{ borderRadius: 20, fontWeight: 600, fontSize: 12 }}
+            >
+              {filteredOrders.length}{' '}
+              {filteredOrders.length === 1 ? 'order' : 'orders'}
+            </Tag>
+          </Space>
+        }
+      >
+        {/* Search */}
+        <Input
+          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+          placeholder="Search by Order ID, Party Name or Contact Person..."
+          value={ordersSearch}
+          onChange={(e) => setOrdersSearch(e.target.value)}
+          allowClear
+          style={{ borderRadius: 8, marginBottom: 14 }}
+        />
+
+        {/* Orders list */}
+        <div style={{ maxHeight: 420, overflowY: 'auto', paddingRight: 2 }}>
+          {ordersLoading ? (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <Spin size="large" />
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '40px 0',
+                color: '#999',
+                fontSize: 14,
+              }}
+            >
+              No orders found for this agent.
+            </div>
+          ) : (
+            filteredOrders.map((order) => {
+              // ✅ Correct PascalCase field names matching the backend schema
+              const partyName = order.Party_Name ?? '—';
+              const alias = order.AliasOrCompanyName ?? '';
+              const contactP1 = order.Contact_Person1 ?? '';
+              const contactP2 = order.Contact_Person2 ?? '';
+              const mobile = order.Mobile1 ? String(order.Mobile1) : '';
+              const totalAmount = order.TotalAmount ?? null;
+              const productCount = Array.isArray(order.Products)
+                ? order.Products.length
+                : null;
+              const orderId = order.OrderId;
+
+              // Display name: prefer AliasOrCompanyName, fall back to Party_Name
+              const displayName = alias || partyName;
+              const contactLine = [contactP1, contactP2]
+                .filter(Boolean)
+                .join(' / ');
+
+              return (
+                <div key={orderId} className="order-card-item">
+                  <Avatar
+                    size={48}
+                    style={{
+                      backgroundColor: avatarColor(displayName),
+                      fontWeight: 700,
+                      fontSize: 20,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {displayName.charAt(0).toUpperCase()}
+                  </Avatar>
+
+                  <div className="order-info">
+                    {/* Row 1: display name + order ID tag + product count tag */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <span className="order-party">{displayName}</span>
+                      <Tag
+                        color="purple"
+                        style={{
+                          borderRadius: 20,
+                          fontWeight: 600,
+                          fontSize: 11,
+                          padding: '0 8px',
+                        }}
+                      >
+                        #{orderId}
+                      </Tag>
+                      {productCount !== null && (
+                        <Tag
+                          color="green"
+                          style={{
+                            borderRadius: 20,
+                            fontWeight: 600,
+                            fontSize: 11,
+                            padding: '0 8px',
+                          }}
+                        >
+                          {productCount}{' '}
+                          {productCount === 1 ? 'product' : 'products'}
+                        </Tag>
+                      )}
+                    </div>
+
+                    {/* Row 2: contact · mobile · amount */}
+                    <div className="order-meta">
+                      {contactLine && <span>{contactLine}</span>}
+                      {contactLine && mobile && (
+                        <span style={{ margin: '0 5px' }}>·</span>
+                      )}
+                      {mobile && <span>{mobile}</span>}
+                      {totalAmount !== null && (
+                        <span
+                          className="order-amount"
+                          style={{ marginLeft: 10 }}
+                        >
+                          ₹{Number(totalAmount).toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </Modal>
     </div>
   );
