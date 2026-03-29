@@ -49,12 +49,6 @@ const DROPDOWN_OPTIONS = {
     { label: 'Stitching', value: 'Stitching' },
     { label: 'Machine', value: 'Machine' },
   ],
-  productSizeStitching: [
-    { label: '15 X 18 X 5', value: '15 X 18 X 5' },
-    { label: '19 X 15 X 5', value: '19 X 15 X 5' },
-    { label: '13 X 15 X 5', value: '13 X 15 X 5' },
-    { label: '16 X 16 X 5', value: '16 X 16 X 5' },
-  ],
   productCategory: [
     { label: 'Leader Bag', value: 'Leader Bag' },
     { label: 'D-Cut Bag', value: 'D-Cut Bag' },
@@ -65,58 +59,6 @@ const DROPDOWN_OPTIONS = {
     { label: 'Bottom Gaget Bag', value: 'Bottom Gaget Bag' },
     { label: 'Box Bag', value: 'Box Bag' },
     { label: 'Handle Bag', value: 'Handle Bag' },
-  ],
-  // ✅ Handle Bag sizes
-  handle_bag_Size: [
-    { label: '10 X 14', value: '10 X 14' },
-    { label: '12 X 16', value: '12 X 16' },
-    { label: '14 X 18', value: '14 X 18' },
-    { label: '16 X 16', value: '16 X 16' },
-    { label: '16 X 19', value: '16 X 19' },
-  ],
-  d_Cut_Bag_Size: [
-    { label: '9 X 12', value: '9 X 12' },
-    { label: '10 X 14', value: '10 X 14' },
-    { label: '12 X 16', value: '12 X 16' },
-    { label: '14 X 19', value: '14 X 19' },
-    { label: '16 X 21', value: '16 X 21' },
-  ],
-  u_Cut_Bag_Size: [
-    { label: '9 X 12', value: '9 X 12' },
-    { label: '11 X 16', value: '11 X 16' },
-    { label: '16 X 21', value: '16 X 21' },
-    { label: '17 X 23', value: '17 X 23' },
-  ],
-  cake_Bag_Old_Pattern_Size: [
-    { label: '4 X 4', value: '4 X 4' },
-    { label: '6 X 6', value: '6 X 6' },
-    { label: '7 X 7', value: '7 X 7' },
-    { label: '8 X 8', value: '8 X 8' },
-    { label: '9 X 9', value: '9 X 9' },
-    { label: '10 X 10', value: '10 X 10' },
-    { label: '12 X 12', value: '12 X 12' },
-    { label: '14 X 14', value: '14 X 14' },
-  ],
-  cake_Bag_New_Pattern_Size: [
-    { label: '4 X 4', value: '4 X 4' },
-    { label: '6 X 6', value: '6 X 6' },
-    { label: '7 X 7', value: '7 X 7' },
-    { label: '8 X 8', value: '8 X 8' },
-    { label: '9 X 9', value: '9 X 9' },
-    { label: '10 X 10', value: '10 X 10' },
-    { label: '12 X 12', value: '12 X 12' },
-    { label: '14 X 14', value: '14 X 14' },
-  ],
-  Side_Gaget_Bag_Size: [
-    { label: '15 X 18 X 5', value: '15 X 18 X 5' },
-    { label: '19 X 15 X 5', value: '19 X 15 X 5' },
-    { label: '12 X 16 X 4', value: '12 X 16 X 4' },
-    { label: '16 X 16 X 4', value: '16 X 16 X 4' },
-  ],
-  Bottom_Gaget_Bag_Size: [
-    { label: '10 X 8 X 2', value: '10 X 8 X 2' },
-    { label: '12 X 8 X 3', value: '12 X 8 X 3' },
-    { label: '16 X 14 X 4', value: '16 X 14 X 4' },
   ],
   bagMaterials: [
     { label: 'Non-woven', value: 'Non-woven' },
@@ -408,6 +350,18 @@ export default function Order() {
   const [selectedOrderType, setSelectedOrderType] = useState(null);
   const [selectedState, setSelectedState] = useState(null);
 
+  // ── Dynamic size options fetched from DynamoDB ─────────────────
+  const [sizeOptions, setSizeOptions] = useState({
+    stitching: [],
+    'd-cut': [],
+    'u-cut': [],
+    'cake-bag-old': [],
+    'cake-bag-new': [],
+    'side-gaget': [],
+    'bottom-gaget': [],
+    'handle-bag': [],
+  });
+
   const [oldOrderAgentModalOpen, setOldOrderAgentModalOpen] = useState(false);
   const [oldOrderListModalOpen, setOldOrderListModalOpen] = useState(false);
   const [selectedOldAgent, setSelectedOldAgent] = useState(null);
@@ -489,28 +443,51 @@ export default function Order() {
     return v || null;
   };
 
-  // ✅ Added 'Handle Bag' case to return handle_bag_Size options
+  // ── Fetch all size options from API on mount ───────────────────
+  useEffect(() => {
+    async function loadSizes() {
+      try {
+        const res = await fetch('/api/sizes');
+        if (!res.ok) throw new Error(`Failed to fetch sizes (${res.status})`);
+        const fetched = await res.json();
+        setSizeOptions({
+          stitching: fetched['stitching'] || [],
+          'd-cut': fetched['d-cut'] || [],
+          'u-cut': fetched['u-cut'] || [],
+          'cake-bag-old': fetched['cake-bag-old'] || [],
+          'cake-bag-new': fetched['cake-bag-new'] || [],
+          'side-gaget': fetched['side-gaget'] || [],
+          'bottom-gaget': fetched['bottom-gaget'] || [],
+          'handle-bag': fetched['handle-bag'] || [],
+        });
+      } catch (err) {
+        message.error('Failed to load product size options');
+      }
+    }
+    loadSizes();
+  }, []);
+
+  // ── Return size options dynamically from fetched state ─────────
   const getProductSizeOptions = (productType, productCategory) => {
-    if (productType === 'Stitching')
-      return DROPDOWN_OPTIONS.productSizeStitching;
+    if (productType === 'Stitching') return sizeOptions['stitching'] || [];
     if (productType === 'Machine') {
       switch (productCategory) {
         case 'Leader Bag':
           return [];
         case 'D-Cut Bag':
-          return DROPDOWN_OPTIONS.d_Cut_Bag_Size;
+          return sizeOptions['d-cut'] || [];
         case 'U-Cut Bag':
-          return DROPDOWN_OPTIONS.u_Cut_Bag_Size;
+          return sizeOptions['u-cut'] || [];
         case 'Cake Bag - Old Pattern':
-          return DROPDOWN_OPTIONS.cake_Bag_Old_Pattern_Size;
+          return sizeOptions['cake-bag-old'] || [];
         case 'Cake Bag - New Pattern':
-          return DROPDOWN_OPTIONS.cake_Bag_New_Pattern_Size;
+          return sizeOptions['cake-bag-new'] || [];
         case 'Side Gaget Bag':
-          return DROPDOWN_OPTIONS.Side_Gaget_Bag_Size;
+          return sizeOptions['side-gaget'] || [];
         case 'Bottom Gaget Bag':
-          return DROPDOWN_OPTIONS.Bottom_Gaget_Bag_Size;
-        case 'Handle Bag': // ✅ NEW
-          return DROPDOWN_OPTIONS.handle_bag_Size; // ✅ NEW
+          return sizeOptions['bottom-gaget'] || [];
+        case 'Handle Bag':
+          return sizeOptions['handle-bag'] || [];
         default:
           return [];
       }
@@ -681,7 +658,6 @@ export default function Order() {
       const state = partyData?.state || partyData?.State || order.State || null;
       setSelectedState(state);
       form.resetFields();
-      // ✅ Fixed typo: setFieldsValues → setFieldsValue
       form.setFieldsValue({
         AgentId: order.AgentId,
         Party_Name:
@@ -852,7 +828,6 @@ export default function Order() {
       });
 
       form.resetFields();
-      // ✅ Fixed typo: setFieldsValues → setFieldsValue
       form.setFieldsValue({
         AgentId: order.AgentId,
         Party_Name: order.Party_Name || '',
@@ -2575,7 +2550,6 @@ export default function Order() {
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  {/* ✅ Email is optional */}
                   <Form.Item
                     label="Email (Optional)"
                     name="Email"
@@ -2846,7 +2820,7 @@ export default function Order() {
                                     </Col>
                                   </Row>
 
-                                  {/* ✅ Hide Border section for Machine type */}
+                                  {/* Hide Border section for Machine type */}
                                   {!isMachine && (
                                     <>
                                       <SubHeading>
