@@ -22,6 +22,7 @@ import {
   Tag,
   Spin,
   Badge,
+  Radio,
 } from 'antd';
 import {
   DeleteOutlined,
@@ -213,8 +214,8 @@ const emptyProduct = {
   ColorCustom: undefined,
   Design: false,
   PlateBlockNumber: undefined,
-  PlateAvailable: false,
-  PlateRate: undefined, // ✅ NEW
+  PlateType: undefined, // ✅ NEW — replaces PlateAvailable
+  PlateRate: undefined,
   Rate: undefined,
   ProductAmount: undefined,
 };
@@ -253,7 +254,7 @@ const SectionBox = ({ title, lockedTag, children, accent = '#1677ff' }) => (
   </div>
 );
 
-// ── Sub-section heading ─────────────────────────────────────────���─
+// ── Sub-section heading ───────────────────────────────────────────
 const SubHeading = ({ children }) => (
   <div
     style={{
@@ -992,8 +993,8 @@ export default function Order() {
           ColorCustom: cc.custom,
           Design: p.Design || false,
           PlateBlockNumber: p.PlateBlockNumber || undefined,
-          PlateAvailable: p.PlateAvailable || false,
-          PlateRate: p.PlateRate || undefined, // ✅ NEW
+          PlateType: p.PlateType || undefined, // ✅ NEW
+          PlateRate: p.PlateRate || undefined,
           Rate: p.Rate,
           ProductAmount: p.ProductAmount || 0,
         };
@@ -1133,7 +1134,8 @@ export default function Order() {
           HandleColorCustom: hc.custom ?? p.HandleColorCustom ?? undefined,
           Color: cc.selected,
           ColorCustom: cc.custom ?? p.ColorCustom ?? undefined,
-          PlateRate: p.PlateRate ?? undefined, // ✅ NEW
+          PlateType: p.PlateType ?? undefined, // ✅ NEW
+          PlateRate: p.PlateRate ?? undefined,
         };
       },
     );
@@ -1243,8 +1245,8 @@ export default function Order() {
       Color: pickValueOrOther(p.Color, p.ColorCustom),
       Design: p.Design || false,
       PlateBlockNumber: p.PlateBlockNumber || null,
-      PlateAvailable: p.PlateAvailable || false,
-      PlateRate: p.PlateRate ? parseFloat(p.PlateRate) : null, // ✅ NEW
+      PlateType: p.PlateType || null, // ✅ NEW — "Old" | "New" | null
+      PlateRate: p.PlateRate ? parseFloat(p.PlateRate) : null,
       Rate: p.Rate,
       ProductAmount: p.ProductAmount || 0,
     }));
@@ -1821,7 +1823,7 @@ export default function Order() {
           />
         </Card>
 
-        {/* ── Order Type Selection ─��� */}
+        {/* ── Order Type Selection ── */}
         <Modal
           title={
             <Space>
@@ -2370,19 +2372,27 @@ export default function Order() {
                               {product.Design ? 'Yes' : 'No'}
                             </Tag>
                           </Descriptions.Item>
-                          <Descriptions.Item label="Plate Available">
-                            <Tag
-                              color={
-                                product.PlateAvailable ? 'green' : 'default'
-                              }
-                            >
-                              {product.PlateAvailable ? 'Yes' : 'No'}
-                            </Tag>
+                          {/* ✅ PlateType replaces PlateAvailable in View modal */}
+                          <Descriptions.Item label="Plate Type">
+                            {product.PlateType ? (
+                              <Tag
+                                color={
+                                  product.PlateType === 'Old'
+                                    ? 'orange'
+                                    : 'green'
+                                }
+                              >
+                                {product.PlateType === 'Old'
+                                  ? '🔄 Old Plate'
+                                  : '✨ New Plate'}
+                              </Tag>
+                            ) : (
+                              '-'
+                            )}
                           </Descriptions.Item>
                           <Descriptions.Item label="Number of Plate">
                             {product.PlateBlockNumber || '-'}
                           </Descriptions.Item>
-                          {/* ✅ NEW — Plate Rate shown in View modal */}
                           <Descriptions.Item label="Plate Rate">
                             {product.PlateRate != null ? (
                               <span
@@ -3139,15 +3149,16 @@ export default function Order() {
 
                                 <SubHeading>Plate Information</SubHeading>
                                 <Row gutter={12}>
+                                  {/* ✅ PlateType — Radio buttons replacing PlateAvailable checkbox */}
                                   <Col span={8}>
                                     <Form.Item
-                                      label="Plate Available"
-                                      name={[field.name, 'PlateAvailable']}
-                                      valuePropName="checked"
+                                      label="Plate Type"
+                                      name={[field.name, 'PlateType']}
                                     >
-                                      <Checkbox disabled={isRepeatOrder}>
-                                        Plate Available
-                                      </Checkbox>
+                                      <Radio.Group disabled={isRepeatOrder}>
+                                        <Radio value="Old">Old Plate</Radio>
+                                        <Radio value="New">New Plate</Radio>
+                                      </Radio.Group>
                                     </Form.Item>
                                   </Col>
                                   <Col span={8}>
@@ -3164,7 +3175,6 @@ export default function Order() {
                                       />
                                     </Form.Item>
                                   </Col>
-                                  {/* ✅ NEW — Plate Rate input field */}
                                   <Col span={8}>
                                     <Form.Item
                                       label="Plate Rate (Optional)"
