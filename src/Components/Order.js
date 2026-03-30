@@ -9,7 +9,6 @@ import {
   Form,
   message,
   Select,
-  Checkbox,
   Descriptions,
   Card,
   Divider,
@@ -190,6 +189,7 @@ const DROPDOWN_OPTIONS = {
   ],
 };
 
+// ── emptyProduct — Design replaced by DesignType ─────────────────
 const emptyProduct = {
   ProductType: undefined,
   ProductId: undefined,
@@ -212,9 +212,9 @@ const emptyProduct = {
   PrintColor: undefined,
   Color: undefined,
   ColorCustom: undefined,
-  Design: false,
+  DesignType: undefined, // "Old" | "New" | undefined  (replaces Design bool)
   PlateBlockNumber: undefined,
-  PlateType: undefined, // ✅ NEW — replaces PlateAvailable
+  PlateType: undefined,
   PlateRate: undefined,
   Rate: undefined,
   ProductAmount: undefined,
@@ -254,7 +254,7 @@ const SectionBox = ({ title, lockedTag, children, accent = '#1677ff' }) => (
   </div>
 );
 
-// ── Sub-section heading ───────────────────────────────────────────
+// ── Sub-section heading ──────────────────────────────────���────────
 const SubHeading = ({ children }) => (
   <div
     style={{
@@ -829,7 +829,7 @@ export default function Order() {
       const state = partyData?.state || partyData?.State || order.State || null;
       setSelectedState(state);
       form.resetFields();
-      form.setFieldsValues({
+      form.setFieldsValue({
         AgentId: order.AgentId,
         Party_Name:
           partyData?.partyName ||
@@ -991,9 +991,9 @@ export default function Order() {
           PrintColor: p.PrintColor,
           Color: cc.selected,
           ColorCustom: cc.custom,
-          Design: p.Design || false,
+          DesignType: p.DesignType || undefined, // ← replaced Design
           PlateBlockNumber: p.PlateBlockNumber || undefined,
-          PlateType: p.PlateType || undefined, // ✅ NEW
+          PlateType: p.PlateType || undefined,
           PlateRate: p.PlateRate || undefined,
           Rate: p.Rate,
           ProductAmount: p.ProductAmount || 0,
@@ -1134,7 +1134,8 @@ export default function Order() {
           HandleColorCustom: hc.custom ?? p.HandleColorCustom ?? undefined,
           Color: cc.selected,
           ColorCustom: cc.custom ?? p.ColorCustom ?? undefined,
-          PlateType: p.PlateType ?? undefined, // ✅ NEW
+          DesignType: p.DesignType ?? undefined, // ← replaced Design
+          PlateType: p.PlateType ?? undefined,
           PlateRate: p.PlateRate ?? undefined,
         };
       },
@@ -1212,6 +1213,7 @@ export default function Order() {
     }
   };
 
+  // ── buildProductsPayload — DesignType replaces Design ─────────
   const buildProductsPayload = (products) =>
     (products || []).map((p) => ({
       ProductType: p.ProductType,
@@ -1243,9 +1245,9 @@ export default function Order() {
       PrintingType: p.PrintingType,
       PrintColor: p.PrintColor,
       Color: pickValueOrOther(p.Color, p.ColorCustom),
-      Design: p.Design || false,
+      DesignType: p.DesignType || null, // "Old" | "New" | null
       PlateBlockNumber: p.PlateBlockNumber || null,
-      PlateType: p.PlateType || null, // ✅ NEW — "Old" | "New" | null
+      PlateType: p.PlateType || null,
       PlateRate: p.PlateRate ? parseFloat(p.PlateRate) : null,
       Rate: p.Rate,
       ProductAmount: p.ProductAmount || 0,
@@ -2367,12 +2369,24 @@ export default function Order() {
                           <Descriptions.Item label="Colour">
                             {product.Color}
                           </Descriptions.Item>
-                          <Descriptions.Item label="Design">
-                            <Tag color={product.Design ? 'green' : 'default'}>
-                              {product.Design ? 'Yes' : 'No'}
-                            </Tag>
+                          {/* ── DesignType replaces Design in View modal ── */}
+                          <Descriptions.Item label="Design Type">
+                            {product.DesignType ? (
+                              <Tag
+                                color={
+                                  product.DesignType === 'Old'
+                                    ? 'orange'
+                                    : 'green'
+                                }
+                              >
+                                {product.DesignType === 'Old'
+                                  ? '🔄 Old Design'
+                                  : '✨ New Design'}
+                              </Tag>
+                            ) : (
+                              '-'
+                            )}
                           </Descriptions.Item>
-                          {/* ✅ PlateType replaces PlateAvailable in View modal */}
                           <Descriptions.Item label="Plate Type">
                             {product.PlateType ? (
                               <Tag
@@ -3134,22 +3148,22 @@ export default function Order() {
                                       required={true}
                                     />
                                   </Col>
+                                  {/* ── DesignType Radio replaces Design Checkbox ── */}
                                   <Col span={12}>
                                     <Form.Item
-                                      label="Design"
-                                      name={[field.name, 'Design']}
-                                      valuePropName="checked"
+                                      label="Design Type"
+                                      name={[field.name, 'DesignType']}
                                     >
-                                      <Checkbox disabled={isRepeatOrder}>
-                                        Include Design
-                                      </Checkbox>
+                                      <Radio.Group disabled={isRepeatOrder}>
+                                        <Radio value="Old">Old Design</Radio>
+                                        <Radio value="New">New Design</Radio>
+                                      </Radio.Group>
                                     </Form.Item>
                                   </Col>
                                 </Row>
 
                                 <SubHeading>Plate Information</SubHeading>
                                 <Row gutter={12}>
-                                  {/* ✅ PlateType — Radio buttons replacing PlateAvailable checkbox */}
                                   <Col span={8}>
                                     <Form.Item
                                       label="Plate Type"
