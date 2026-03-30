@@ -58,6 +58,10 @@ const getSizeKey = (productType, productCategory) => {
         return 'bottom-gaget';
       case 'Handle Bag':
         return 'handle-bag';
+      case 'Box Bag':
+        return 'box-bag';
+      case 'Leader Bag':
+        return 'leader-bag';
       default:
         return null;
     }
@@ -363,7 +367,10 @@ const OtherSelectField = ({
 );
 
 // ── ProductSizeField ──────────────────────────────────────────────
-// FIX: Uses sizeKey (slug) directly in the POST URL — matches sizes.py
+// ✅ FIX: For 'box-bag' and 'leader-bag', always show existing sizes from
+//         DynamoDB (loaded into sizeOptions) PLUS the "Other" option at the
+//         bottom. The old ONLY_OTHER_SIZE_KEYS logic was permanently hiding
+//         already-saved sizes — that check is now removed entirely.
 const ProductSizeField = ({
   fieldName,
   productType,
@@ -375,6 +382,10 @@ const ProductSizeField = ({
   required = true,
 }) => {
   const sizeKey = getSizeKey(productType, productCategory);
+
+  // ✅ Always read from sizeOptions for every category including
+  //    'box-bag' and 'leader-bag'. "Other" is always appended at the end
+  //    so the user can add a brand-new size at any time.
   const baseOptions = sizeKey ? sizeOptions[sizeKey] || [] : [];
   const options = [...baseOptions, { label: 'Other', value: OTHER_SIZE_VALUE }];
 
@@ -403,7 +414,7 @@ const ProductSizeField = ({
           if (!customVal || !sizeKey) return;
 
           try {
-            // ✅ FIX: use sizeKey (e.g. "cake-bag-new") not the table name
+            // POST to /api/sizes/<sizeKey> — works for all categories
             const res = await fetch(
               `/api/sizes/${encodeURIComponent(sizeKey)}`,
               {
@@ -416,9 +427,10 @@ const ProductSizeField = ({
               const errData = await res.json().catch(() => ({}));
               throw new Error(errData.detail || 'Failed to save new size');
             }
-            // Update local dropdown immediately
+            // ✅ Immediately add the new value to the local sizeOptions state
+            //    so it appears in the dropdown right away without a page reload
             onNewSizeAdded(sizeKey, customVal);
-            // Replace sentinel with the saved value in the form
+            // Replace the sentinel value with the real saved value in the form
             const products = form.getFieldValue('Products') || [];
             const updated = [...products];
             updated[fieldName] = {
@@ -539,6 +551,8 @@ export default function Order() {
     'side-gaget': [],
     'bottom-gaget': [],
     'handle-bag': [],
+    'box-bag': [],
+    'leader-bag': [],
   });
 
   const [oldOrderAgentModalOpen, setOldOrderAgentModalOpen] = useState(false);
@@ -633,28 +647,33 @@ export default function Order() {
     return v || null;
   };
 
-  useEffect(() => {
-    async function loadSizes() {
-      try {
-        const res = await fetch('/api/sizes');
-        if (!res.ok) throw new Error(`Failed to fetch sizes (${res.status})`);
-        const fetched = await res.json();
-        setSizeOptions({
-          stitching: fetched['stitching'] || [],
-          'd-cut': fetched['d-cut'] || [],
-          'u-cut': fetched['u-cut'] || [],
-          'cake-bag-old': fetched['cake-bag-old'] || [],
-          'cake-bag-new': fetched['cake-bag-new'] || [],
-          'side-gaget': fetched['side-gaget'] || [],
-          'bottom-gaget': fetched['bottom-gaget'] || [],
-          'handle-bag': fetched['handle-bag'] || [],
-        });
-      } catch (err) {
-        message.error('Failed to load product size options');
-      }
+  // ✅ loadSizes is extracted so it can be called both on mount AND when
+  //    the modal opens — ensuring fresh data is always shown
+  const loadSizes = useCallback(async () => {
+    try {
+      const res = await fetch('/api/sizes');
+      if (!res.ok) throw new Error(`Failed to fetch sizes (${res.status})`);
+      const fetched = await res.json();
+      setSizeOptions({
+        stitching: fetched['stitching'] || [],
+        'd-cut': fetched['d-cut'] || [],
+        'u-cut': fetched['u-cut'] || [],
+        'cake-bag-old': fetched['cake-bag-old'] || [],
+        'cake-bag-new': fetched['cake-bag-new'] || [],
+        'side-gaget': fetched['side-gaget'] || [],
+        'bottom-gaget': fetched['bottom-gaget'] || [],
+        'handle-bag': fetched['handle-bag'] || [],
+        'box-bag': fetched['box-bag'] || [],
+        'leader-bag': fetched['leader-bag'] || [],
+      });
+    } catch (err) {
+      message.error('Failed to load product size options');
     }
-    loadSizes();
   }, []);
+
+  useEffect(() => {
+    loadSizes();
+  }, [loadSizes]);
 
   const handleProductTypeChange = (fieldName) => {
     const products = form.getFieldValue('Products') || [];
@@ -1071,6 +1090,8 @@ export default function Order() {
     setSelectedOrderType(null);
   };
 
+  // ✅ loadSizes is called here so the modal always opens with the latest
+  //    sizes from DynamoDB — including any newly added ones
   const openAddOrderModal = async () => {
     setModalMode('add');
     setEditingOrderId(null);
@@ -1080,20 +1101,21 @@ export default function Order() {
     form.setFieldValue('Products', [{ ...emptyProduct }]);
     form.setFieldValue('TotalAmount', 0);
     try {
-      setAgents(await fetchAgents());
+      await Promise.all([fetchAgents().then(setAgents), loadSizes()]);
     } catch (err) {
       message.error(err.message);
     }
     setIsModalOpen(true);
   };
 
+  // ✅ loadSizes is also called when opening the edit modal
   const openEditModal = async (record) => {
     setModalMode('edit');
     setEditingOrderId(record.OrderId);
     setSelectedState(record.State || null);
     setIsRepeatOrder(false);
     try {
-      setAgents(await fetchAgents());
+      await Promise.all([fetchAgents().then(setAgents), loadSizes()]);
     } catch (err) {
       message.error(err.message);
     }
@@ -2843,7 +2865,7 @@ export default function Order() {
                                       </Form.Item>
                                     </Col>
                                   )}
-                                  {/* ── Product Size with "Other" support — uses sizeKey slug ── */}
+                                  {/* ── Product Size — existing sizes shown + Other always at bottom ── */}
                                   <Col
                                     span={productType === 'Machine' ? 8 : 12}
                                   >
