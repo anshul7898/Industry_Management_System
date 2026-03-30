@@ -187,9 +187,14 @@ const DROPDOWN_OPTIONS = {
     { label: 'Repeat Order', value: 'repeat' },
     { label: 'Old Order', value: 'old' },
   ],
+  // ── NEW: Design Style dropdown ────────────────────────────────
+  designStyles: [
+    { label: 'Same Front/Back', value: 'Same Front/Back' },
+    { label: 'Different Front/Back', value: 'Different Front/Back' },
+  ],
 };
 
-// ── emptyProduct — Design replaced by DesignType ─────────────────
+// ── emptyProduct ─────────────────────────────────────────────────
 const emptyProduct = {
   ProductType: undefined,
   ProductId: undefined,
@@ -212,7 +217,8 @@ const emptyProduct = {
   PrintColor: undefined,
   Color: undefined,
   ColorCustom: undefined,
-  DesignType: undefined, // "Old" | "New" | undefined  (replaces Design bool)
+  DesignType: undefined, // "Old" | "New" | undefined
+  DesignStyle: undefined, // "Same Front/Back" | "Different Front/Back" | undefined  ← NEW
   PlateBlockNumber: undefined,
   PlateType: undefined,
   PlateRate: undefined,
@@ -254,7 +260,7 @@ const SectionBox = ({ title, lockedTag, children, accent = '#1677ff' }) => (
   </div>
 );
 
-// ── Sub-section heading ──────────────────────────────────���────────
+// ── Sub-section heading ───────────────────────────────────────────
 const SubHeading = ({ children }) => (
   <div
     style={{
@@ -991,7 +997,8 @@ export default function Order() {
           PrintColor: p.PrintColor,
           Color: cc.selected,
           ColorCustom: cc.custom,
-          DesignType: p.DesignType || undefined, // ← replaced Design
+          DesignType: p.DesignType || undefined,
+          DesignStyle: p.DesignStyle || undefined, // ← NEW
           PlateBlockNumber: p.PlateBlockNumber || undefined,
           PlateType: p.PlateType || undefined,
           PlateRate: p.PlateRate || undefined,
@@ -1134,7 +1141,8 @@ export default function Order() {
           HandleColorCustom: hc.custom ?? p.HandleColorCustom ?? undefined,
           Color: cc.selected,
           ColorCustom: cc.custom ?? p.ColorCustom ?? undefined,
-          DesignType: p.DesignType ?? undefined, // ← replaced Design
+          DesignType: p.DesignType ?? undefined,
+          DesignStyle: p.DesignStyle ?? undefined, // ← NEW
           PlateType: p.PlateType ?? undefined,
           PlateRate: p.PlateRate ?? undefined,
         };
@@ -1213,7 +1221,7 @@ export default function Order() {
     }
   };
 
-  // ── buildProductsPayload — DesignType replaces Design ─────────
+  // ── buildProductsPayload — includes DesignStyle ───────────────
   const buildProductsPayload = (products) =>
     (products || []).map((p) => ({
       ProductType: p.ProductType,
@@ -1245,7 +1253,8 @@ export default function Order() {
       PrintingType: p.PrintingType,
       PrintColor: p.PrintColor,
       Color: pickValueOrOther(p.Color, p.ColorCustom),
-      DesignType: p.DesignType || null, // "Old" | "New" | null
+      DesignType: p.DesignType || null,
+      DesignStyle: p.DesignStyle || null, // ← NEW
       PlateBlockNumber: p.PlateBlockNumber || null,
       PlateType: p.PlateType || null,
       PlateRate: p.PlateRate ? parseFloat(p.PlateRate) : null,
@@ -2369,7 +2378,6 @@ export default function Order() {
                           <Descriptions.Item label="Colour">
                             {product.Color}
                           </Descriptions.Item>
-                          {/* ── DesignType replaces Design in View modal ── */}
                           <Descriptions.Item label="Design Type">
                             {product.DesignType ? (
                               <Tag
@@ -2382,6 +2390,24 @@ export default function Order() {
                                 {product.DesignType === 'Old'
                                   ? '🔄 Old Design'
                                   : '✨ New Design'}
+                              </Tag>
+                            ) : (
+                              '-'
+                            )}
+                          </Descriptions.Item>
+                          {/* ── DesignStyle in View modal ── */}
+                          <Descriptions.Item label="Design Style">
+                            {product.DesignStyle ? (
+                              <Tag
+                                color={
+                                  product.DesignStyle === 'Same Front/Back'
+                                    ? 'blue'
+                                    : 'purple'
+                                }
+                              >
+                                {product.DesignStyle === 'Same Front/Back'
+                                  ? '🔁 Same Front/Back'
+                                  : '🔀 Different Front/Back'}
                               </Tag>
                             ) : (
                               '-'
@@ -3136,7 +3162,7 @@ export default function Order() {
 
                                 <SubHeading>Other Information</SubHeading>
                                 <Row gutter={12}>
-                                  <Col span={12}>
+                                  <Col span={8}>
                                     <OtherSelectField
                                       fieldName={field.name}
                                       selectFieldKey="Color"
@@ -3148,8 +3174,7 @@ export default function Order() {
                                       required={true}
                                     />
                                   </Col>
-                                  {/* ── DesignType Radio replaces Design Checkbox ── */}
-                                  <Col span={12}>
+                                  <Col span={8}>
                                     <Form.Item
                                       label="Design Type"
                                       name={[field.name, 'DesignType']}
@@ -3158,6 +3183,20 @@ export default function Order() {
                                         <Radio value="Old">Old Design</Radio>
                                         <Radio value="New">New Design</Radio>
                                       </Radio.Group>
+                                    </Form.Item>
+                                  </Col>
+                                  {/* ── DesignStyle Dropdown ── */}
+                                  <Col span={8}>
+                                    <Form.Item
+                                      label="Design Style"
+                                      name={[field.name, 'DesignStyle']}
+                                    >
+                                      <Select
+                                        placeholder="Select Design Style"
+                                        options={DROPDOWN_OPTIONS.designStyles}
+                                        disabled={isRepeatOrder}
+                                        allowClear
+                                      />
                                     </Form.Item>
                                   </Col>
                                 </Row>
