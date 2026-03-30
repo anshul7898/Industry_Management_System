@@ -71,9 +71,10 @@ const getSizeKey = (productType, productCategory) => {
 
 const DROPDOWN_OPTIONS = {
   plateBlockNumbers: [
-    { label: 'Single', value: 'Single' },
-    { label: 'Double', value: 'Double' },
-    { label: 'Multi', value: 'Multi' },
+    { label: '1', value: '1' },
+    { label: '2', value: '2' },
+    { label: '3', value: '3' },
+    { label: '4', value: '4' },
   ],
   productTypes: [
     { label: 'Stitching', value: 'Stitching' },
@@ -2391,7 +2392,7 @@ export default function Order() {
                               {product.PlateAvailable ? 'Yes' : 'No'}
                             </Tag>
                           </Descriptions.Item>
-                          <Descriptions.Item label="Plate Block Number">
+                          <Descriptions.Item label="Number of Plate">
                             {product.PlateBlockNumber || '-'}
                           </Descriptions.Item>
                           <Descriptions.Item label="Product Amount" span={3}>
@@ -3153,11 +3154,11 @@ export default function Order() {
                                   </Col>
                                   <Col span={12}>
                                     <Form.Item
-                                      label="Plate Block Number"
+                                      label="Number of Plate"
                                       name={[field.name, 'PlateBlockNumber']}
                                     >
                                       <Select
-                                        placeholder="Select Plate Block Number"
+                                        placeholder="Select Number of Plate"
                                         options={
                                           DROPDOWN_OPTIONS.plateBlockNumbers
                                         }
