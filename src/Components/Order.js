@@ -214,6 +214,7 @@ const emptyProduct = {
   Design: false,
   PlateBlockNumber: undefined,
   PlateAvailable: false,
+  PlateRate: undefined, // ✅ NEW
   Rate: undefined,
   ProductAmount: undefined,
 };
@@ -252,7 +253,7 @@ const SectionBox = ({ title, lockedTag, children, accent = '#1677ff' }) => (
   </div>
 );
 
-// ── Sub-section heading ───────────────────────────────────────────
+// ── Sub-section heading ─────────────────────────────────────────���─
 const SubHeading = ({ children }) => (
   <div
     style={{
@@ -368,10 +369,6 @@ const OtherSelectField = ({
 );
 
 // ── ProductSizeField ──────────────────────────────────────────────
-// ✅ FIX: For 'box-bag' and 'leader-bag', always show existing sizes from
-//         DynamoDB (loaded into sizeOptions) PLUS the "Other" option at the
-//         bottom. The old ONLY_OTHER_SIZE_KEYS logic was permanently hiding
-//         already-saved sizes — that check is now removed entirely.
 const ProductSizeField = ({
   fieldName,
   productType,
@@ -383,10 +380,6 @@ const ProductSizeField = ({
   required = true,
 }) => {
   const sizeKey = getSizeKey(productType, productCategory);
-
-  // ✅ Always read from sizeOptions for every category including
-  //    'box-bag' and 'leader-bag'. "Other" is always appended at the end
-  //    so the user can add a brand-new size at any time.
   const baseOptions = sizeKey ? sizeOptions[sizeKey] || [] : [];
   const options = [...baseOptions, { label: 'Other', value: OTHER_SIZE_VALUE }];
 
@@ -415,7 +408,6 @@ const ProductSizeField = ({
           if (!customVal || !sizeKey) return;
 
           try {
-            // POST to /api/sizes/<sizeKey> — works for all categories
             const res = await fetch(
               `/api/sizes/${encodeURIComponent(sizeKey)}`,
               {
@@ -428,10 +420,7 @@ const ProductSizeField = ({
               const errData = await res.json().catch(() => ({}));
               throw new Error(errData.detail || 'Failed to save new size');
             }
-            // ✅ Immediately add the new value to the local sizeOptions state
-            //    so it appears in the dropdown right away without a page reload
             onNewSizeAdded(sizeKey, customVal);
-            // Replace the sentinel value with the real saved value in the form
             const products = form.getFieldValue('Products') || [];
             const updated = [...products];
             updated[fieldName] = {
@@ -648,8 +637,6 @@ export default function Order() {
     return v || null;
   };
 
-  // ✅ loadSizes is extracted so it can be called both on mount AND when
-  //    the modal opens — ensuring fresh data is always shown
   const loadSizes = useCallback(async () => {
     try {
       const res = await fetch('/api/sizes');
@@ -841,7 +828,7 @@ export default function Order() {
       const state = partyData?.state || partyData?.State || order.State || null;
       setSelectedState(state);
       form.resetFields();
-      form.setFieldsValue({
+      form.setFieldsValues({
         AgentId: order.AgentId,
         Party_Name:
           partyData?.partyName ||
@@ -1006,6 +993,7 @@ export default function Order() {
           Design: p.Design || false,
           PlateBlockNumber: p.PlateBlockNumber || undefined,
           PlateAvailable: p.PlateAvailable || false,
+          PlateRate: p.PlateRate || undefined, // ✅ NEW
           Rate: p.Rate,
           ProductAmount: p.ProductAmount || 0,
         };
@@ -1091,8 +1079,6 @@ export default function Order() {
     setSelectedOrderType(null);
   };
 
-  // ✅ loadSizes is called here so the modal always opens with the latest
-  //    sizes from DynamoDB — including any newly added ones
   const openAddOrderModal = async () => {
     setModalMode('add');
     setEditingOrderId(null);
@@ -1109,7 +1095,6 @@ export default function Order() {
     setIsModalOpen(true);
   };
 
-  // ✅ loadSizes is also called when opening the edit modal
   const openEditModal = async (record) => {
     setModalMode('edit');
     setEditingOrderId(record.OrderId);
@@ -1148,6 +1133,7 @@ export default function Order() {
           HandleColorCustom: hc.custom ?? p.HandleColorCustom ?? undefined,
           Color: cc.selected,
           ColorCustom: cc.custom ?? p.ColorCustom ?? undefined,
+          PlateRate: p.PlateRate ?? undefined, // ✅ NEW
         };
       },
     );
@@ -1258,6 +1244,7 @@ export default function Order() {
       Design: p.Design || false,
       PlateBlockNumber: p.PlateBlockNumber || null,
       PlateAvailable: p.PlateAvailable || false,
+      PlateRate: p.PlateRate ? parseFloat(p.PlateRate) : null, // ✅ NEW
       Rate: p.Rate,
       ProductAmount: p.ProductAmount || 0,
     }));
@@ -1834,7 +1821,7 @@ export default function Order() {
           />
         </Card>
 
-        {/* ── Order Type Selection ── */}
+        {/* ── Order Type Selection ─��� */}
         <Modal
           title={
             <Space>
@@ -2395,6 +2382,18 @@ export default function Order() {
                           <Descriptions.Item label="Number of Plate">
                             {product.PlateBlockNumber || '-'}
                           </Descriptions.Item>
+                          {/* ✅ NEW — Plate Rate shown in View modal */}
+                          <Descriptions.Item label="Plate Rate">
+                            {product.PlateRate != null ? (
+                              <span
+                                style={{ fontWeight: 600, color: '#722ed1' }}
+                              >
+                                ₹{Number(product.PlateRate).toFixed(2)}
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                          </Descriptions.Item>
                           <Descriptions.Item label="Product Amount" span={3}>
                             <span
                               style={{
@@ -2866,7 +2865,6 @@ export default function Order() {
                                       </Form.Item>
                                     </Col>
                                   )}
-                                  {/* ── Product Size — existing sizes shown + Other always at bottom ── */}
                                   <Col
                                     span={productType === 'Machine' ? 8 : 12}
                                   >
@@ -3141,7 +3139,7 @@ export default function Order() {
 
                                 <SubHeading>Plate Information</SubHeading>
                                 <Row gutter={12}>
-                                  <Col span={12}>
+                                  <Col span={8}>
                                     <Form.Item
                                       label="Plate Available"
                                       name={[field.name, 'PlateAvailable']}
@@ -3152,7 +3150,7 @@ export default function Order() {
                                       </Checkbox>
                                     </Form.Item>
                                   </Col>
-                                  <Col span={12}>
+                                  <Col span={8}>
                                     <Form.Item
                                       label="Number of Plate"
                                       name={[field.name, 'PlateBlockNumber']}
@@ -3163,6 +3161,21 @@ export default function Order() {
                                           DROPDOWN_OPTIONS.plateBlockNumbers
                                         }
                                         disabled={isRepeatOrder}
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                  {/* ✅ NEW — Plate Rate input field */}
+                                  <Col span={8}>
+                                    <Form.Item
+                                      label="Plate Rate (Optional)"
+                                      name={[field.name, 'PlateRate']}
+                                    >
+                                      <Input
+                                        placeholder="e.g., 500.00"
+                                        onInput={handleDecimalInput}
+                                        disabled={isRepeatOrder}
+                                        prefix="₹"
+                                        style={{ color: '#722ed1' }}
                                       />
                                     </Form.Item>
                                   </Col>
