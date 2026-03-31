@@ -187,14 +187,14 @@ const DROPDOWN_OPTIONS = {
     { label: 'Repeat Order', value: 'repeat' },
     { label: 'Old Order', value: 'old' },
   ],
-  // ── NEW: Design Style dropdown ────────────────────────────────
+  // ── Design Style dropdown ─────────────────────────────────────
   designStyles: [
     { label: 'Same Front/Back', value: 'Same Front/Back' },
     { label: 'Different Front/Back', value: 'Different Front/Back' },
   ],
 };
 
-// ── emptyProduct ─────────────────────────────────────────────────
+// ── emptyProduct ──────────────────────────────────────────────────
 const emptyProduct = {
   ProductType: undefined,
   ProductId: undefined,
@@ -218,7 +218,7 @@ const emptyProduct = {
   Color: undefined,
   ColorCustom: undefined,
   DesignType: undefined, // "Old" | "New" | undefined
-  DesignStyle: undefined, // "Same Front/Back" | "Different Front/Back" | undefined  ← NEW
+  DesignStyle: undefined, // "Same Front/Back" | "Different Front/Back" | undefined
   PlateBlockNumber: undefined,
   PlateType: undefined,
   PlateRate: undefined,
@@ -413,7 +413,6 @@ const ProductSizeField = ({
               '',
           ).trim();
           if (!customVal || !sizeKey) return;
-
           try {
             const res = await fetch(
               `/api/sizes/${encodeURIComponent(sizeKey)}`,
@@ -524,6 +523,7 @@ const ProductSizeField = ({
   );
 };
 
+// ─────────────────────────────────────────────────────────────────
 export default function Order() {
   const [searchText, setSearchText] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 5 });
@@ -868,6 +868,11 @@ export default function Order() {
         Mobile2:
           partyData?.mobile2 || partyData?.Mobile2 || order.Mobile2 || '',
         Email: partyData?.email || partyData?.Email || order.Email || '',
+        // Dispatch fields — blank for old-order new form
+        BookingName: '',
+        TransportName: '',
+        DispatchContactNumber: '',
+        Destination: '',
         Products: [{ ...emptyProduct }],
         TotalAmount: 0,
       });
@@ -998,7 +1003,7 @@ export default function Order() {
           Color: cc.selected,
           ColorCustom: cc.custom,
           DesignType: p.DesignType || undefined,
-          DesignStyle: p.DesignStyle || undefined, // ← NEW
+          DesignStyle: p.DesignStyle || undefined,
           PlateBlockNumber: p.PlateBlockNumber || undefined,
           PlateType: p.PlateType || undefined,
           PlateRate: p.PlateRate || undefined,
@@ -1021,6 +1026,10 @@ export default function Order() {
         Mobile1: order.Mobile1 || '',
         Mobile2: order.Mobile2 || '',
         Email: order.Email || '',
+        BookingName: order.BookingName || '',
+        TransportName: order.TransportName || '',
+        DispatchContactNumber: order.DispatchContactNumber || '',
+        Destination: order.Destination || '',
         Products: copiedProducts,
         TotalAmount: order.TotalAmount || 0,
       });
@@ -1142,7 +1151,7 @@ export default function Order() {
           Color: cc.selected,
           ColorCustom: cc.custom ?? p.ColorCustom ?? undefined,
           DesignType: p.DesignType ?? undefined,
-          DesignStyle: p.DesignStyle ?? undefined, // ← NEW
+          DesignStyle: p.DesignStyle ?? undefined,
           PlateType: p.PlateType ?? undefined,
           PlateRate: p.PlateRate ?? undefined,
         };
@@ -1162,6 +1171,10 @@ export default function Order() {
       Mobile1: record.Mobile1,
       Mobile2: record.Mobile2,
       Email: record.Email || '',
+      BookingName: record.BookingName || '',
+      TransportName: record.TransportName || '',
+      DispatchContactNumber: record.DispatchContactNumber || '',
+      Destination: record.Destination || '',
       Products: normalisedProducts,
       TotalAmount: record.TotalAmount || 0,
     });
@@ -1221,7 +1234,7 @@ export default function Order() {
     }
   };
 
-  // ── buildProductsPayload — includes DesignStyle ───────────────
+  // ── buildProductsPayload ──────────────────────────────────────
   const buildProductsPayload = (products) =>
     (products || []).map((p) => ({
       ProductType: p.ProductType,
@@ -1254,7 +1267,7 @@ export default function Order() {
       PrintColor: p.PrintColor,
       Color: pickValueOrOther(p.Color, p.ColorCustom),
       DesignType: p.DesignType || null,
-      DesignStyle: p.DesignStyle || null, // ← NEW
+      DesignStyle: p.DesignStyle || null,
       PlateBlockNumber: p.PlateBlockNumber || null,
       PlateType: p.PlateType || null,
       PlateRate: p.PlateRate ? parseFloat(p.PlateRate) : null,
@@ -1284,6 +1297,10 @@ export default function Order() {
         Mobile1: values.Mobile1,
         Mobile2: values.Mobile2 || null,
         Email: values.Email || null,
+        BookingName: values.BookingName || null,
+        TransportName: values.TransportName || null,
+        DispatchContactNumber: values.DispatchContactNumber || null,
+        Destination: values.Destination || null,
         TotalAmount: parseFloat(totalAmount),
         Products: buildProductsPayload(values.Products),
       }),
@@ -1317,6 +1334,10 @@ export default function Order() {
         Mobile1: values.Mobile1,
         Mobile2: values.Mobile2 || null,
         Email: values.Email || null,
+        BookingName: values.BookingName || null,
+        TransportName: values.TransportName || null,
+        DispatchContactNumber: values.DispatchContactNumber || null,
+        Destination: values.Destination || null,
         TotalAmount: parseFloat(totalAmount),
         Products: buildProductsPayload(values.Products),
       }),
@@ -1661,6 +1682,7 @@ export default function Order() {
     </List.Item>
   );
 
+  // ─────────────────────────────────────────────────────────────────
   return (
     <div style={{ width: '100%', background: '#f4f6fb', minHeight: '100vh' }}>
       <Navbar />
@@ -2276,6 +2298,7 @@ export default function Order() {
                   </Descriptions.Item>
                 </Descriptions>
               </SectionBox>
+
               <SectionBox title="Contact Information" accent="#13c2c2">
                 <Descriptions bordered size="small" column={2}>
                   <Descriptions.Item label="Contact Person 1">
@@ -2295,6 +2318,25 @@ export default function Order() {
                   </Descriptions.Item>
                 </Descriptions>
               </SectionBox>
+
+              {/* ── Dispatch Information (View) ── */}
+              <SectionBox title="Dispatch Information" accent="#fa8c16">
+                <Descriptions bordered size="small" column={2}>
+                  <Descriptions.Item label="Booking Name">
+                    {viewingOrder.BookingName || '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Transport Name">
+                    {viewingOrder.TransportName || '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Contact Number">
+                    {viewingOrder.DispatchContactNumber || '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Destination">
+                    {viewingOrder.Destination || '-'}
+                  </Descriptions.Item>
+                </Descriptions>
+              </SectionBox>
+
               <SectionBox
                 title={`Products (${viewingOrder.Products?.length || 0})`}
                 accent="#52c41a"
@@ -2395,7 +2437,6 @@ export default function Order() {
                               '-'
                             )}
                           </Descriptions.Item>
-                          {/* ── DesignStyle in View modal ── */}
                           <Descriptions.Item label="Design Style">
                             {product.DesignStyle ? (
                               <Tag
@@ -2529,6 +2570,7 @@ export default function Order() {
           }}
         >
           <Form form={form} layout="vertical">
+            {/* Info banner */}
             {isRepeatOrder ? (
               <div
                 style={{
@@ -2565,7 +2607,7 @@ export default function Order() {
               </div>
             )}
 
-            {/* Party Information */}
+            {/* ── Party Information ── */}
             <SectionBox
               title="Party Information"
               lockedTag={isRepeatOrder}
@@ -2700,7 +2742,7 @@ export default function Order() {
               </Row>
             </SectionBox>
 
-            {/* Contact Information */}
+            {/* ── Contact Information ── */}
             <SectionBox
               title="Contact Information"
               lockedTag={isRepeatOrder}
@@ -2788,7 +2830,57 @@ export default function Order() {
               </Row>
             </SectionBox>
 
-            {/* Products Section */}
+            {/* ── Dispatch Information ── */}
+            <SectionBox
+              title="Dispatch Information"
+              lockedTag={isRepeatOrder}
+              accent="#fa8c16"
+            >
+              <Row gutter={12}>
+                <Col span={12}>
+                  <Form.Item label="Booking Name" name="BookingName">
+                    <Input
+                      placeholder="e.g., Rajesh Transport Booking"
+                      disabled={isRepeatOrder}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Transport Name" name="TransportName">
+                    <Input
+                      placeholder="e.g., Shree Ram Transport"
+                      disabled={isRepeatOrder}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={12}>
+                <Col span={12}>
+                  <Form.Item
+                    label="Contact Number"
+                    name="DispatchContactNumber"
+                    rules={[{ validator: validateMobile }]}
+                  >
+                    <Input
+                      placeholder="e.g., 9876543210"
+                      maxLength={10}
+                      onInput={handleMobileInput}
+                      disabled={isRepeatOrder}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Destination" name="Destination">
+                    <Input
+                      placeholder="e.g., Mumbai, Maharashtra"
+                      disabled={isRepeatOrder}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </SectionBox>
+
+            {/* ── Products Section ── */}
             <SectionBox
               title="Products"
               lockedTag={isRepeatOrder}
@@ -2860,6 +2952,7 @@ export default function Order() {
                                   )
                                 }
                               >
+                                {/* Product Type / Category / Size */}
                                 <Row gutter={12}>
                                   <Col
                                     span={productType === 'Machine' ? 8 : 12}
@@ -2931,6 +3024,7 @@ export default function Order() {
                                   </Col>
                                 </Row>
 
+                                {/* Bag Material / Quantity */}
                                 <Row gutter={12}>
                                   <Col span={12}>
                                     <Form.Item
@@ -2989,6 +3083,7 @@ export default function Order() {
                                   </Col>
                                 </Row>
 
+                                {/* Sheet Information */}
                                 <SubHeading>Sheet Information</SubHeading>
                                 <Row gutter={12}>
                                   <Col span={12}>
@@ -3023,6 +3118,7 @@ export default function Order() {
                                   </Col>
                                 </Row>
 
+                                {/* Border Information (Stitching only) */}
                                 {!isMachine && (
                                   <>
                                     <SubHeading>Border Information</SubHeading>
@@ -3066,6 +3162,7 @@ export default function Order() {
                                   </>
                                 )}
 
+                                {/* Handle Information */}
                                 <SubHeading>Handle Information</SubHeading>
                                 <Row gutter={12}>
                                   <Col span={8}>
@@ -3118,6 +3215,7 @@ export default function Order() {
                                   </Col>
                                 </Row>
 
+                                {/* Printing Information */}
                                 <SubHeading>Printing Information</SubHeading>
                                 <Row gutter={12}>
                                   <Col span={12}>
@@ -3160,6 +3258,7 @@ export default function Order() {
                                   </Col>
                                 </Row>
 
+                                {/* Design Information */}
                                 <SubHeading>Design Information</SubHeading>
                                 <Row gutter={12}>
                                   <Col span={8}>
@@ -3179,14 +3278,17 @@ export default function Order() {
                                       label="Design Type"
                                       name={[field.name, 'DesignType']}
                                     >
-                                      <Radio.Group disabled={isRepeatOrder}>
+                                      <Radio.Group
+                                        disabled={isRepeatOrder}
+                                        style={{ marginTop: 4 }}
+                                      >
                                         <Radio value="Old">Old Design</Radio>
                                         <Radio value="New">New Design</Radio>
                                       </Radio.Group>
                                     </Form.Item>
                                   </Col>
-                                  {/* ── DesignStyle Dropdown ── */}
                                   <Col span={8}>
+                                    {/* ── NEW: Design Style dropdown ── */}
                                     <Form.Item
                                       label="Design Style"
                                       name={[field.name, 'DesignStyle']}
@@ -3201,6 +3303,7 @@ export default function Order() {
                                   </Col>
                                 </Row>
 
+                                {/* Plate Information */}
                                 <SubHeading>Plate Information</SubHeading>
                                 <Row gutter={12}>
                                   <Col span={8}>
@@ -3208,7 +3311,10 @@ export default function Order() {
                                       label="Plate Type"
                                       name={[field.name, 'PlateType']}
                                     >
-                                      <Radio.Group disabled={isRepeatOrder}>
+                                      <Radio.Group
+                                        disabled={isRepeatOrder}
+                                        style={{ marginTop: 4 }}
+                                      >
                                         <Radio value="Old">Old Plate</Radio>
                                         <Radio value="New">New Plate</Radio>
                                       </Radio.Group>
@@ -3220,11 +3326,12 @@ export default function Order() {
                                       name={[field.name, 'PlateBlockNumber']}
                                     >
                                       <Select
-                                        placeholder="Select Number of Plate"
+                                        placeholder="Select"
                                         options={
                                           DROPDOWN_OPTIONS.plateBlockNumbers
                                         }
                                         disabled={isRepeatOrder}
+                                        allowClear
                                       />
                                     </Form.Item>
                                   </Col>
@@ -3234,16 +3341,20 @@ export default function Order() {
                                       name={[field.name, 'PlateRate']}
                                     >
                                       <Input
-                                        placeholder="e.g., 500.00"
+                                        placeholder="e.g., 500"
+                                        prefix={
+                                          <span style={{ color: '#722ed1' }}>
+                                            ₹
+                                          </span>
+                                        }
                                         onInput={handleDecimalInput}
                                         disabled={isRepeatOrder}
-                                        prefix="₹"
-                                        style={{ color: '#722ed1' }}
                                       />
                                     </Form.Item>
                                   </Col>
                                 </Row>
 
+                                {/* Pricing */}
                                 <SubHeading>Pricing</SubHeading>
                                 <Row gutter={12}>
                                   <Col span={12}>
@@ -3258,15 +3369,19 @@ export default function Order() {
                                       ]}
                                     >
                                       <Input
-                                        placeholder="e.g., 100.50"
+                                        placeholder="e.g., 5.50"
+                                        prefix={
+                                          <span style={{ color: '#1677ff' }}>
+                                            ₹
+                                          </span>
+                                        }
                                         onInput={handleDecimalInput}
+                                        disabled={isRepeatOrder}
                                         onChange={() =>
                                           handleRateOrQuantityChange(
                                             `${idx}_Rate`,
                                           )
                                         }
-                                        disabled={isRepeatOrder}
-                                        prefix="₹"
                                       />
                                     </Form.Item>
                                   </Col>
@@ -3276,18 +3391,22 @@ export default function Order() {
                                       name={[field.name, 'ProductAmount']}
                                     >
                                       <Input
-                                        placeholder="Auto calculated (editable)"
+                                        placeholder="Auto-calculated"
+                                        prefix={
+                                          <span style={{ color: '#52c41a' }}>
+                                            ₹
+                                          </span>
+                                        }
+                                        style={{
+                                          color: '#389e0d',
+                                          fontWeight: 600,
+                                        }}
                                         onInput={handleDecimalInput}
                                         onChange={() =>
                                           handleProductAmountChange(
                                             `${idx}_ProductAmount`,
                                           )
                                         }
-                                        prefix="₹"
-                                        style={{
-                                          fontWeight: 600,
-                                          color: '#389e0d',
-                                        }}
                                       />
                                     </Form.Item>
                                   </Col>
@@ -3298,71 +3417,67 @@ export default function Order() {
                         </Form.Item>
                       ))
                     )}
+
+                    {!isRepeatOrder && (
+                      <Button
+                        type="dashed"
+                        onClick={() => add({ ...emptyProduct })}
+                        block
+                        icon={<PlusOutlined />}
+                        style={{
+                          borderRadius: 8,
+                          marginBottom: 16,
+                          height: 48,
+                          borderColor: '#1677ff',
+                          color: '#1677ff',
+                          fontWeight: 600,
+                        }}
+                      >
+                        + Add Product
+                      </Button>
+                    )}
                   </>
                 )}
               </Form.List>
-
-              {!isRepeatOrder && (
-                <Button
-                  type="dashed"
-                  block
-                  icon={<PlusOutlined />}
-                  onClick={() =>
-                    form.setFieldValue('Products', [
-                      ...(form.getFieldValue('Products') || []),
-                      { ...emptyProduct },
-                    ])
-                  }
-                  style={{
-                    borderRadius: 8,
-                    height: 44,
-                    fontSize: 14,
-                    fontWeight: 500,
-                  }}
-                >
-                  Add Product
-                </Button>
-              )}
             </SectionBox>
 
-            {/* Total Amount */}
+            {/* ── Total Amount ── */}
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '14px 18px',
-                background: 'linear-gradient(90deg,#f6ffed,#f9fff0)',
-                border: '1px solid #b7eb8f',
+                marginBottom: 8,
+                padding: '16px 20px',
+                background: 'linear-gradient(90deg, #f6ffed, #f0fff0)',
                 borderRadius: 10,
-                marginTop: 4,
+                border: '1px solid #b7eb8f',
               }}
             >
-              <span
-                style={{
-                  fontWeight: 700,
-                  fontSize: 15,
-                  color: '#135200',
-                  minWidth: 120,
-                }}
-              >
-                Total Amount
-              </span>
-              <Form.Item name="TotalAmount" style={{ margin: 0, flex: 1 }}>
-                <Input
-                  placeholder="Auto calculated (editable)"
-                  onInput={handleDecimalInput}
-                  prefix={
-                    <span style={{ fontWeight: 700, color: '#389e0d' }}>₹</span>
-                  }
-                  style={{
-                    fontWeight: 700,
-                    fontSize: 16,
-                    color: '#389e0d',
-                    borderRadius: 8,
-                  }}
-                />
-              </Form.Item>
+              <Row align="middle" gutter={16}>
+                <Col>
+                  <span
+                    style={{ fontWeight: 700, fontSize: 15, color: '#237804' }}
+                  >
+                    Total Amount
+                  </span>
+                </Col>
+                <Col flex="auto">
+                  <Form.Item name="TotalAmount" style={{ marginBottom: 0 }}>
+                    <Input
+                      prefix={
+                        <span style={{ color: '#52c41a', fontWeight: 600 }}>
+                          ₹
+                        </span>
+                      }
+                      style={{
+                        fontWeight: 700,
+                        color: '#389e0d',
+                        fontSize: 15,
+                        borderRadius: 8,
+                      }}
+                      onInput={handleDecimalInput}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
             </div>
           </Form>
         </Modal>
