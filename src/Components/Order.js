@@ -1462,7 +1462,7 @@ export default function Order() {
       };
     });
 
-  // ── CHANGED: shared helper — TotalAmount = sum(ProductAmounts) + sum(FixAmounts) + Carting ──
+  // ── TotalAmount = sum(ProductAmounts) + sum(FixAmounts) + sum(PlateRates) + Carting ──
   const recalcTotalAmount = useCallback(() => {
     const products = form.getFieldValue('Products') || [];
     const carting = parseFloat(form.getFieldValue('Carting') || 0);
@@ -1474,7 +1474,13 @@ export default function Order() {
       (s, p) => s + (parseFloat(p?.FixAmount) || 0),
       0,
     );
-    const total = parseFloat((productsSum + fixAmountSum + carting).toFixed(2));
+    const plateRateSum = products.reduce(
+      (s, p) => s + (parseFloat(p?.PlateRate) || 0),
+      0,
+    );
+    const total = parseFloat(
+      (productsSum + fixAmountSum + plateRateSum + carting).toFixed(2),
+    );
     form.setFieldValue('TotalAmount', total);
     return total;
   }, [form]);
@@ -1502,7 +1508,7 @@ export default function Order() {
     recalcTotalAmount();
   };
 
-  // ── CHANGED: compute correct TotalAmount at submit so DynamoDB gets sum + FixAmounts + Carting ──
+  // ── compute correct TotalAmount at submit: sum(ProductAmounts) + sum(FixAmounts) + sum(PlateRates) + Carting ──
   const computeFinalTotalAmount = (values) => {
     const productsSum = (values.Products || []).reduce(
       (s, p) => s + (parseFloat(p?.ProductAmount) || 0),
@@ -1512,8 +1518,14 @@ export default function Order() {
       (s, p) => s + (parseFloat(p?.FixAmount) || 0),
       0,
     );
+    const plateRateSum = (values.Products || []).reduce(
+      (s, p) => s + (parseFloat(p?.PlateRate) || 0),
+      0,
+    );
     const carting = parseFloat(values.Carting || 0);
-    return parseFloat((productsSum + fixAmountSum + carting).toFixed(2));
+    return parseFloat(
+      (productsSum + fixAmountSum + plateRateSum + carting).toFixed(2),
+    );
   };
 
   const handleAdd = async (values) => {
@@ -3559,6 +3571,7 @@ export default function Order() {
                                         placeholder="e.g., 500"
                                         disabled={isRepeatOrder}
                                         onInput={handleDecimalInput}
+                                        onChange={recalcTotalAmount}
                                         prefix={
                                           <span
                                             style={{
