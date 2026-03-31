@@ -224,6 +224,7 @@ const emptyProduct = {
   PlateType: undefined,
   PlateRate: undefined,
   Rate: undefined,
+  FixAmount: undefined,
   ProductAmount: undefined,
 };
 
@@ -1180,6 +1181,7 @@ export default function Order() {
           PlateType: p.PlateType || undefined,
           PlateRate: p.PlateRate || undefined,
           Rate: p.Rate,
+          FixAmount: p.FixAmount || undefined,
           ProductAmount: p.ProductAmount || 0,
         };
       });
@@ -1455,11 +1457,12 @@ export default function Order() {
         PlateType: p.PlateType || null,
         PlateRate: p.PlateRate ? parseFloat(p.PlateRate) : null,
         Rate: p.Rate,
+        FixAmount: p.FixAmount ? parseFloat(p.FixAmount) : null,
         ProductAmount: p.ProductAmount || 0,
       };
     });
 
-  // ── CHANGED: shared helper — TotalAmount = sum(ProductAmounts) + Carting ──
+  // ── CHANGED: shared helper — TotalAmount = sum(ProductAmounts) + sum(FixAmounts) + Carting ──
   const recalcTotalAmount = useCallback(() => {
     const products = form.getFieldValue('Products') || [];
     const carting = parseFloat(form.getFieldValue('Carting') || 0);
@@ -1467,7 +1470,11 @@ export default function Order() {
       (s, p) => s + (parseFloat(p?.ProductAmount) || 0),
       0,
     );
-    const total = parseFloat((productsSum + carting).toFixed(2));
+    const fixAmountSum = products.reduce(
+      (s, p) => s + (parseFloat(p?.FixAmount) || 0),
+      0,
+    );
+    const total = parseFloat((productsSum + fixAmountSum + carting).toFixed(2));
     form.setFieldValue('TotalAmount', total);
     return total;
   }, [form]);
@@ -1495,14 +1502,18 @@ export default function Order() {
     recalcTotalAmount();
   };
 
-  // ── CHANGED: compute correct TotalAmount at submit so DynamoDB gets sum + Carting ──
+  // ── CHANGED: compute correct TotalAmount at submit so DynamoDB gets sum + FixAmounts + Carting ──
   const computeFinalTotalAmount = (values) => {
     const productsSum = (values.Products || []).reduce(
       (s, p) => s + (parseFloat(p?.ProductAmount) || 0),
       0,
     );
+    const fixAmountSum = (values.Products || []).reduce(
+      (s, p) => s + (parseFloat(p?.FixAmount) || 0),
+      0,
+    );
     const carting = parseFloat(values.Carting || 0);
-    return parseFloat((productsSum + carting).toFixed(2));
+    return parseFloat((productsSum + fixAmountSum + carting).toFixed(2));
   };
 
   const handleAdd = async (values) => {
@@ -3599,6 +3610,30 @@ export default function Order() {
                                       />
                                     </Form.Item>
                                   </Col>
+                                  <Col span={12}>
+                                    <Form.Item
+                                      label="Fix Amount (Optional)"
+                                      name={[field.name, 'FixAmount']}
+                                    >
+                                      <Input
+                                        placeholder="e.g., 100"
+                                        onInput={handleDecimalInput}
+                                        onChange={recalcTotalAmount}
+                                        prefix={
+                                          <span
+                                            style={{
+                                              color: '#eb2f96',
+                                              fontWeight: 600,
+                                            }}
+                                          >
+                                            ₹
+                                          </span>
+                                        }
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                </Row>
+                                <Row gutter={12}>
                                   <Col span={12}>
                                     <Form.Item
                                       label={
