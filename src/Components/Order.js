@@ -3160,7 +3160,7 @@ export default function Order() {
                                   </Col>
                                 </Row>
 
-                                <SubHeading>Other Information</SubHeading>
+                                <SubHeading>Design Information</SubHeading>
                                 <Row gutter={12}>
                                   <Col span={8}>
                                     <OtherSelectField
