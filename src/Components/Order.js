@@ -39,6 +39,7 @@ import { getCityOptions } from '../data/cities';
 
 const OTHER_OPTION_VALUE = '__OTHER__';
 const OTHER_SIZE_VALUE = '__OTHER_SIZE__';
+const OTHER_ROLL_SIZE_VALUE = '__OTHER_ROLL_SIZE__';
 
 const getSizeKey = (productType, productCategory) => {
   if (productType === 'Stitching') return 'stitching';
@@ -187,20 +188,20 @@ const DROPDOWN_OPTIONS = {
     { label: 'Repeat Order', value: 'repeat' },
     { label: 'Old Order', value: 'old' },
   ],
-  // ── Design Style dropdown ─────────────────────────────────────
   designStyles: [
     { label: 'Same Front/Back', value: 'Same Front/Back' },
     { label: 'Different Front/Back', value: 'Different Front/Back' },
   ],
 };
 
-// ── emptyProduct ──────────────────────────────────────────────────
 const emptyProduct = {
   ProductType: undefined,
   ProductId: undefined,
   ProductCategory: undefined,
   ProductSize: undefined,
   ProductSizeCustom: undefined,
+  RollSize: undefined,
+  RollSizeCustom: undefined,
   BagMaterial: undefined,
   Quantity: undefined,
   SheetGSM: undefined,
@@ -217,8 +218,8 @@ const emptyProduct = {
   PrintColor: undefined,
   Color: undefined,
   ColorCustom: undefined,
-  DesignType: undefined, // "Old" | "New" | undefined
-  DesignStyle: undefined, // "Same Front/Back" | "Different Front/Back" | undefined
+  DesignType: undefined,
+  DesignStyle: undefined,
   PlateBlockNumber: undefined,
   PlateType: undefined,
   PlateRate: undefined,
@@ -226,7 +227,6 @@ const emptyProduct = {
   ProductAmount: undefined,
 };
 
-// ── Styled section wrapper ────────────────────────────────────────
 const SectionBox = ({ title, lockedTag, children, accent = '#1677ff' }) => (
   <div
     style={{
@@ -260,7 +260,6 @@ const SectionBox = ({ title, lockedTag, children, accent = '#1677ff' }) => (
   </div>
 );
 
-// ── Sub-section heading ───────────────────────────────────────────
 const SubHeading = ({ children }) => (
   <div
     style={{
@@ -279,7 +278,6 @@ const SubHeading = ({ children }) => (
   </div>
 );
 
-// ── OtherSelectField ──────────────────────────────────────────────
 const OtherSelectField = ({
   fieldName,
   selectFieldKey,
@@ -305,7 +303,6 @@ const OtherSelectField = ({
         selectFieldKey,
       ]);
       const isOther = selectedValue === OTHER_OPTION_VALUE;
-
       return (
         <Row gutter={8} align="middle" style={{ marginBottom: 0 }}>
           <Col flex={isOther ? '140px' : 'auto'}>
@@ -375,7 +372,6 @@ const OtherSelectField = ({
   </Form.Item>
 );
 
-// ── ProductSizeField ──────────────────────────────────────────────
 const ProductSizeField = ({
   fieldName,
   productType,
@@ -523,7 +519,164 @@ const ProductSizeField = ({
   );
 };
 
-// ─────────────────────────────────────────────────────────────────
+const RollSizeField = ({
+  fieldName,
+  rollSizeOptions,
+  onNewRollSizeAdded,
+  disabled,
+  form,
+  required = false,
+}) => {
+  const options = [
+    ...rollSizeOptions,
+    { label: 'Other', value: OTHER_ROLL_SIZE_VALUE },
+  ];
+
+  return (
+    <Form.Item
+      noStyle
+      shouldUpdate={(prev, cur) => {
+        const prevVal = prev.Products?.[fieldName]?.RollSize;
+        const curVal = cur.Products?.[fieldName]?.RollSize;
+        return prevVal !== curVal;
+      }}
+    >
+      {() => {
+        const selectedValue = form.getFieldValue([
+          'Products',
+          fieldName,
+          'RollSize',
+        ]);
+        const isOther = selectedValue === OTHER_ROLL_SIZE_VALUE;
+
+        const handleSaveCustomRollSize = async () => {
+          const customVal = String(
+            form.getFieldValue(['Products', fieldName, 'RollSizeCustom']) || '',
+          ).trim();
+          if (!customVal) return;
+          try {
+            const res = await fetch('/api/roll-sizes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ size: customVal }),
+            });
+            if (!res.ok) {
+              if (res.status === 409) {
+                onNewRollSizeAdded(customVal);
+                const products = form.getFieldValue('Products') || [];
+                const updated = [...products];
+                updated[fieldName] = {
+                  ...updated[fieldName],
+                  RollSize: customVal,
+                  RollSizeCustom: undefined,
+                };
+                form.setFieldValue('Products', updated);
+                message.info(
+                  `Roll size "${customVal}" already exists — selected.`,
+                );
+                return;
+              }
+              const errData = await res.json().catch(() => ({}));
+              throw new Error(errData.detail || 'Failed to save new roll size');
+            }
+            onNewRollSizeAdded(customVal);
+            const products = form.getFieldValue('Products') || [];
+            const updated = [...products];
+            updated[fieldName] = {
+              ...updated[fieldName],
+              RollSize: customVal,
+              RollSizeCustom: undefined,
+            };
+            form.setFieldValue('Products', updated);
+            message.success(
+              `Roll size "${customVal}" saved and added to the list.`,
+            );
+          } catch (err) {
+            message.error(err?.message || 'Failed to save custom roll size');
+          }
+        };
+
+        return (
+          <Row gutter={8} align="middle" style={{ marginBottom: 0 }}>
+            <Col flex={isOther ? '140px' : 'auto'}>
+              <Form.Item
+                label="Roll Size"
+                name={[fieldName, 'RollSize']}
+                rules={
+                  required
+                    ? [{ required: true, message: 'Please select Roll Size.' }]
+                    : []
+                }
+                style={{ marginBottom: 0 }}
+              >
+                <Select
+                  placeholder="Select Roll Size"
+                  options={options}
+                  disabled={disabled}
+                  allowClear={!required}
+                  onChange={(val) => {
+                    if (val !== OTHER_ROLL_SIZE_VALUE) {
+                      const products = form.getFieldValue('Products') || [];
+                      const updated = [...products];
+                      if (updated[fieldName]) {
+                        updated[fieldName].RollSizeCustom = undefined;
+                        form.setFieldValue('Products', updated);
+                      }
+                    }
+                  }}
+                />
+              </Form.Item>
+            </Col>
+            {isOther && (
+              <Col flex="auto">
+                <Form.Item
+                  label="Custom Roll Size"
+                  name={[fieldName, 'RollSizeCustom']}
+                  rules={[
+                    {
+                      required: true,
+                      message: 'Please enter a custom roll size.',
+                    },
+                    {
+                      validator: (_, value) => {
+                        const v = String(value || '').trim();
+                        if (!v)
+                          return Promise.reject(
+                            new Error('Please enter a custom roll size.'),
+                          );
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
+                  style={{ marginBottom: 0 }}
+                >
+                  <Input
+                    placeholder="e.g., 45 Inches"
+                    allowClear
+                    disabled={disabled}
+                    onBlur={handleSaveCustomRollSize}
+                    onPressEnter={handleSaveCustomRollSize}
+                    suffix={
+                      <Button
+                        size="small"
+                        type="link"
+                        style={{ padding: 0, height: 'auto', fontSize: 12 }}
+                        onClick={handleSaveCustomRollSize}
+                      >
+                        Save
+                      </Button>
+                    }
+                  />
+                </Form.Item>
+              </Col>
+            )}
+          </Row>
+        );
+      }}
+    </Form.Item>
+  );
+};
+
 export default function Order() {
   const [searchText, setSearchText] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 5 });
@@ -536,6 +689,7 @@ export default function Order() {
   const [modalMode, setModalMode] = useState('add');
   const [editingOrderId, setEditingOrderId] = useState(null);
   const [viewingOrder, setViewingOrder] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [selectedOrderType, setSelectedOrderType] = useState(null);
   const [selectedState, setSelectedState] = useState(null);
 
@@ -551,6 +705,8 @@ export default function Order() {
     'box-bag': [],
     'leader-bag': [],
   });
+
+  const [rollSizeOptions, setRollSizeOptions] = useState([]);
 
   const [oldOrderAgentModalOpen, setOldOrderAgentModalOpen] = useState(false);
   const [oldOrderListModalOpen, setOldOrderListModalOpen] = useState(false);
@@ -589,6 +745,15 @@ export default function Order() {
         ...prev,
         [sizeKey]: [...existing, { label: newValue, value: newValue }],
       };
+    });
+  }, []);
+
+  const handleNewRollSizeAdded = useCallback((newValue) => {
+    setRollSizeOptions((prev) => {
+      if (prev.some((o) => o.value === newValue)) return prev;
+      const updated = [...prev, { label: newValue, value: newValue }];
+      updated.sort((a, b) => a.label.localeCompare(b.label));
+      return updated;
     });
   }, []);
 
@@ -661,14 +826,28 @@ export default function Order() {
         'box-bag': fetched['box-bag'] || [],
         'leader-bag': fetched['leader-bag'] || [],
       });
-    } catch (err) {
+    } catch {
       message.error('Failed to load product size options');
+    }
+  }, []);
+
+  const loadRollSizes = useCallback(async () => {
+    try {
+      const res = await fetch('/api/roll-sizes');
+      if (!res.ok)
+        throw new Error(`Failed to fetch roll sizes (${res.status})`);
+      const data = await res.json();
+      const sizes = (data.sizes || []).map((s) => ({ label: s, value: s }));
+      setRollSizeOptions(sizes);
+    } catch {
+      message.error('Failed to load roll size options');
     }
   }, []);
 
   useEffect(() => {
     loadSizes();
-  }, [loadSizes]);
+    loadRollSizes();
+  }, [loadSizes, loadRollSizes]);
 
   const handleProductTypeChange = (fieldName) => {
     const products = form.getFieldValue('Products') || [];
@@ -790,7 +969,6 @@ export default function Order() {
   const compareNumber = (a, b, field) =>
     Number(a?.[field] ?? 0) - Number(b?.[field] ?? 0);
 
-  // ── Old Order Handlers ────────────────────────────────────────
   const openOldOrderAgentModal = async () => {
     oldOrderAgentForm.resetFields();
     setSelectedOldAgent(null);
@@ -868,7 +1046,6 @@ export default function Order() {
         Mobile2:
           partyData?.mobile2 || partyData?.Mobile2 || order.Mobile2 || '',
         Email: partyData?.email || partyData?.Email || order.Email || '',
-        // Dispatch fields — blank for old-order new form
         BookingName: '',
         TransportName: '',
         DispatchContactNumber: '',
@@ -915,7 +1092,6 @@ export default function Order() {
     );
   }, [oldOrdersForAgent, oldOrderSearch]);
 
-  // ── Repeat Order Handlers ─────────────────────────────────────
   const openRepeatOrderAgentModal = async () => {
     repeatOrderAgentForm.resetFields();
     setSelectedRepeatAgent(null);
@@ -954,6 +1130,13 @@ export default function Order() {
     return { selected: OTHER_OPTION_VALUE, custom: value };
   };
 
+  const normaliseRollSizeForForm = (value, options) => {
+    if (!value) return { selected: undefined, custom: undefined };
+    const match = options.find((o) => o.value === value);
+    if (match) return { selected: value, custom: undefined };
+    return { selected: OTHER_ROLL_SIZE_VALUE, custom: value };
+  };
+
   const handleRepeatOrderSelect = async (order) => {
     setRepeatOrderListModalOpen(false);
     const key = 'repeat-order-lookup';
@@ -980,12 +1163,15 @@ export default function Order() {
           DROPDOWN_OPTIONS.handleColors,
         );
         const cc = normaliseColorForForm(p.Color, DROPDOWN_OPTIONS.colors);
+        const rs = normaliseRollSizeForForm(p.RollSize, rollSizeOptions);
         return {
           ProductType: p.ProductType,
           ProductId: p.ProductId,
           ProductCategory: p.ProductCategory,
           ProductSize: p.ProductSize,
           ProductSizeCustom: undefined,
+          RollSize: rs.selected,
+          RollSizeCustom: rs.custom,
           BagMaterial: p.BagMaterial,
           Quantity: p.Quantity,
           SheetGSM: p.SheetGSM,
@@ -1070,7 +1256,6 @@ export default function Order() {
     );
   }, [repeatOrdersForAgent, repeatOrderSearch]);
 
-  // ── Order Type & Add / Edit ────────────────────────────────────
   const handleOrderTypeSelect = async (values) => {
     try {
       const orderType = values.orderType;
@@ -1105,7 +1290,11 @@ export default function Order() {
     form.setFieldValue('Products', [{ ...emptyProduct }]);
     form.setFieldValue('TotalAmount', 0);
     try {
-      await Promise.all([fetchAgents().then(setAgents), loadSizes()]);
+      await Promise.all([
+        fetchAgents().then(setAgents),
+        loadSizes(),
+        loadRollSizes(),
+      ]);
     } catch (err) {
       message.error(err.message);
     }
@@ -1118,7 +1307,11 @@ export default function Order() {
     setSelectedState(record.State || null);
     setIsRepeatOrder(false);
     try {
-      await Promise.all([fetchAgents().then(setAgents), loadSizes()]);
+      await Promise.all([
+        fetchAgents().then(setAgents),
+        loadSizes(),
+        loadRollSizes(),
+      ]);
     } catch (err) {
       message.error(err.message);
     }
@@ -1138,10 +1331,13 @@ export default function Order() {
           DROPDOWN_OPTIONS.handleColors,
         );
         const cc = normaliseColorForForm(p.Color, DROPDOWN_OPTIONS.colors);
+        const rs = normaliseRollSizeForForm(p.RollSize, rollSizeOptions);
         return {
           ...emptyProduct,
           ...p,
           ProductSizeCustom: undefined,
+          RollSize: rs.selected,
+          RollSizeCustom: rs.custom ?? undefined,
           SheetColor: sc.selected,
           SheetColorCustom: sc.custom ?? p.SheetColorCustom ?? undefined,
           BorderColor: bc.selected,
@@ -1234,46 +1430,52 @@ export default function Order() {
     }
   };
 
-  // ── buildProductsPayload ──────────────────────────────────────
   const buildProductsPayload = (products) =>
-    (products || []).map((p) => ({
-      ProductType: p.ProductType,
-      ProductId: p.ProductId,
-      ProductCategory: p.ProductCategory,
-      ProductSize:
-        p.ProductSize === OTHER_SIZE_VALUE
-          ? String(p.ProductSizeCustom || '').trim() || null
-          : p.ProductSize,
-      BagMaterial: p.BagMaterial,
-      Quantity: p.Quantity,
-      SheetGSM: Number(p.SheetGSM),
-      SheetColor: pickValueOrOther(p.SheetColor, p.SheetColorCustom),
-      BorderGSM:
-        p.ProductType === 'Machine'
-          ? p.BorderGSM
-            ? Number(p.BorderGSM)
-            : null
-          : Number(p.BorderGSM),
-      BorderColor:
-        p.ProductType === 'Machine'
-          ? p.BorderColor
-            ? pickValueOrOther(p.BorderColor, p.BorderColorCustom)
-            : null
-          : pickValueOrOther(p.BorderColor, p.BorderColorCustom),
-      HandleType: p.HandleType,
-      HandleColor: pickValueOrOther(p.HandleColor, p.HandleColorCustom),
-      HandleGSM: Number(p.HandleGSM),
-      PrintingType: p.PrintingType,
-      PrintColor: p.PrintColor,
-      Color: pickValueOrOther(p.Color, p.ColorCustom),
-      DesignType: p.DesignType || null,
-      DesignStyle: p.DesignStyle || null,
-      PlateBlockNumber: p.PlateBlockNumber || null,
-      PlateType: p.PlateType || null,
-      PlateRate: p.PlateRate ? parseFloat(p.PlateRate) : null,
-      Rate: p.Rate,
-      ProductAmount: p.ProductAmount || 0,
-    }));
+    (products || []).map((p) => {
+      let resolvedRollSize = p.RollSize;
+      if (p.RollSize === OTHER_ROLL_SIZE_VALUE) {
+        resolvedRollSize = String(p.RollSizeCustom || '').trim() || null;
+      }
+      return {
+        ProductType: p.ProductType,
+        ProductId: p.ProductId,
+        ProductCategory: p.ProductCategory,
+        ProductSize:
+          p.ProductSize === OTHER_SIZE_VALUE
+            ? String(p.ProductSizeCustom || '').trim() || null
+            : p.ProductSize,
+        RollSize: resolvedRollSize || null,
+        BagMaterial: p.BagMaterial,
+        Quantity: p.Quantity,
+        SheetGSM: Number(p.SheetGSM),
+        SheetColor: pickValueOrOther(p.SheetColor, p.SheetColorCustom),
+        BorderGSM:
+          p.ProductType === 'Machine'
+            ? p.BorderGSM
+              ? Number(p.BorderGSM)
+              : null
+            : Number(p.BorderGSM),
+        BorderColor:
+          p.ProductType === 'Machine'
+            ? p.BorderColor
+              ? pickValueOrOther(p.BorderColor, p.BorderColorCustom)
+              : null
+            : pickValueOrOther(p.BorderColor, p.BorderColorCustom),
+        HandleType: p.HandleType,
+        HandleColor: pickValueOrOther(p.HandleColor, p.HandleColorCustom),
+        HandleGSM: Number(p.HandleGSM),
+        PrintingType: p.PrintingType,
+        PrintColor: p.PrintColor,
+        Color: pickValueOrOther(p.Color, p.ColorCustom),
+        DesignType: p.DesignType || null,
+        DesignStyle: p.DesignStyle || null,
+        PlateBlockNumber: p.PlateBlockNumber || null,
+        PlateType: p.PlateType || null,
+        PlateRate: p.PlateRate ? parseFloat(p.PlateRate) : null,
+        Rate: p.Rate,
+        ProductAmount: p.ProductAmount || 0,
+      };
+    });
 
   const handleAdd = async (values) => {
     if (!values.Products || values.Products.length === 0)
@@ -1682,7 +1884,6 @@ export default function Order() {
     </List.Item>
   );
 
-  // ─────────────────────────────────────────────────────────────────
   return (
     <div style={{ width: '100%', background: '#f4f6fb', minHeight: '100vh' }}>
       <Navbar />
@@ -2319,7 +2520,6 @@ export default function Order() {
                 </Descriptions>
               </SectionBox>
 
-              {/* ── Dispatch Information (View) ── */}
               <SectionBox title="Dispatch Information" accent="#fa8c16">
                 <Descriptions bordered size="small" column={2}>
                   <Descriptions.Item label="Booking Name">
@@ -2374,6 +2574,13 @@ export default function Order() {
                           </Descriptions.Item>
                           <Descriptions.Item label="Product Size">
                             {product.ProductSize}
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Roll Size">
+                            {product.RollSize ? (
+                              <Tag color="geekblue">{product.RollSize}</Tag>
+                            ) : (
+                              '-'
+                            )}
                           </Descriptions.Item>
                           <Descriptions.Item label="Bag Material">
                             {product.BagMaterial}
@@ -2570,7 +2777,6 @@ export default function Order() {
           }}
         >
           <Form form={form} layout="vertical">
-            {/* Info banner */}
             {isRepeatOrder ? (
               <div
                 style={{
@@ -3024,8 +3230,24 @@ export default function Order() {
                                   </Col>
                                 </Row>
 
+                                {/* Roll Size */}
+                                <Row gutter={12} style={{ marginTop: 4 }}>
+                                  <Col span={24}>
+                                    <RollSizeField
+                                      fieldName={field.name}
+                                      rollSizeOptions={rollSizeOptions}
+                                      onNewRollSizeAdded={
+                                        handleNewRollSizeAdded
+                                      }
+                                      disabled={isRepeatOrder}
+                                      form={form}
+                                      required={false}
+                                    />
+                                  </Col>
+                                </Row>
+
                                 {/* Bag Material / Quantity */}
-                                <Row gutter={12}>
+                                <Row gutter={12} style={{ marginTop: 12 }}>
                                   <Col span={12}>
                                     <Form.Item
                                       label="Bag Material"
@@ -3288,7 +3510,6 @@ export default function Order() {
                                     </Form.Item>
                                   </Col>
                                   <Col span={8}>
-                                    {/* ── NEW: Design Style dropdown ── */}
                                     <Form.Item
                                       label="Design Style"
                                       name={[field.name, 'DesignStyle']}
