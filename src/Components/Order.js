@@ -291,9 +291,9 @@ const OtherSelectField = ({
   <Form.Item
     noStyle
     shouldUpdate={(prev, cur) => {
-      const prevVal = prev.Products?.[fieldName]?.[selectFieldKey];
-      const curVal = cur.Products?.[fieldName]?.[selectFieldKey];
-      return prevVal !== curVal;
+      const p = prev.Products?.[fieldName]?.[selectFieldKey];
+      const c = cur.Products?.[fieldName]?.[selectFieldKey];
+      return p !== c;
     }}
   >
     {() => {
@@ -385,14 +385,13 @@ const ProductSizeField = ({
   const sizeKey = getSizeKey(productType, productCategory);
   const baseOptions = sizeKey ? sizeOptions[sizeKey] || [] : [];
   const options = [...baseOptions, { label: 'Other', value: OTHER_SIZE_VALUE }];
-
   return (
     <Form.Item
       noStyle
       shouldUpdate={(prev, cur) => {
-        const prevVal = prev.Products?.[fieldName]?.ProductSize;
-        const curVal = cur.Products?.[fieldName]?.ProductSize;
-        return prevVal !== curVal;
+        const p = prev.Products?.[fieldName]?.ProductSize;
+        const c = cur.Products?.[fieldName]?.ProductSize;
+        return p !== c;
       }}
     >
       {() => {
@@ -402,7 +401,6 @@ const ProductSizeField = ({
           'ProductSize',
         ]);
         const isOther = selectedValue === OTHER_SIZE_VALUE;
-
         const handleSaveCustomSize = async () => {
           const customVal = String(
             form.getFieldValue(['Products', fieldName, 'ProductSizeCustom']) ||
@@ -436,7 +434,6 @@ const ProductSizeField = ({
             message.error(err?.message || 'Failed to save custom size');
           }
         };
-
         return (
           <Row gutter={8} align="middle" style={{ marginBottom: 0 }}>
             <Col flex={isOther ? '140px' : 'auto'}>
@@ -531,14 +528,13 @@ const RollSizeField = ({
     ...rollSizeOptions,
     { label: 'Other', value: OTHER_ROLL_SIZE_VALUE },
   ];
-
   return (
     <Form.Item
       noStyle
       shouldUpdate={(prev, cur) => {
-        const prevVal = prev.Products?.[fieldName]?.RollSize;
-        const curVal = cur.Products?.[fieldName]?.RollSize;
-        return prevVal !== curVal;
+        const p = prev.Products?.[fieldName]?.RollSize;
+        const c = cur.Products?.[fieldName]?.RollSize;
+        return p !== c;
       }}
     >
       {() => {
@@ -548,7 +544,6 @@ const RollSizeField = ({
           'RollSize',
         ]);
         const isOther = selectedValue === OTHER_ROLL_SIZE_VALUE;
-
         const handleSaveCustomRollSize = async () => {
           const customVal = String(
             form.getFieldValue(['Products', fieldName, 'RollSizeCustom']) || '',
@@ -595,7 +590,6 @@ const RollSizeField = ({
             message.error(err?.message || 'Failed to save custom roll size');
           }
         };
-
         return (
           <Row gutter={8} align="middle" style={{ marginBottom: 0 }}>
             <Col flex={isOther ? '140px' : 'auto'}>
@@ -705,7 +699,6 @@ export default function Order() {
     'box-bag': [],
     'leader-bag': [],
   });
-
   const [rollSizeOptions, setRollSizeOptions] = useState([]);
 
   const [oldOrderAgentModalOpen, setOldOrderAgentModalOpen] = useState(false);
@@ -761,27 +754,21 @@ export default function Order() {
     setSelectedState(value);
     form.setFieldValue('City', null);
   };
-
   const handleCityChange = (value) => {
     form.setFieldValue('City', value);
   };
-
   const handleAlphabetsOnlyInput = (e) => {
     e.target.value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
   };
-
   const handleNumbersOnlyInput = (e) => {
     e.target.value = e.target.value.replace(/[^0-9]/g, '');
   };
-
   const handlePincodeInput = (e) => {
     e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
   };
-
   const handleMobileInput = (e) => {
     e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
   };
-
   const handleDecimalInput = (e) => {
     const filtered = e.target.value.replace(/[^0-9.]/g, '');
     const parts = filtered.split('.');
@@ -796,7 +783,6 @@ export default function Order() {
       new Error('Please enter a valid email address (e.g., user@example.com)'),
     );
   };
-
   const validateMobile = (_, value) => {
     if (!value) return Promise.resolve();
     if (/^[0-9]{10}$/.test(value)) return Promise.resolve();
@@ -837,8 +823,9 @@ export default function Order() {
       if (!res.ok)
         throw new Error(`Failed to fetch roll sizes (${res.status})`);
       const data = await res.json();
-      const sizes = (data.sizes || []).map((s) => ({ label: s, value: s }));
-      setRollSizeOptions(sizes);
+      setRollSizeOptions(
+        (data.sizes || []).map((s) => ({ label: s, value: s })),
+      );
     } catch {
       message.error('Failed to load roll size options');
     }
@@ -1073,7 +1060,6 @@ export default function Order() {
     oldOrderAgentForm.resetFields();
     setSelectedOldAgent(null);
   };
-
   const closeOldOrderListModal = () => {
     setOldOrderListModalOpen(false);
     setOldOrdersForAgent([]);
@@ -1149,7 +1135,6 @@ export default function Order() {
       setIsRepeatOrder(true);
       const state = order.State || null;
       setSelectedState(state);
-
       const copiedProducts = (order.Products || []).map((p) => {
         const sc = normaliseColorForForm(
           p.SheetColor,
@@ -1198,7 +1183,6 @@ export default function Order() {
           ProductAmount: p.ProductAmount || 0,
         };
       });
-
       form.resetFields();
       form.setFieldsValue({
         AgentId: order.AgentId,
@@ -1238,7 +1222,6 @@ export default function Order() {
     repeatOrderAgentForm.resetFields();
     setSelectedRepeatAgent(null);
   };
-
   const closeRepeatOrderListModal = () => {
     setRepeatOrderListModalOpen(false);
     setRepeatOrdersForAgent([]);
@@ -1276,7 +1259,6 @@ export default function Order() {
     setSelectedOrderType(null);
     setOrderTypeModalOpen(true);
   };
-
   const closeOrderTypeModal = () => {
     setOrderTypeModalOpen(false);
     orderTypeForm.resetFields();
@@ -1318,7 +1300,6 @@ export default function Order() {
     } catch (err) {
       message.error(err.message);
     }
-
     const normalisedProducts = (record.Products || [{ ...emptyProduct }]).map(
       (p) => {
         const sc = normaliseColorForForm(
@@ -1356,7 +1337,6 @@ export default function Order() {
         };
       },
     );
-
     form.setFieldsValue({
       AgentId: record.AgentId,
       Party_Name: record.Party_Name,
@@ -1385,13 +1365,11 @@ export default function Order() {
     setViewingOrder(record);
     setViewModalOpen(true);
   };
-
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedState(null);
     setIsRepeatOrder(false);
   };
-
   const closeViewModal = () => {
     setViewModalOpen(false);
     setViewingOrder(null);
@@ -1481,10 +1459,56 @@ export default function Order() {
       };
     });
 
+  // ── CHANGED: shared helper — TotalAmount = sum(ProductAmounts) + Carting ──
+  const recalcTotalAmount = useCallback(() => {
+    const products = form.getFieldValue('Products') || [];
+    const carting = parseFloat(form.getFieldValue('Carting') || 0);
+    const productsSum = products.reduce(
+      (s, p) => s + (parseFloat(p?.ProductAmount) || 0),
+      0,
+    );
+    const total = parseFloat((productsSum + carting).toFixed(2));
+    form.setFieldValue('TotalAmount', total);
+    return total;
+  }, [form]);
+
+  // ── CHANGED: recalc ProductAmount then TotalAmount (with Carting) ──
+  const handleRateOrQuantityChange = (fieldName) => {
+    const products = form.getFieldValue('Products') || [];
+    const productIndex = parseInt(fieldName.split('_')[0]);
+    if (productIndex >= 0 && productIndex < products.length) {
+      const product = products[productIndex];
+      const productAmount = parseFloat(
+        (
+          (parseFloat(product.Rate) || 0) * (parseFloat(product.Quantity) || 0)
+        ).toFixed(2),
+      );
+      const updated = [...products];
+      updated[productIndex].ProductAmount = productAmount;
+      form.setFieldValue('Products', updated);
+      recalcTotalAmount();
+    }
+  };
+
+  // ── CHANGED: recalc TotalAmount (with Carting) after manual ProductAmount edit ──
+  const handleProductAmountChange = () => {
+    recalcTotalAmount();
+  };
+
+  // ── CHANGED: compute correct TotalAmount at submit so DynamoDB gets sum + Carting ──
+  const computeFinalTotalAmount = (values) => {
+    const productsSum = (values.Products || []).reduce(
+      (s, p) => s + (parseFloat(p?.ProductAmount) || 0),
+      0,
+    );
+    const carting = parseFloat(values.Carting || 0);
+    return parseFloat((productsSum + carting).toFixed(2));
+  };
+
   const handleAdd = async (values) => {
     if (!values.Products || values.Products.length === 0)
       throw new Error('Please add at least one product');
-    const totalAmount = values.TotalAmount || 0;
+    const totalAmount = computeFinalTotalAmount(values); // ← CHANGED
     if (isNaN(totalAmount) || totalAmount < 0)
       throw new Error('Total Amount must be a valid non-negative number');
     const res = await fetch('/api/orders', {
@@ -1507,7 +1531,7 @@ export default function Order() {
         TransportName: values.TransportName || null,
         DispatchContactNumber: values.DispatchContactNumber || null,
         Destination: values.Destination || null,
-        TotalAmount: parseFloat(totalAmount),
+        TotalAmount: totalAmount, // ← CHANGED: sum of products + carting
         Carting: parseFloat(values.Carting || 0),
         Products: buildProductsPayload(values.Products),
       }),
@@ -1522,7 +1546,7 @@ export default function Order() {
   const handleUpdate = async (orderId, values) => {
     if (!values.Products || values.Products.length === 0)
       throw new Error('Please add at least one product');
-    const totalAmount = values.TotalAmount || 0;
+    const totalAmount = computeFinalTotalAmount(values); // ← CHANGED
     if (isNaN(totalAmount) || totalAmount < 0)
       throw new Error('Total Amount must be a valid non-negative number');
     const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
@@ -1545,7 +1569,7 @@ export default function Order() {
         TransportName: values.TransportName || null,
         DispatchContactNumber: values.DispatchContactNumber || null,
         Destination: values.Destination || null,
-        TotalAmount: parseFloat(totalAmount),
+        TotalAmount: totalAmount, // ← CHANGED: sum of products + carting
         Carting: parseFloat(values.Carting || 0),
         Products: buildProductsPayload(values.Products),
       }),
@@ -1565,48 +1589,6 @@ export default function Order() {
       const text = await res.text().catch(() => '');
       throw new Error(`Failed to delete order (${res.status}): ${text}`);
     }
-  };
-
-  const handleRateOrQuantityChange = (fieldName) => {
-    const products = form.getFieldValue('Products') || [];
-    const productIndex = parseInt(fieldName.split('_')[0]);
-    if (productIndex >= 0 && productIndex < products.length) {
-      const product = products[productIndex];
-      const productAmount = parseFloat(
-        (
-          (parseFloat(product.Rate) || 0) * (parseFloat(product.Quantity) || 0)
-        ).toFixed(2),
-      );
-      const updated = [...products];
-      updated[productIndex].ProductAmount = productAmount;
-      form.setFieldValue('Products', updated);
-      form.setFieldValue(
-        'TotalAmount',
-        parseFloat(
-          updated
-            .reduce((s, p) => s + (parseFloat(p.ProductAmount) || 0), 0)
-            .toFixed(2),
-        ),
-      );
-    }
-  };
-
-  const handleProductAmountChange = (fieldName) => {
-    const products = form.getFieldValue('Products') || [];
-    const productIndex = parseInt(fieldName.split('_')[0]);
-    if (productIndex >= 0 && productIndex < products.length) {
-      const updated = [...products];
-      form.setFieldValue('Products', updated);
-    }
-    const latestProducts = form.getFieldValue('Products') || [];
-    form.setFieldValue(
-      'TotalAmount',
-      parseFloat(
-        latestProducts
-          .reduce((s, p) => s + (parseFloat(p.ProductAmount) || 0), 0)
-          .toFixed(2),
-      ),
-    );
   };
 
   const handleSubmitModal = async () => {
@@ -1894,10 +1876,7 @@ export default function Order() {
     <div style={{ width: '100%', background: '#f4f6fb', minHeight: '100vh' }}>
       <Navbar />
       <style>{`
-        .orders-table .ant-table-thead > tr > th {
-          background: #1f2937 !important; color: #ffffff !important;
-          font-weight: 600; font-size: 13px; border-bottom: none !important;
-        }
+        .orders-table .ant-table-thead > tr > th { background: #1f2937 !important; color: #ffffff !important; font-weight: 600; font-size: 13px; border-bottom: none !important; }
         .orders-table .ant-table-thead > tr > th .ant-table-column-sorter,
         .orders-table .ant-table-thead > tr > th .ant-table-column-sorter-up,
         .orders-table .ant-table-thead > tr > th .ant-table-column-sorter-down { color: rgba(255,255,255,0.85); }
@@ -1907,16 +1886,10 @@ export default function Order() {
         .orders-table .ant-table-cell { font-size: 13px; }
         .orders-table-card { border-radius: 12px !important; overflow: hidden; }
         .orders-table-card .ant-card-body { padding: 0 !important; }
-        .order-list-item:hover {
-          background: #f0f5ff !important; border-color: #1677ff !important;
-          transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22,119,255,0.10);
-        }
+        .order-list-item:hover { background: #f0f5ff !important; border-color: #1677ff !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(22,119,255,0.10); }
         .ant-descriptions-item-label { font-weight: 600; color: #374151; background: #f9fafb; }
         .ant-form-item-label > label { font-size: 12px; font-weight: 600; color: #374151; }
-        .product-card .ant-card-head {
-          background: linear-gradient(90deg, #1677ff18 0%, #f0f5ff 100%);
-          border-bottom: 1px solid #d6e4ff; font-weight: 700; font-size: 13px;
-        }
+        .product-card .ant-card-head { background: linear-gradient(90deg, #1677ff18 0%, #f0f5ff 100%); border-bottom: 1px solid #d6e4ff; font-weight: 700; font-size: 13px; }
         .order-modal .ant-modal-footer .ant-btn-primary { background: #1677ff; border-radius: 8px; font-weight: 600; }
         .order-modal .ant-modal-header { border-bottom: 2px solid #f0f0f0; }
         .order-modal .ant-modal-title { font-size: 16px; font-weight: 700; }
@@ -2505,7 +2478,6 @@ export default function Order() {
                   </Descriptions.Item>
                 </Descriptions>
               </SectionBox>
-
               <SectionBox title="Contact Information" accent="#13c2c2">
                 <Descriptions bordered size="small" column={2}>
                   <Descriptions.Item label="Contact Person 1">
@@ -2525,7 +2497,6 @@ export default function Order() {
                   </Descriptions.Item>
                 </Descriptions>
               </SectionBox>
-
               <SectionBox title="Dispatch Information" accent="#fa8c16">
                 <Descriptions bordered size="small" column={2}>
                   <Descriptions.Item label="Booking Name">
@@ -2542,7 +2513,6 @@ export default function Order() {
                   </Descriptions.Item>
                 </Descriptions>
               </SectionBox>
-
               <SectionBox
                 title={`Products (${viewingOrder.Products?.length || 0})`}
                 accent="#52c41a"
@@ -2810,9 +2780,9 @@ export default function Order() {
               >
                 <p style={{ margin: 0, color: '#531dab', fontSize: 13 }}>
                   <strong>🔒 Repeat Order Mode:</strong> All party, contact, and
-                  product details are locked and copied from the original order.
-                  Only <strong>Quantity</strong> can be edited for each product.
-                  ProductAmount and TotalAmount will auto-recalculate.
+                  product details are locked. Only <strong>Quantity</strong> can
+                  be edited. ProductAmount and TotalAmount will
+                  auto-recalculate.
                 </p>
               </div>
             ) : (
@@ -2826,10 +2796,9 @@ export default function Order() {
                 }}
               >
                 <p style={{ margin: 0, color: '#0050b3', fontSize: 13 }}>
-                  <strong>ℹ️ Note:</strong> Each order can contain multiple
-                  products. ProductAmount = Rate × Quantity (auto-calculated,
-                  but editable). TotalAmount = Sum of all ProductAmounts
-                  (auto-calculated, but editable).
+                  <strong>ℹ️ Note:</strong> ProductAmount = Rate × Quantity
+                  (auto-calculated). TotalAmount = Sum of all ProductAmounts +
+                  Carting (auto-calculated, but editable).
                 </p>
               </div>
             )}
@@ -3137,7 +3106,6 @@ export default function Order() {
                               form.getFieldValue('Products')?.[idx]
                                 ?.ProductCategory;
                             const isMachine = productType === 'Machine';
-
                             return (
                               <Card
                                 className="product-card"
@@ -3711,7 +3679,7 @@ export default function Order() {
               }}
             >
               <Row gutter={16}>
-                {/* ── Carting Field ── */}
+                {/* Carting Field */}
                 <Col span={12}>
                   <Form.Item
                     label={
@@ -3732,6 +3700,8 @@ export default function Order() {
                       size="large"
                       placeholder="0.00"
                       onInput={handleDecimalInput}
+                      // ── CHANGED: recalc TotalAmount whenever Carting changes ──
+                      onChange={recalcTotalAmount}
                       prefix={
                         <span
                           style={{
@@ -3752,7 +3722,7 @@ export default function Order() {
                     />
                   </Form.Item>
                 </Col>
-                {/* ── Total Amount Field ── */}
+                {/* Total Amount Field */}
                 <Col span={12}>
                   <Form.Item
                     label={
