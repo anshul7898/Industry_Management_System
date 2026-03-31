@@ -1052,6 +1052,7 @@ export default function Order() {
         Destination: '',
         Products: [{ ...emptyProduct }],
         TotalAmount: 0,
+        Carting: 0,
       });
       message.success({
         content: partyData
@@ -1218,6 +1219,7 @@ export default function Order() {
         Destination: order.Destination || '',
         Products: copiedProducts,
         TotalAmount: order.TotalAmount || 0,
+        Carting: order.Carting || 0,
       });
       message.success({
         content: `Repeat order loaded from #${order.OrderId}. Only Quantity can be edited.`,
@@ -1289,6 +1291,7 @@ export default function Order() {
     form.resetFields();
     form.setFieldValue('Products', [{ ...emptyProduct }]);
     form.setFieldValue('TotalAmount', 0);
+    form.setFieldValue('Carting', 0);
     try {
       await Promise.all([
         fetchAgents().then(setAgents),
@@ -1373,6 +1376,7 @@ export default function Order() {
       Destination: record.Destination || '',
       Products: normalisedProducts,
       TotalAmount: record.TotalAmount || 0,
+      Carting: record.Carting || 0,
     });
     setIsModalOpen(true);
   };
@@ -1504,6 +1508,7 @@ export default function Order() {
         DispatchContactNumber: values.DispatchContactNumber || null,
         Destination: values.Destination || null,
         TotalAmount: parseFloat(totalAmount),
+        Carting: parseFloat(values.Carting || 0),
         Products: buildProductsPayload(values.Products),
       }),
     });
@@ -1541,6 +1546,7 @@ export default function Order() {
         DispatchContactNumber: values.DispatchContactNumber || null,
         Destination: values.Destination || null,
         TotalAmount: parseFloat(totalAmount),
+        Carting: parseFloat(values.Carting || 0),
         Products: buildProductsPayload(values.Products),
       }),
     });
@@ -2707,7 +2713,22 @@ export default function Order() {
                       </Card>
                     ))}
                     <Divider style={{ margin: '12px 0' }} />
-                    <Row justify="end">
+                    <Row justify="end" gutter={24}>
+                      <Col>
+                        <Statistic
+                          title={
+                            <span style={{ fontWeight: 600 }}>Carting</span>
+                          }
+                          value={viewingOrder.Carting || 0}
+                          prefix="₹"
+                          precision={2}
+                          valueStyle={{
+                            color: '#fa8c16',
+                            fontWeight: 700,
+                            fontSize: 20,
+                          }}
+                        />
+                      </Col>
                       <Col>
                         <Statistic
                           title={
@@ -3440,7 +3461,7 @@ export default function Order() {
                                 {/* Printing Information */}
                                 <SubHeading>Printing Information</SubHeading>
                                 <Row gutter={12}>
-                                  <Col span={12}>
+                                  <Col span={8}>
                                     <Form.Item
                                       label="Printing Type"
                                       name={[field.name, 'PrintingType']}
@@ -3459,7 +3480,7 @@ export default function Order() {
                                       />
                                     </Form.Item>
                                   </Col>
-                                  <Col span={12}>
+                                  <Col span={8}>
                                     <Form.Item
                                       label="Print Colour"
                                       name={[field.name, 'PrintColor']}
@@ -3478,11 +3499,6 @@ export default function Order() {
                                       />
                                     </Form.Item>
                                   </Col>
-                                </Row>
-
-                                {/* Design Information */}
-                                <SubHeading>Design Information</SubHeading>
-                                <Row gutter={12}>
                                   <Col span={8}>
                                     <OtherSelectField
                                       fieldName={field.name}
@@ -3495,21 +3511,23 @@ export default function Order() {
                                       required={true}
                                     />
                                   </Col>
+                                </Row>
+
+                                {/* Design Information */}
+                                <SubHeading>Design Information</SubHeading>
+                                <Row gutter={12}>
                                   <Col span={8}>
                                     <Form.Item
                                       label="Design Type"
                                       name={[field.name, 'DesignType']}
                                     >
-                                      <Radio.Group
-                                        disabled={isRepeatOrder}
-                                        style={{ marginTop: 4 }}
-                                      >
+                                      <Radio.Group disabled={isRepeatOrder}>
                                         <Radio value="Old">Old Design</Radio>
                                         <Radio value="New">New Design</Radio>
                                       </Radio.Group>
                                     </Form.Item>
                                   </Col>
-                                  <Col span={8}>
+                                  <Col span={16}>
                                     <Form.Item
                                       label="Design Style"
                                       name={[field.name, 'DesignStyle']}
@@ -3532,10 +3550,7 @@ export default function Order() {
                                       label="Plate Type"
                                       name={[field.name, 'PlateType']}
                                     >
-                                      <Radio.Group
-                                        disabled={isRepeatOrder}
-                                        style={{ marginTop: 4 }}
-                                      >
+                                      <Radio.Group disabled={isRepeatOrder}>
                                         <Radio value="Old">Old Plate</Radio>
                                         <Radio value="New">New Plate</Radio>
                                       </Radio.Group>
@@ -3547,7 +3562,7 @@ export default function Order() {
                                       name={[field.name, 'PlateBlockNumber']}
                                     >
                                       <Select
-                                        placeholder="Select"
+                                        placeholder="Select Number of Plate"
                                         options={
                                           DROPDOWN_OPTIONS.plateBlockNumbers
                                         }
@@ -3563,13 +3578,18 @@ export default function Order() {
                                     >
                                       <Input
                                         placeholder="e.g., 500"
+                                        disabled={isRepeatOrder}
+                                        onInput={handleDecimalInput}
                                         prefix={
-                                          <span style={{ color: '#722ed1' }}>
+                                          <span
+                                            style={{
+                                              color: '#722ed1',
+                                              fontWeight: 600,
+                                            }}
+                                          >
                                             ₹
                                           </span>
                                         }
-                                        onInput={handleDecimalInput}
-                                        disabled={isRepeatOrder}
                                       />
                                     </Form.Item>
                                   </Col>
@@ -3591,42 +3611,62 @@ export default function Order() {
                                     >
                                       <Input
                                         placeholder="e.g., 5.50"
-                                        prefix={
-                                          <span style={{ color: '#1677ff' }}>
-                                            ₹
-                                          </span>
-                                        }
-                                        onInput={handleDecimalInput}
                                         disabled={isRepeatOrder}
+                                        onInput={handleDecimalInput}
                                         onChange={() =>
                                           handleRateOrQuantityChange(
                                             `${idx}_Rate`,
                                           )
+                                        }
+                                        prefix={
+                                          <span
+                                            style={{
+                                              color: '#1677ff',
+                                              fontWeight: 600,
+                                            }}
+                                          >
+                                            ₹
+                                          </span>
                                         }
                                       />
                                     </Form.Item>
                                   </Col>
                                   <Col span={12}>
                                     <Form.Item
-                                      label="Product Amount"
+                                      label={
+                                        isRepeatOrder ? (
+                                          <span>
+                                            Product Amount{' '}
+                                            <Tag
+                                              color="green"
+                                              style={{ fontSize: 11 }}
+                                            >
+                                              ✏️ Auto
+                                            </Tag>
+                                          </span>
+                                        ) : (
+                                          'Product Amount'
+                                        )
+                                      }
                                       name={[field.name, 'ProductAmount']}
                                     >
                                       <Input
                                         placeholder="Auto-calculated"
-                                        prefix={
-                                          <span style={{ color: '#52c41a' }}>
-                                            ₹
-                                          </span>
-                                        }
-                                        style={{
-                                          color: '#389e0d',
-                                          fontWeight: 600,
-                                        }}
                                         onInput={handleDecimalInput}
                                         onChange={() =>
                                           handleProductAmountChange(
                                             `${idx}_ProductAmount`,
                                           )
+                                        }
+                                        prefix={
+                                          <span
+                                            style={{
+                                              color: '#52c41a',
+                                              fontWeight: 600,
+                                            }}
+                                          >
+                                            ₹
+                                          </span>
                                         }
                                       />
                                     </Form.Item>
@@ -3638,7 +3678,6 @@ export default function Order() {
                         </Form.Item>
                       ))
                     )}
-
                     {!isRepeatOrder && (
                       <Button
                         type="dashed"
@@ -3647,8 +3686,7 @@ export default function Order() {
                         icon={<PlusOutlined />}
                         style={{
                           borderRadius: 8,
-                          marginBottom: 16,
-                          height: 48,
+                          marginBottom: 12,
                           borderColor: '#1677ff',
                           color: '#1677ff',
                           fontWeight: 600,
@@ -3662,39 +3700,96 @@ export default function Order() {
               </Form.List>
             </SectionBox>
 
-            {/* ── Total Amount ── */}
+            {/* ── Totals Section ── */}
             <div
               style={{
-                marginBottom: 8,
-                padding: '16px 20px',
-                background: 'linear-gradient(90deg, #f6ffed, #f0fff0)',
-                borderRadius: 10,
+                background: 'linear-gradient(90deg, #f6ffed 0%, #fcffe6 100%)',
                 border: '1px solid #b7eb8f',
+                borderRadius: 10,
+                padding: '16px 20px',
+                marginTop: 8,
               }}
             >
-              <Row align="middle" gutter={16}>
-                <Col>
-                  <span
-                    style={{ fontWeight: 700, fontSize: 15, color: '#237804' }}
+              <Row gutter={16}>
+                {/* ── Carting Field ── */}
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 14,
+                          color: '#fa8c16',
+                        }}
+                      >
+                        Carting
+                      </span>
+                    }
+                    name="Carting"
+                    style={{ marginBottom: 0 }}
                   >
-                    Total Amount
-                  </span>
-                </Col>
-                <Col flex="auto">
-                  <Form.Item name="TotalAmount" style={{ marginBottom: 0 }}>
                     <Input
+                      size="large"
+                      placeholder="0.00"
+                      onInput={handleDecimalInput}
                       prefix={
-                        <span style={{ color: '#52c41a', fontWeight: 600 }}>
+                        <span
+                          style={{
+                            color: '#fa8c16',
+                            fontWeight: 700,
+                            fontSize: 16,
+                          }}
+                        >
                           ₹
                         </span>
                       }
                       style={{
-                        fontWeight: 700,
-                        color: '#389e0d',
+                        fontWeight: 600,
                         fontSize: 15,
                         borderRadius: 8,
+                        borderColor: '#ffd591',
                       }}
+                    />
+                  </Form.Item>
+                </Col>
+                {/* ── Total Amount Field ── */}
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 14,
+                          color: '#389e0d',
+                        }}
+                      >
+                        Total Amount
+                      </span>
+                    }
+                    name="TotalAmount"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Input
+                      size="large"
+                      placeholder="Auto-calculated"
                       onInput={handleDecimalInput}
+                      prefix={
+                        <span
+                          style={{
+                            color: '#389e0d',
+                            fontWeight: 700,
+                            fontSize: 16,
+                          }}
+                        >
+                          ₹
+                        </span>
+                      }
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 15,
+                        borderRadius: 8,
+                        borderColor: '#b7eb8f',
+                      }}
                     />
                   </Form.Item>
                 </Col>
