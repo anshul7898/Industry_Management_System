@@ -2585,6 +2585,7 @@ export default function Order() {
                         size="small"
                       >
                         <Descriptions bordered size="small" column={3}>
+                          {/* ── Basic Info ── */}
                           <Descriptions.Item label="Product Type">
                             {product.ProductType}
                           </Descriptions.Item>
@@ -2604,7 +2605,21 @@ export default function Order() {
                           <Descriptions.Item label="Bag Material">
                             {product.BagMaterial}
                           </Descriptions.Item>
-                          {/* ── NEW: Quantity + QuantityType in view ── */}
+                          <Descriptions.Item label="Quantity Type">
+                            {product.QuantityType ? (
+                              <Tag
+                                color={
+                                  product.QuantityType === 'KG'
+                                    ? 'volcano'
+                                    : 'geekblue'
+                                }
+                              >
+                                {product.QuantityType}
+                              </Tag>
+                            ) : (
+                              '-'
+                            )}
+                          </Descriptions.Item>
                           <Descriptions.Item label="Quantity">
                             <Space>
                               <span>{product.Quantity}</span>
@@ -2622,11 +2637,8 @@ export default function Order() {
                               )}
                             </Space>
                           </Descriptions.Item>
-                          <Descriptions.Item label="Rate">
-                            <span style={{ fontWeight: 600, color: '#1677ff' }}>
-                              ₹{Number(product.Rate || 0).toFixed(2)}
-                            </span>
-                          </Descriptions.Item>
+
+                          {/* ── Sheet / Border ── */}
                           <Descriptions.Item label="Sheet GSM">
                             {product.SheetGSM}
                           </Descriptions.Item>
@@ -2643,6 +2655,8 @@ export default function Order() {
                               </Descriptions.Item>
                             </>
                           )}
+
+                          {/* ── Handle ── */}
                           <Descriptions.Item label="Handle Type">
                             {product.HandleType}
                           </Descriptions.Item>
@@ -2652,6 +2666,8 @@ export default function Order() {
                           <Descriptions.Item label="Handle GSM">
                             {product.HandleGSM}
                           </Descriptions.Item>
+
+                          {/* ── Printing ── */}
                           <Descriptions.Item label="Printing Type">
                             {product.PrintingType}
                           </Descriptions.Item>
@@ -2659,8 +2675,10 @@ export default function Order() {
                             {product.PrintColor}
                           </Descriptions.Item>
                           <Descriptions.Item label="Colour">
-                            {product.Color}
+                            {product.Color || '-'}
                           </Descriptions.Item>
+
+                          {/* ── Design ── */}
                           <Descriptions.Item label="Design Type">
                             {product.DesignType ? (
                               <Tag
@@ -2695,6 +2713,8 @@ export default function Order() {
                               '-'
                             )}
                           </Descriptions.Item>
+
+                          {/* ── Plate ── */}
                           <Descriptions.Item label="Plate Type">
                             {product.PlateType ? (
                               <Tag
@@ -2726,7 +2746,57 @@ export default function Order() {
                               '-'
                             )}
                           </Descriptions.Item>
-                          <Descriptions.Item label="Product Amount" span={3}>
+
+                          {/* ── Pricing ── */}
+                          <Descriptions.Item label="Rate">
+                            <span style={{ fontWeight: 600, color: '#1677ff' }}>
+                              ₹{Number(product.Rate || 0).toFixed(2)}
+                            </span>
+                          </Descriptions.Item>
+                          <Descriptions.Item label="Fix Amount">
+                            {product.FixAmount != null ? (
+                              <span
+                                style={{ fontWeight: 600, color: '#eb2f96' }}
+                              >
+                                ₹{Number(product.FixAmount).toFixed(2)}
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                          </Descriptions.Item>
+                          {/* GST — shown for all products */}
+                          <Descriptions.Item label="GST">
+                            <Tag
+                              color={
+                                Number(product.GST) === 18
+                                  ? 'red'
+                                  : Number(product.GST) === 5
+                                    ? 'orange'
+                                    : 'default'
+                              }
+                              style={{ fontWeight: 600 }}
+                            >
+                              {Number(product.GST ?? 0)}%
+                            </Tag>
+                          </Descriptions.Item>
+                          {/* Job Work Rate — only for KG products */}
+                          {product.QuantityType === 'KG' && (
+                            <Descriptions.Item label="Job Work Rate">
+                              {product.JobWorkRate != null ? (
+                                <span
+                                  style={{ fontWeight: 600, color: '#fa8c16' }}
+                                >
+                                  ₹{Number(product.JobWorkRate).toFixed(2)}
+                                </span>
+                              ) : (
+                                '-'
+                              )}
+                            </Descriptions.Item>
+                          )}
+                          <Descriptions.Item
+                            label="Product Amount"
+                            span={product.QuantityType === 'KG' ? 2 : 3}
+                          >
                             <span
                               style={{
                                 fontWeight: 700,
