@@ -231,6 +231,7 @@ const emptyProduct = {
   PlateRate: undefined,
   Rate: undefined,
   FixAmount: undefined,
+  JobWorkRate: undefined,
   ProductAmount: undefined,
 };
 
@@ -1189,6 +1190,7 @@ export default function Order() {
           PlateRate: p.PlateRate || undefined,
           Rate: p.Rate,
           FixAmount: p.FixAmount || undefined,
+          JobWorkRate: p.JobWorkRate || undefined,
           ProductAmount: p.ProductAmount || 0,
         };
       });
@@ -1468,6 +1470,7 @@ export default function Order() {
         PlateRate: p.PlateRate ? parseFloat(p.PlateRate) : null,
         Rate: p.Rate,
         FixAmount: p.FixAmount ? parseFloat(p.FixAmount) : null,
+        JobWorkRate: p.JobWorkRate ? parseFloat(p.JobWorkRate) : null,
         ProductAmount: p.ProductAmount || 0,
       };
     });
@@ -1479,12 +1482,16 @@ export default function Order() {
       (s, p) => s + (parseFloat(p?.ProductAmount) || 0),
       0,
     );
+    // For non-KG products, FixAmount and PlateRate are added separately to Total.
+    // For KG products, they are already baked into ProductAmount.
     const fixAmountSum = products.reduce(
-      (s, p) => s + (parseFloat(p?.FixAmount) || 0),
+      (s, p) =>
+        p?.QuantityType === 'KG' ? s : s + (parseFloat(p?.FixAmount) || 0),
       0,
     );
     const plateRateSum = products.reduce(
-      (s, p) => s + (parseFloat(p?.PlateRate) || 0),
+      (s, p) =>
+        p?.QuantityType === 'KG' ? s : s + (parseFloat(p?.PlateRate) || 0),
       0,
     );
     const total = parseFloat(
@@ -1499,11 +1506,25 @@ export default function Order() {
     const productIndex = parseInt(fieldName.split('_')[0]);
     if (productIndex >= 0 && productIndex < products.length) {
       const product = products[productIndex];
-      const productAmount = parseFloat(
-        (
-          (parseFloat(product.Rate) || 0) * (parseFloat(product.Quantity) || 0)
-        ).toFixed(2),
-      );
+      let productAmount;
+      if (product.QuantityType === 'KG') {
+        // KG formula: (Quantity × Rate) + FixAmount + JobWorkRate + PlateRate
+        const kgAmount =
+          (parseFloat(product.Rate) || 0) * (parseFloat(product.Quantity) || 0);
+        const fixAmt = parseFloat(product.FixAmount) || 0;
+        const jobWorkRate = parseFloat(product.JobWorkRate) || 0;
+        const plateRate = parseFloat(product.PlateRate) || 0;
+        productAmount = parseFloat(
+          (kgAmount + fixAmt + jobWorkRate + plateRate).toFixed(2),
+        );
+      } else {
+        productAmount = parseFloat(
+          (
+            (parseFloat(product.Rate) || 0) *
+            (parseFloat(product.Quantity) || 0)
+          ).toFixed(2),
+        );
+      }
       const updated = [...products];
       updated[productIndex].ProductAmount = productAmount;
       form.setFieldValue('Products', updated);
@@ -1521,11 +1542,13 @@ export default function Order() {
       0,
     );
     const fixAmountSum = (values.Products || []).reduce(
-      (s, p) => s + (parseFloat(p?.FixAmount) || 0),
+      (s, p) =>
+        p?.QuantityType === 'KG' ? s : s + (parseFloat(p?.FixAmount) || 0),
       0,
     );
     const plateRateSum = (values.Products || []).reduce(
-      (s, p) => s + (parseFloat(p?.PlateRate) || 0),
+      (s, p) =>
+        p?.QuantityType === 'KG' ? s : s + (parseFloat(p?.PlateRate) || 0),
       0,
     );
     const carting = parseFloat(values.Carting || 0);
@@ -3317,6 +3340,11 @@ export default function Order() {
                                         placeholder="Select Type"
                                         options={DROPDOWN_OPTIONS.quantityTypes}
                                         disabled={isRepeatOrder}
+                                        onChange={() =>
+                                          handleRateOrQuantityChange(
+                                            `${idx}_QuantityType`,
+                                          )
+                                        }
                                       />
                                     </Form.Item>
                                   </Col>
@@ -3672,7 +3700,11 @@ export default function Order() {
                                       <Input
                                         placeholder="e.g., 100"
                                         onInput={handleDecimalInput}
-                                        onChange={recalcTotalAmount}
+                                        onChange={() =>
+                                          handleRateOrQuantityChange(
+                                            `${idx}_FixAmount`,
+                                          )
+                                        }
                                         prefix={
                                           <span
                                             style={{
@@ -3687,6 +3719,53 @@ export default function Order() {
                                     </Form.Item>
                                   </Col>
                                 </Row>
+                                {/* Job Work Rate — only visible when Quantity Type is KG */}
+                                <Form.Item
+                                  noStyle
+                                  shouldUpdate={(prev, cur) =>
+                                    prev.Products?.[idx]?.QuantityType !==
+                                    cur.Products?.[idx]?.QuantityType
+                                  }
+                                >
+                                  {() => {
+                                    const quantityType = form.getFieldValue([
+                                      'Products',
+                                      idx,
+                                      'QuantityType',
+                                    ]);
+                                    if (quantityType !== 'KG') return null;
+                                    return (
+                                      <Row gutter={12}>
+                                        <Col span={12}>
+                                          <Form.Item
+                                            label="Job Work Rate"
+                                            name={[field.name, 'JobWorkRate']}
+                                          >
+                                            <Input
+                                              placeholder="e.g., 200"
+                                              onInput={handleDecimalInput}
+                                              onChange={() =>
+                                                handleRateOrQuantityChange(
+                                                  `${idx}_JobWorkRate`,
+                                                )
+                                              }
+                                              prefix={
+                                                <span
+                                                  style={{
+                                                    color: '#fa8c16',
+                                                    fontWeight: 600,
+                                                  }}
+                                                >
+                                                  ₹
+                                                </span>
+                                              }
+                                            />
+                                          </Form.Item>
+                                        </Col>
+                                      </Row>
+                                    );
+                                  }}
+                                </Form.Item>
                                 <Row gutter={12}>
                                   <Col span={12}>
                                     <Form.Item
