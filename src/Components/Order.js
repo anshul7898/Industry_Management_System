@@ -192,6 +192,11 @@ const DROPDOWN_OPTIONS = {
     { label: 'Same Front/Back', value: 'Same Front/Back' },
     { label: 'Different Front/Back', value: 'Different Front/Back' },
   ],
+  // ── NEW: Quantity Type ──
+  quantityTypes: [
+    { label: 'Pieces', value: 'Pieces' },
+    { label: 'KG', value: 'KG' },
+  ],
 };
 
 const emptyProduct = {
@@ -204,6 +209,7 @@ const emptyProduct = {
   RollSizeCustom: undefined,
   BagMaterial: undefined,
   Quantity: undefined,
+  QuantityType: undefined, // ── NEW ──
   SheetGSM: undefined,
   SheetColor: undefined,
   SheetColorCustom: undefined,
@@ -1161,6 +1167,7 @@ export default function Order() {
           RollSizeCustom: rs.custom,
           BagMaterial: p.BagMaterial,
           Quantity: p.Quantity,
+          QuantityType: p.QuantityType || undefined, // ── NEW ──
           SheetGSM: p.SheetGSM,
           SheetColor: sc.selected,
           SheetColorCustom: sc.custom,
@@ -1336,6 +1343,7 @@ export default function Order() {
           DesignStyle: p.DesignStyle ?? undefined,
           PlateType: p.PlateType ?? undefined,
           PlateRate: p.PlateRate ?? undefined,
+          QuantityType: p.QuantityType ?? undefined, // ── NEW ──
         };
       },
     );
@@ -1414,6 +1422,7 @@ export default function Order() {
     }
   };
 
+  // ── UPDATED: include QuantityType in payload ──
   const buildProductsPayload = (products) =>
     (products || []).map((p) => {
       let resolvedRollSize = p.RollSize;
@@ -1431,6 +1440,7 @@ export default function Order() {
         RollSize: resolvedRollSize || null,
         BagMaterial: p.BagMaterial,
         Quantity: p.Quantity,
+        QuantityType: p.QuantityType || null, // ── NEW ──
         SheetGSM: Number(p.SheetGSM),
         SheetColor: pickValueOrOther(p.SheetColor, p.SheetColorCustom),
         BorderGSM:
@@ -1462,7 +1472,6 @@ export default function Order() {
       };
     });
 
-  // ── TotalAmount = sum(ProductAmounts) + sum(FixAmounts) + sum(PlateRates) + Carting ──
   const recalcTotalAmount = useCallback(() => {
     const products = form.getFieldValue('Products') || [];
     const carting = parseFloat(form.getFieldValue('Carting') || 0);
@@ -1485,7 +1494,6 @@ export default function Order() {
     return total;
   }, [form]);
 
-  // ── CHANGED: recalc ProductAmount then TotalAmount (with Carting) ──
   const handleRateOrQuantityChange = (fieldName) => {
     const products = form.getFieldValue('Products') || [];
     const productIndex = parseInt(fieldName.split('_')[0]);
@@ -1503,12 +1511,10 @@ export default function Order() {
     }
   };
 
-  // ── CHANGED: recalc TotalAmount (with Carting) after manual ProductAmount edit ──
   const handleProductAmountChange = () => {
     recalcTotalAmount();
   };
 
-  // ── compute correct TotalAmount at submit: sum(ProductAmounts) + sum(FixAmounts) + sum(PlateRates) + Carting ──
   const computeFinalTotalAmount = (values) => {
     const productsSum = (values.Products || []).reduce(
       (s, p) => s + (parseFloat(p?.ProductAmount) || 0),
@@ -1531,7 +1537,7 @@ export default function Order() {
   const handleAdd = async (values) => {
     if (!values.Products || values.Products.length === 0)
       throw new Error('Please add at least one product');
-    const totalAmount = computeFinalTotalAmount(values); // ← CHANGED
+    const totalAmount = computeFinalTotalAmount(values);
     if (isNaN(totalAmount) || totalAmount < 0)
       throw new Error('Total Amount must be a valid non-negative number');
     const res = await fetch('/api/orders', {
@@ -1554,7 +1560,7 @@ export default function Order() {
         TransportName: values.TransportName || null,
         DispatchContactNumber: values.DispatchContactNumber || null,
         Destination: values.Destination || null,
-        TotalAmount: totalAmount, // ← CHANGED: sum of products + carting
+        TotalAmount: totalAmount,
         Carting: parseFloat(values.Carting || 0),
         Products: buildProductsPayload(values.Products),
       }),
@@ -1569,7 +1575,7 @@ export default function Order() {
   const handleUpdate = async (orderId, values) => {
     if (!values.Products || values.Products.length === 0)
       throw new Error('Please add at least one product');
-    const totalAmount = computeFinalTotalAmount(values); // ← CHANGED
+    const totalAmount = computeFinalTotalAmount(values);
     if (isNaN(totalAmount) || totalAmount < 0)
       throw new Error('Total Amount must be a valid non-negative number');
     const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
@@ -1592,7 +1598,7 @@ export default function Order() {
         TransportName: values.TransportName || null,
         DispatchContactNumber: values.DispatchContactNumber || null,
         Destination: values.Destination || null,
-        TotalAmount: totalAmount, // ← CHANGED: sum of products + carting
+        TotalAmount: totalAmount,
         Carting: parseFloat(values.Carting || 0),
         Products: buildProductsPayload(values.Products),
       }),
@@ -2584,8 +2590,23 @@ export default function Order() {
                           <Descriptions.Item label="Bag Material">
                             {product.BagMaterial}
                           </Descriptions.Item>
+                          {/* ── NEW: Quantity + QuantityType in view ── */}
                           <Descriptions.Item label="Quantity">
-                            {product.Quantity}
+                            <Space>
+                              <span>{product.Quantity}</span>
+                              {product.QuantityType && (
+                                <Tag
+                                  color={
+                                    product.QuantityType === 'KG'
+                                      ? 'volcano'
+                                      : 'geekblue'
+                                  }
+                                  style={{ fontSize: 11 }}
+                                >
+                                  {product.QuantityType}
+                                </Tag>
+                              )}
+                            </Space>
                           </Descriptions.Item>
                           <Descriptions.Item label="Rate">
                             <span style={{ fontWeight: 600, color: '#1677ff' }}>
@@ -3258,9 +3279,9 @@ export default function Order() {
                                   </Col>
                                 </Row>
 
-                                {/* Bag Material / Quantity */}
+                                {/* ── UPDATED: Bag Material / Quantity Type / Quantity ── */}
                                 <Row gutter={12} style={{ marginTop: 12 }}>
-                                  <Col span={12}>
+                                  <Col span={8}>
                                     <Form.Item
                                       label="Bag Material"
                                       name={[field.name, 'BagMaterial']}
@@ -3279,7 +3300,27 @@ export default function Order() {
                                       />
                                     </Form.Item>
                                   </Col>
-                                  <Col span={12}>
+                                  {/* ── NEW: Quantity Type dropdown ── */}
+                                  <Col span={8}>
+                                    <Form.Item
+                                      label="Quantity Type"
+                                      name={[field.name, 'QuantityType']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message:
+                                            'Please select Quantity Type.',
+                                        },
+                                      ]}
+                                    >
+                                      <Select
+                                        placeholder="Select Type"
+                                        options={DROPDOWN_OPTIONS.quantityTypes}
+                                        disabled={isRepeatOrder}
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                  <Col span={8}>
                                     <Form.Item
                                       label={
                                         isRepeatOrder ? (
@@ -3727,7 +3768,6 @@ export default function Order() {
               }}
             >
               <Row gutter={16}>
-                {/* Carting Field */}
                 <Col span={12}>
                   <Form.Item
                     label={
@@ -3748,7 +3788,6 @@ export default function Order() {
                       size="large"
                       placeholder="0.00"
                       onInput={handleDecimalInput}
-                      // ── CHANGED: recalc TotalAmount whenever Carting changes ──
                       onChange={recalcTotalAmount}
                       prefix={
                         <span
@@ -3770,7 +3809,6 @@ export default function Order() {
                     />
                   </Form.Item>
                 </Col>
-                {/* Total Amount Field */}
                 <Col span={12}>
                   <Form.Item
                     label={
