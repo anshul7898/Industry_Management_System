@@ -197,6 +197,12 @@ const DROPDOWN_OPTIONS = {
     { label: 'Pieces', value: 'Pieces' },
     { label: 'KG', value: 'KG' },
   ],
+  // ── NEW: GST Options ──
+  gstOptions: [
+    { label: '0%', value: 0 },
+    { label: '5%', value: 5 },
+    { label: '18%', value: 18 },
+  ],
 };
 
 const emptyProduct = {
@@ -232,6 +238,7 @@ const emptyProduct = {
   Rate: undefined,
   FixAmount: undefined,
   JobWorkRate: undefined,
+  GST: 0, // ── NEW: GST percentage (0, 5, or 18) ──
   ProductAmount: undefined,
 };
 
@@ -1191,6 +1198,7 @@ export default function Order() {
           Rate: p.Rate,
           FixAmount: p.FixAmount || undefined,
           JobWorkRate: p.JobWorkRate || undefined,
+          GST: p.GST !== undefined ? p.GST : 0, // ── NEW ──
           ProductAmount: p.ProductAmount || 0,
         };
       });
@@ -1346,6 +1354,7 @@ export default function Order() {
           PlateType: p.PlateType ?? undefined,
           PlateRate: p.PlateRate ?? undefined,
           QuantityType: p.QuantityType ?? undefined, // ── NEW ──
+          GST: p.GST !== undefined ? p.GST : 0, // ── NEW ──
         };
       },
     );
@@ -1471,6 +1480,7 @@ export default function Order() {
         Rate: p.Rate,
         FixAmount: p.FixAmount ? parseFloat(p.FixAmount) : null,
         JobWorkRate: p.JobWorkRate ? parseFloat(p.JobWorkRate) : null,
+        GST: p.GST !== undefined ? parseFloat(p.GST) : 0, // ── NEW ──
         ProductAmount: p.ProductAmount || 0,
       };
     });
@@ -1482,21 +1492,7 @@ export default function Order() {
       (s, p) => s + (parseFloat(p?.ProductAmount) || 0),
       0,
     );
-    // For non-KG products, FixAmount and PlateRate are added separately to Total.
-    // For KG products, they are already baked into ProductAmount.
-    const fixAmountSum = products.reduce(
-      (s, p) =>
-        p?.QuantityType === 'KG' ? s : s + (parseFloat(p?.FixAmount) || 0),
-      0,
-    );
-    const plateRateSum = products.reduce(
-      (s, p) =>
-        p?.QuantityType === 'KG' ? s : s + (parseFloat(p?.PlateRate) || 0),
-      0,
-    );
-    const total = parseFloat(
-      (productsSum + fixAmountSum + plateRateSum + carting).toFixed(2),
-    );
+    const total = parseFloat((productsSum + carting).toFixed(2));
     form.setFieldValue('TotalAmount', total);
     return total;
   }, [form]);
@@ -1506,23 +1502,30 @@ export default function Order() {
     const productIndex = parseInt(fieldName.split('_')[0]);
     if (productIndex >= 0 && productIndex < products.length) {
       const product = products[productIndex];
+      const gstRate = (parseFloat(product.GST) || 0) / 100;
       let productAmount;
       if (product.QuantityType === 'KG') {
-        // KG formula: (Quantity × Rate) + FixAmount + JobWorkRate + PlateRate
-        const kgAmount =
+        // KG formula: GST on (Quantity × Rate) + JobWorkRate + PlateRate + FixAmount
+        const baseAmount =
           (parseFloat(product.Rate) || 0) * (parseFloat(product.Quantity) || 0);
+        const gstAmount = parseFloat((baseAmount * gstRate).toFixed(2));
         const fixAmt = parseFloat(product.FixAmount) || 0;
         const jobWorkRate = parseFloat(product.JobWorkRate) || 0;
         const plateRate = parseFloat(product.PlateRate) || 0;
         productAmount = parseFloat(
-          (kgAmount + fixAmt + jobWorkRate + plateRate).toFixed(2),
+          (baseAmount + gstAmount + jobWorkRate + plateRate + fixAmt).toFixed(
+            2,
+          ),
         );
       } else {
+        // Pieces formula: GST on (Quantity × Rate) + PlateRate + FixAmount
+        const baseAmount =
+          (parseFloat(product.Rate) || 0) * (parseFloat(product.Quantity) || 0);
+        const gstAmount = parseFloat((baseAmount * gstRate).toFixed(2));
+        const plateRate = parseFloat(product.PlateRate) || 0;
+        const fixAmt = parseFloat(product.FixAmount) || 0;
         productAmount = parseFloat(
-          (
-            (parseFloat(product.Rate) || 0) *
-            (parseFloat(product.Quantity) || 0)
-          ).toFixed(2),
+          (baseAmount + gstAmount + plateRate + fixAmt).toFixed(2),
         );
       }
       const updated = [...products];
@@ -1541,20 +1544,8 @@ export default function Order() {
       (s, p) => s + (parseFloat(p?.ProductAmount) || 0),
       0,
     );
-    const fixAmountSum = (values.Products || []).reduce(
-      (s, p) =>
-        p?.QuantityType === 'KG' ? s : s + (parseFloat(p?.FixAmount) || 0),
-      0,
-    );
-    const plateRateSum = (values.Products || []).reduce(
-      (s, p) =>
-        p?.QuantityType === 'KG' ? s : s + (parseFloat(p?.PlateRate) || 0),
-      0,
-    );
     const carting = parseFloat(values.Carting || 0);
-    return parseFloat(
-      (productsSum + fixAmountSum + plateRateSum + carting).toFixed(2),
-    );
+    return parseFloat((productsSum + carting).toFixed(2));
   };
 
   const handleAdd = async (values) => {
@@ -3719,12 +3710,50 @@ export default function Order() {
                                     </Form.Item>
                                   </Col>
                                 </Row>
+                                {/* GST Dropdown */}
+                                <Row gutter={12}>
+                                  <Col span={12}>
+                                    <Form.Item
+                                      label={
+                                        <span>
+                                          GST{' '}
+                                          <span
+                                            style={{
+                                              fontSize: 11,
+                                              color: '#8c8c8c',
+                                              fontWeight: 400,
+                                            }}
+                                          >
+                                            (on Qty × Rate)
+                                          </span>
+                                        </span>
+                                      }
+                                      name={[field.name, 'GST']}
+                                      initialValue={0}
+                                    >
+                                      <Select
+                                        options={DROPDOWN_OPTIONS.gstOptions}
+                                        disabled={isRepeatOrder}
+                                        onChange={() =>
+                                          handleRateOrQuantityChange(
+                                            `${idx}_GST`,
+                                          )
+                                        }
+                                        style={{
+                                          fontWeight: 600,
+                                        }}
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                </Row>
                                 {/* Job Work Rate — only visible when Quantity Type is KG */}
                                 <Form.Item
                                   noStyle
                                   shouldUpdate={(prev, cur) =>
                                     prev.Products?.[idx]?.QuantityType !==
-                                    cur.Products?.[idx]?.QuantityType
+                                      cur.Products?.[idx]?.QuantityType ||
+                                    prev.Products?.[idx]?.GST !==
+                                      cur.Products?.[idx]?.GST
                                   }
                                 >
                                   {() => {
