@@ -3954,6 +3954,79 @@ export default function Order() {
                                     );
                                   }}
                                 </Form.Item>
+                                {/* Individual Product Total */}
+                                <Form.Item
+                                  noStyle
+                                  shouldUpdate={(prev, cur) =>
+                                    prev.Products?.[idx]?.ProductAmount !==
+                                      cur.Products?.[idx]?.ProductAmount ||
+                                    prev.Products?.[idx]?.FixAmount !==
+                                      cur.Products?.[idx]?.FixAmount ||
+                                    prev.Products?.[idx]?.PlateRate !==
+                                      cur.Products?.[idx]?.PlateRate ||
+                                    prev.Products?.[idx]?.JobWorkRate !==
+                                      cur.Products?.[idx]?.JobWorkRate
+                                  }
+                                >
+                                  {() => {
+                                    const productAmount = parseFloat(
+                                      form.getFieldValue([
+                                        'Products',
+                                        idx,
+                                        'ProductAmount',
+                                      ]) || 0,
+                                    );
+                                    const fixAmount = parseFloat(
+                                      form.getFieldValue([
+                                        'Products',
+                                        idx,
+                                        'FixAmount',
+                                      ]) || 0,
+                                    );
+                                    const plateRate = parseFloat(
+                                      form.getFieldValue([
+                                        'Products',
+                                        idx,
+                                        'PlateRate',
+                                      ]) || 0,
+                                    );
+                                    const jobWorkRate = parseFloat(
+                                      form.getFieldValue([
+                                        'Products',
+                                        idx,
+                                        'JobWorkRate',
+                                      ]) || 0,
+                                    );
+                                    const individualTotal = parseFloat(
+                                      (
+                                        productAmount +
+                                        fixAmount +
+                                        plateRate +
+                                        jobWorkRate
+                                      ).toFixed(2),
+                                    );
+                                    return (
+                                      <Row
+                                        gutter={12}
+                                        style={{ marginTop: 12 }}
+                                      >
+                                        <Col span={12}>
+                                          <Form.Item label="Individual Product Total">
+                                            <Input
+                                              value={`₹${individualTotal.toFixed(2)}`}
+                                              disabled
+                                              style={{
+                                                color: '#13c2c2',
+                                                fontWeight: 700,
+                                                fontSize: 14,
+                                              }}
+                                            />
+                                          </Form.Item>
+                                        </Col>
+                                      </Row>
+                                    );
+                                  }}
+                                </Form.Item>
                               </Card>
                             );
                           }}
