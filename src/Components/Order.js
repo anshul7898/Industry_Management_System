@@ -1497,13 +1497,13 @@ export default function Order() {
     const carting = parseFloat(form.getFieldValue('Carting') || 0);
     const gstPercentage = parseFloat(form.getFieldValue('OrderGST') || 0);
 
-    // Calculate product amounts (for Pieces, these don't include GST)
+    // Calculate product amounts
     const productsSum = products.reduce(
       (s, p) => s + (parseFloat(p?.ProductAmount) || 0),
       0,
     );
 
-    // Calculate sum of Fix Amounts and Plate Rates
+    // Calculate sum of Fix Amounts, Plate Rates, and Job Work Rates
     const fixAmountsSum = products.reduce(
       (s, p) => s + (parseFloat(p?.FixAmount) || 0),
       0,
@@ -1512,17 +1512,23 @@ export default function Order() {
       (s, p) => s + (parseFloat(p?.PlateRate) || 0),
       0,
     );
+    const jobWorkRatesSum = products.reduce(
+      (s, p) => s + (parseFloat(p?.JobWorkRate) || 0),
+      0,
+    );
 
-    // Calculate GST on (Products + FixAmounts + PlateRates + Carting)
-    const gstBase = productsSum + fixAmountsSum + plateRatesSum + carting;
+    // Calculate GST on (Products + FixAmounts + PlateRates + JobWorkRates + Carting)
+    const gstBase =
+      productsSum + fixAmountsSum + plateRatesSum + jobWorkRatesSum + carting;
     const gstAmount = parseFloat((gstBase * (gstPercentage / 100)).toFixed(2));
 
-    // Total = Products + FixAmounts + PlateRates + Carting + GST
+    // Total = Products + FixAmounts + PlateRates + JobWorkRates + Carting + GST
     const total = parseFloat(
       (
         productsSum +
         fixAmountsSum +
         plateRatesSum +
+        jobWorkRatesSum +
         carting +
         gstAmount
       ).toFixed(2),
@@ -1530,7 +1536,7 @@ export default function Order() {
 
     form.setFieldValue(
       'TotalAmount',
-      productsSum + fixAmountsSum + plateRatesSum + carting,
+      productsSum + fixAmountsSum + plateRatesSum + jobWorkRatesSum + carting,
     );
     form.setFieldValue('OrderGSTAmount', gstAmount);
     form.setFieldValue('FinalTotalAmount', total);
@@ -1544,33 +1550,13 @@ export default function Order() {
     if (productIndex >= 0 && productIndex < products.length) {
       const product = products[productIndex];
       let productAmount;
-      if (product.QuantityType === 'KG') {
-        // KG formula: Product Amount includes GST on (Quantity × Rate) + JobWorkRate + PlateRate + FixAmount
-        const gstRate = (parseFloat(product.GST) || 0) / 100;
-        const baseAmount =
-          (parseFloat(product.Rate) || 0) * (parseFloat(product.Quantity) || 0);
-        const gstAmount = parseFloat((baseAmount * gstRate).toFixed(2));
-        const fixAmt = parseFloat(product.FixAmount) || 0;
-        const jobWorkRate = parseFloat(product.JobWorkRate) || 0;
-        const plateRate = parseFloat(product.PlateRate) || 0;
-        productAmount = parseFloat(
-          (baseAmount + gstAmount + jobWorkRate + plateRate + fixAmt).toFixed(
-            2,
-          ),
-        );
-        const updated = [...products];
-        updated[productIndex].ProductAmount = productAmount;
-        updated[productIndex].GSTAmount = gstAmount;
-        form.setFieldValue('Products', updated);
-      } else {
-        // Pieces formula: Product Amount = Rate × Quantity only (GST calculated at order level)
-        const baseAmount =
-          (parseFloat(product.Rate) || 0) * (parseFloat(product.Quantity) || 0);
-        productAmount = baseAmount;
-        const updated = [...products];
-        updated[productIndex].ProductAmount = productAmount;
-        form.setFieldValue('Products', updated);
-      }
+      // For both KG and Pieces: Product Amount = Rate × Quantity (GST calculated at order level)
+      const baseAmount =
+        (parseFloat(product.Rate) || 0) * (parseFloat(product.Quantity) || 0);
+      productAmount = baseAmount;
+      const updated = [...products];
+      updated[productIndex].ProductAmount = productAmount;
+      form.setFieldValue('Products', updated);
       recalcTotalAmount();
     }
   };
@@ -1590,7 +1576,7 @@ export default function Order() {
       0,
     );
 
-    // Calculate sum of Fix Amounts and Plate Rates
+    // Calculate sum of Fix Amounts, Plate Rates, and Job Work Rates
     const fixAmountsSum = products.reduce(
       (s, p) => s + (parseFloat(p?.FixAmount) || 0),
       0,
@@ -1599,17 +1585,23 @@ export default function Order() {
       (s, p) => s + (parseFloat(p?.PlateRate) || 0),
       0,
     );
+    const jobWorkRatesSum = products.reduce(
+      (s, p) => s + (parseFloat(p?.JobWorkRate) || 0),
+      0,
+    );
 
-    // Calculate GST on (Products + FixAmounts + PlateRates + Carting)
-    const gstBase = productsSum + fixAmountsSum + plateRatesSum + carting;
+    // Calculate GST on (Products + FixAmounts + PlateRates + JobWorkRates + Carting)
+    const gstBase =
+      productsSum + fixAmountsSum + plateRatesSum + jobWorkRatesSum + carting;
     const gstAmount = parseFloat((gstBase * (gstPercentage / 100)).toFixed(2));
 
-    // Final total = Products + FixAmounts + PlateRates + Carting + GST
+    // Final total = Products + FixAmounts + PlateRates + JobWorkRates + Carting + GST
     const finalTotal = parseFloat(
       (
         productsSum +
         fixAmountsSum +
         plateRatesSum +
+        jobWorkRatesSum +
         carting +
         gstAmount
       ).toFixed(2),
