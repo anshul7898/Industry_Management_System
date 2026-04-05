@@ -3346,7 +3346,10 @@ export default function Order() {
                                       danger
                                       size="small"
                                       icon={<DeleteOutlined />}
-                                      onClick={() => remove(field.name)}
+                                      onClick={() => {
+                                        remove(field.name);
+                                        setTimeout(recalcTotalAmount, 0);
+                                      }}
                                       style={{ borderRadius: 6 }}
                                     >
                                       Remove
@@ -3960,7 +3963,10 @@ export default function Order() {
                     {!isRepeatOrder && (
                       <Button
                         type="dashed"
-                        onClick={() => add({ ...emptyProduct })}
+                        onClick={() => {
+                          add({ ...emptyProduct });
+                          setTimeout(recalcTotalAmount, 0);
+                        }}
                         block
                         icon={<PlusOutlined />}
                         style={{
