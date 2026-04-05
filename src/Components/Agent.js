@@ -29,6 +29,7 @@ import {
   ArrowLeftOutlined,
 } from '@ant-design/icons';
 import Navbar from './Navbar';
+import { API_BASE_URL } from '../config';
 
 export default function Agent() {
   const [searchText, setSearchText] = useState('');
@@ -53,7 +54,7 @@ export default function Agent() {
 
   // ---------------- FETCH ----------------
   async function fetchAgents() {
-    const res = await fetch('/api/agents');
+    const res = await fetch(`${API_BASE_URL}/api/agents`);
     if (!res.ok) throw new Error('Failed to fetch agents');
     return res.json();
   }
@@ -85,7 +86,7 @@ export default function Agent() {
     setIsOrdersModalOpen(true);
     setOrdersLoading(true);
     try {
-      const res = await fetch('/api/orders');
+      const res = await fetch(`${API_BASE_URL}/api/orders`);
       if (!res.ok) throw new Error('Failed to fetch orders');
       const allOrders = await res.json();
       const filtered = allOrders.filter(
@@ -215,7 +216,7 @@ export default function Agent() {
       };
 
       if (modalMode === 'add') {
-        const res = await fetch('/api/agents', {
+        const res = await fetch(`${API_BASE_URL}/api/agents`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -226,11 +227,14 @@ export default function Agent() {
         }
         message.success('Agent created successfully');
       } else {
-        const res = await fetch(`/api/agents/${editingAgentId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
+        const res = await fetch(
+          `${API_BASE_URL}/api/agents/${editingAgentId}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          },
+        );
         if (!res.ok) {
           const e = await res.json();
           throw new Error(e.detail || 'Failed to update agent');
@@ -250,7 +254,9 @@ export default function Agent() {
   const handleDelete = async (agentId) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/agents/${agentId}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE_URL}/api/agents/${agentId}`, {
+        method: 'DELETE',
+      });
       if (!res.ok) {
         const e = await res.json();
         throw new Error(e.detail || 'Failed to delete agent');

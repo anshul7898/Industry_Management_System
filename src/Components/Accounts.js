@@ -14,6 +14,7 @@ import {
   message,
 } from 'antd';
 import Navbar from './Navbar';
+import { API_BASE_URL } from '../config';
 import dayjs from 'dayjs';
 
 export default function Accounts() {
@@ -32,7 +33,7 @@ export default function Accounts() {
   const refresh = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/accounts');
+      const res = await fetch(`${API_BASE_URL}/api/accounts`);
       if (!res.ok) {
         const text = await res.text().catch(() => '');
         throw new Error(`Failed to fetch accounts (${res.status}): ${text}`);
@@ -137,7 +138,7 @@ export default function Accounts() {
       };
 
       if (modalMode === 'add') {
-        const res = await fetch('/api/accounts', {
+        const res = await fetch(`${API_BASE_URL}/api/accounts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -168,7 +169,7 @@ export default function Accounts() {
         if (!editingTxnId) throw new Error('Missing txnId for update.');
 
         const res = await fetch(
-          `/api/accounts/${encodeURIComponent(editingTxnId)}`,
+          `${API_BASE_URL}/api/accounts/${encodeURIComponent(editingTxnId)}`,
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -201,9 +202,12 @@ export default function Accounts() {
   const handleDelete = async (txnId) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/accounts/${encodeURIComponent(txnId)}`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(
+        `${API_BASE_URL}/api/accounts/${encodeURIComponent(txnId)}`,
+        {
+          method: 'DELETE',
+        },
+      );
 
       if (!res.ok) {
         const text = await res.text().catch(() => '');
