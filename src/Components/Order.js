@@ -99,7 +99,7 @@ const DROPDOWN_OPTIONS = {
   ],
   handleTypes: [
     { label: 'Single Colour', value: 'Single Colour' },
-    { label: 'Show Colour', value: 'Show Colour' },
+    { label: 'Show Handle', value: 'Show Handle' },
   ],
   printingTypes: [
     { label: 'Flexo', value: 'Flexo' },
