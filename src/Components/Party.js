@@ -25,6 +25,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons';
 import Navbar from './Navbar';
+import { API_BASE_URL } from '../config';
 import { getStateOptions } from '../data/states';
 import { getCityOptions } from '../data/cities';
 
@@ -128,12 +129,12 @@ export default function Party() {
 
   // ---------------- FETCH ----------------
   const fetchParties = async () => {
-    const res = await fetch('/api/party');
+    const res = await fetch(`${API_BASE_URL}/api/party`);
     if (!res.ok) throw new Error('Failed to fetch parties');
     return res.json();
   };
   const fetchAgents = async () => {
-    const res = await fetch('/api/agents/lightweight');
+    const res = await fetch(`${API_BASE_URL}/api/agents/lightweight`);
     if (!res.ok) throw new Error('Failed to fetch agents');
     return res.json();
   };
@@ -247,7 +248,7 @@ export default function Party() {
       };
 
       if (modalMode === 'add') {
-        const res = await fetch('/api/party', {
+        const res = await fetch(`${API_BASE_URL}/api/party`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -258,7 +259,7 @@ export default function Party() {
         }
         message.success('Party created successfully');
       } else if (modalMode === 'edit') {
-        const res = await fetch(`/api/party/${editingPartyId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/party/${editingPartyId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -283,7 +284,9 @@ export default function Party() {
   const handleDelete = async (partyId) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/party/${partyId}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE_URL}/api/party/${partyId}`, {
+        method: 'DELETE',
+      });
       if (!res.ok) throw new Error('Failed to delete party');
       message.success('Party deleted successfully');
       await refreshParties();

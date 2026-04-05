@@ -34,6 +34,7 @@ import {
   EyeOutlined,
 } from '@ant-design/icons';
 import Navbar from './Navbar';
+import { API_BASE_URL } from '../config';
 import { getStateOptions } from '../data/states';
 import { getCityOptions } from '../data/cities';
 
@@ -424,7 +425,7 @@ const ProductSizeField = ({
           if (!customVal || !sizeKey) return;
           try {
             const res = await fetch(
-              `/api/sizes/${encodeURIComponent(sizeKey)}`,
+              `${API_BASE_URL}/api/sizes/${encodeURIComponent(sizeKey)}`,
               {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -565,7 +566,7 @@ const RollSizeField = ({
           ).trim();
           if (!customVal) return;
           try {
-            const res = await fetch('/api/roll-sizes', {
+            const res = await fetch(`${API_BASE_URL}/api/roll-sizes`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ size: customVal }),
@@ -812,7 +813,7 @@ export default function Order() {
 
   const loadSizes = useCallback(async () => {
     try {
-      const res = await fetch('/api/sizes');
+      const res = await fetch(`${API_BASE_URL}/api/sizes`);
       if (!res.ok) throw new Error(`Failed to fetch sizes (${res.status})`);
       const fetched = await res.json();
       setSizeOptions({
@@ -834,7 +835,7 @@ export default function Order() {
 
   const loadRollSizes = useCallback(async () => {
     try {
-      const res = await fetch('/api/roll-sizes');
+      const res = await fetch(`${API_BASE_URL}/api/roll-sizes`);
       if (!res.ok)
         throw new Error(`Failed to fetch roll sizes (${res.status})`);
       const data = await res.json();
@@ -878,7 +879,7 @@ export default function Order() {
   };
 
   async function fetchOrders() {
-    const res = await fetch('/api/orders');
+    const res = await fetch(`${API_BASE_URL}/api/orders`);
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(`Failed to fetch orders (${res.status}): ${text}`);
@@ -888,7 +889,7 @@ export default function Order() {
   }
 
   async function fetchAgents() {
-    const res = await fetch('/api/agents/lightweight');
+    const res = await fetch(`${API_BASE_URL}/api/agents/lightweight`);
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(`Failed to fetch agents (${res.status}): ${text}`);
@@ -899,7 +900,7 @@ export default function Order() {
   async function fetchPartyByName(partyName) {
     try {
       const res = await fetch(
-        `/api/party/by-name/${encodeURIComponent(partyName)}`,
+        `${API_BASE_URL}/api/party/by-name/${encodeURIComponent(partyName)}`,
       );
       if (!res.ok) return null;
       return res.json();
@@ -1398,7 +1399,7 @@ export default function Order() {
 
   const addPartyFromOrder = async (values, orderId) => {
     try {
-      const res = await fetch('/api/party', {
+      const res = await fetch(`${API_BASE_URL}/api/party`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1554,7 +1555,7 @@ export default function Order() {
     const totalAmount = computeFinalTotalAmount(values);
     if (isNaN(totalAmount) || totalAmount < 0)
       throw new Error('Total Amount must be a valid non-negative number');
-    const res = await fetch('/api/orders', {
+    const res = await fetch(`${API_BASE_URL}/api/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1592,31 +1593,34 @@ export default function Order() {
     const totalAmount = computeFinalTotalAmount(values);
     if (isNaN(totalAmount) || totalAmount < 0)
       throw new Error('Total Amount must be a valid non-negative number');
-    const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        AgentId: values.AgentId ? parseInt(values.AgentId) : null,
-        Party_Name: values.Party_Name,
-        AliasOrCompanyName: values.AliasOrCompanyName,
-        Address: values.Address,
-        City: values.City,
-        State: values.State,
-        Pincode: values.Pincode,
-        Contact_Person1: values.Contact_Person1,
-        Contact_Person2: values.Contact_Person2 || null,
-        Mobile1: values.Mobile1,
-        Mobile2: values.Mobile2 || null,
-        Email: values.Email || null,
-        BookingName: values.BookingName || null,
-        TransportName: values.TransportName || null,
-        DispatchContactNumber: values.DispatchContactNumber || null,
-        Destination: values.Destination || null,
-        TotalAmount: totalAmount,
-        Carting: parseFloat(values.Carting || 0),
-        Products: buildProductsPayload(values.Products),
-      }),
-    });
+    const res = await fetch(
+      `${API_BASE_URL}/api/orders/${encodeURIComponent(orderId)}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          AgentId: values.AgentId ? parseInt(values.AgentId) : null,
+          Party_Name: values.Party_Name,
+          AliasOrCompanyName: values.AliasOrCompanyName,
+          Address: values.Address,
+          City: values.City,
+          State: values.State,
+          Pincode: values.Pincode,
+          Contact_Person1: values.Contact_Person1,
+          Contact_Person2: values.Contact_Person2 || null,
+          Mobile1: values.Mobile1,
+          Mobile2: values.Mobile2 || null,
+          Email: values.Email || null,
+          BookingName: values.BookingName || null,
+          TransportName: values.TransportName || null,
+          DispatchContactNumber: values.DispatchContactNumber || null,
+          Destination: values.Destination || null,
+          TotalAmount: totalAmount,
+          Carting: parseFloat(values.Carting || 0),
+          Products: buildProductsPayload(values.Products),
+        }),
+      },
+    );
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(`Failed to update order (${res.status}): ${text}`);
@@ -1625,9 +1629,12 @@ export default function Order() {
   };
 
   const handleDelete = async (orderId) => {
-    const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}`, {
-      method: 'DELETE',
-    });
+    const res = await fetch(
+      `${API_BASE_URL}/api/orders/${encodeURIComponent(orderId)}`,
+      {
+        method: 'DELETE',
+      },
+    );
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(`Failed to delete order (${res.status}): ${text}`);

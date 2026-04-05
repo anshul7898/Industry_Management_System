@@ -29,8 +29,9 @@ import {
   AppstoreOutlined,
 } from '@ant-design/icons';
 import Navbar from './Navbar';
+import { API_BASE_URL as BASE_URL } from '../config';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = `${BASE_URL}/api`;
 
 const DROPDOWN_OPTIONS = {
   bagMaterial: [
