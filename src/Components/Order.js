@@ -241,6 +241,7 @@ const emptyProduct = {
   JobWorkRate: undefined,
   GST: 0, // ── NEW: GST percentage (0, 5, or 18) ──
   ProductAmount: undefined,
+  GSTAmount: 0, // ── NEW: Display GST Amount ──
 };
 
 const SectionBox = ({ title, lockedTag, children, accent = '#1677ff' }) => (
@@ -1056,6 +1057,7 @@ export default function Order() {
         Products: [{ ...emptyProduct }],
         TotalAmount: 0,
         Carting: 0,
+        OrderGST: 0,
       });
       message.success({
         content: partyData
@@ -1201,6 +1203,7 @@ export default function Order() {
           JobWorkRate: p.JobWorkRate || undefined,
           GST: p.GST !== undefined ? p.GST : 0, // ── NEW ──
           ProductAmount: p.ProductAmount || 0,
+          GSTAmount: p.GSTAmount || 0, // ── NEW ──
         };
       });
       form.resetFields();
@@ -1224,6 +1227,7 @@ export default function Order() {
         Products: copiedProducts,
         TotalAmount: order.TotalAmount || 0,
         Carting: order.Carting || 0,
+        OrderGST: order.OrderGST !== undefined ? order.OrderGST : 0,
       });
       message.success({
         content: `Repeat order loaded from #${order.OrderId}. Only Quantity can be edited.`,
@@ -1379,6 +1383,7 @@ export default function Order() {
       Products: normalisedProducts,
       TotalAmount: record.TotalAmount || 0,
       Carting: record.Carting || 0,
+      OrderGST: record.OrderGST !== undefined ? record.OrderGST : 0,
     });
     setIsModalOpen(true);
   };
@@ -1483,18 +1488,53 @@ export default function Order() {
         JobWorkRate: p.JobWorkRate ? parseFloat(p.JobWorkRate) : null,
         GST: p.GST !== undefined ? parseFloat(p.GST) : 0, // ── NEW ──
         ProductAmount: p.ProductAmount || 0,
+        GSTAmount: p.GSTAmount || 0, // ── NEW ──
       };
     });
 
   const recalcTotalAmount = useCallback(() => {
     const products = form.getFieldValue('Products') || [];
     const carting = parseFloat(form.getFieldValue('Carting') || 0);
+    const gstPercentage = parseFloat(form.getFieldValue('OrderGST') || 0);
+
+    // Calculate product amounts (for Pieces, these don't include GST)
     const productsSum = products.reduce(
       (s, p) => s + (parseFloat(p?.ProductAmount) || 0),
       0,
     );
-    const total = parseFloat((productsSum + carting).toFixed(2));
-    form.setFieldValue('TotalAmount', total);
+
+    // Calculate sum of Fix Amounts and Plate Rates
+    const fixAmountsSum = products.reduce(
+      (s, p) => s + (parseFloat(p?.FixAmount) || 0),
+      0,
+    );
+    const plateRatesSum = products.reduce(
+      (s, p) => s + (parseFloat(p?.PlateRate) || 0),
+      0,
+    );
+
+    // Calculate GST on (Products + FixAmounts + PlateRates + Carting)
+    const gstBase = productsSum + fixAmountsSum + plateRatesSum + carting;
+    const gstAmount = parseFloat((gstBase * (gstPercentage / 100)).toFixed(2));
+
+    // Total = Products + FixAmounts + PlateRates + Carting + GST
+    const total = parseFloat(
+      (
+        productsSum +
+        fixAmountsSum +
+        plateRatesSum +
+        carting +
+        gstAmount
+      ).toFixed(2),
+    );
+
+    form.setFieldValue(
+      'TotalAmount',
+      productsSum + fixAmountsSum + plateRatesSum + carting,
+    );
+    form.setFieldValue('OrderGSTAmount', gstAmount);
+    form.setFieldValue('FinalTotalAmount', total);
+
     return total;
   }, [form]);
 
@@ -1503,10 +1543,10 @@ export default function Order() {
     const productIndex = parseInt(fieldName.split('_')[0]);
     if (productIndex >= 0 && productIndex < products.length) {
       const product = products[productIndex];
-      const gstRate = (parseFloat(product.GST) || 0) / 100;
       let productAmount;
       if (product.QuantityType === 'KG') {
-        // KG formula: GST on (Quantity × Rate) + JobWorkRate + PlateRate + FixAmount
+        // KG formula: Product Amount includes GST on (Quantity × Rate) + JobWorkRate + PlateRate + FixAmount
+        const gstRate = (parseFloat(product.GST) || 0) / 100;
         const baseAmount =
           (parseFloat(product.Rate) || 0) * (parseFloat(product.Quantity) || 0);
         const gstAmount = parseFloat((baseAmount * gstRate).toFixed(2));
@@ -1518,20 +1558,19 @@ export default function Order() {
             2,
           ),
         );
+        const updated = [...products];
+        updated[productIndex].ProductAmount = productAmount;
+        updated[productIndex].GSTAmount = gstAmount;
+        form.setFieldValue('Products', updated);
       } else {
-        // Pieces formula: GST on (Quantity × Rate) + PlateRate + FixAmount
+        // Pieces formula: Product Amount = Rate × Quantity only (GST calculated at order level)
         const baseAmount =
           (parseFloat(product.Rate) || 0) * (parseFloat(product.Quantity) || 0);
-        const gstAmount = parseFloat((baseAmount * gstRate).toFixed(2));
-        const plateRate = parseFloat(product.PlateRate) || 0;
-        const fixAmt = parseFloat(product.FixAmount) || 0;
-        productAmount = parseFloat(
-          (baseAmount + gstAmount + plateRate + fixAmt).toFixed(2),
-        );
+        productAmount = baseAmount;
+        const updated = [...products];
+        updated[productIndex].ProductAmount = productAmount;
+        form.setFieldValue('Products', updated);
       }
-      const updated = [...products];
-      updated[productIndex].ProductAmount = productAmount;
-      form.setFieldValue('Products', updated);
       recalcTotalAmount();
     }
   };
@@ -1541,12 +1580,41 @@ export default function Order() {
   };
 
   const computeFinalTotalAmount = (values) => {
-    const productsSum = (values.Products || []).reduce(
+    const products = values.Products || [];
+    const carting = parseFloat(values.Carting || 0);
+    const gstPercentage = parseFloat(values.OrderGST || 0);
+
+    // Calculate product amounts
+    const productsSum = products.reduce(
       (s, p) => s + (parseFloat(p?.ProductAmount) || 0),
       0,
     );
-    const carting = parseFloat(values.Carting || 0);
-    return parseFloat((productsSum + carting).toFixed(2));
+
+    // Calculate sum of Fix Amounts and Plate Rates
+    const fixAmountsSum = products.reduce(
+      (s, p) => s + (parseFloat(p?.FixAmount) || 0),
+      0,
+    );
+    const plateRatesSum = products.reduce(
+      (s, p) => s + (parseFloat(p?.PlateRate) || 0),
+      0,
+    );
+
+    // Calculate GST on (Products + FixAmounts + PlateRates + Carting)
+    const gstBase = productsSum + fixAmountsSum + plateRatesSum + carting;
+    const gstAmount = parseFloat((gstBase * (gstPercentage / 100)).toFixed(2));
+
+    // Final total = Products + FixAmounts + PlateRates + Carting + GST
+    const finalTotal = parseFloat(
+      (
+        productsSum +
+        fixAmountsSum +
+        plateRatesSum +
+        carting +
+        gstAmount
+      ).toFixed(2),
+    );
+    return finalTotal;
   };
 
   const handleAdd = async (values) => {
@@ -1577,6 +1645,7 @@ export default function Order() {
         Destination: values.Destination || null,
         TotalAmount: totalAmount,
         Carting: parseFloat(values.Carting || 0),
+        OrderGST: parseFloat(values.OrderGST || 0),
         Products: buildProductsPayload(values.Products),
       }),
     });
@@ -1617,6 +1686,7 @@ export default function Order() {
           Destination: values.Destination || null,
           TotalAmount: totalAmount,
           Carting: parseFloat(values.Carting || 0),
+          OrderGST: parseFloat(values.OrderGST || 0),
           Products: buildProductsPayload(values.Products),
         }),
       },
@@ -2786,6 +2856,16 @@ export default function Order() {
                               {Number(product.GST ?? 0)}%
                             </Tag>
                           </Descriptions.Item>
+                          {/* GST Amount — only for Pieces products */}
+                          {product.QuantityType === 'Pieces' && (
+                            <Descriptions.Item label="GST Amount">
+                              <span
+                                style={{ fontWeight: 600, color: '#ff4d4f' }}
+                              >
+                                ₹{Number(product.GSTAmount || 0).toFixed(2)}
+                              </span>
+                            </Descriptions.Item>
+                          )}
                           {/* Job Work Rate — only for KG products */}
                           {product.QuantityType === 'KG' && (
                             <Descriptions.Item label="Job Work Rate">
@@ -3787,38 +3867,45 @@ export default function Order() {
                                     </Form.Item>
                                   </Col>
                                 </Row>
-                                {/* GST Dropdown */}
+                                {/* Product Amount and GST */}
                                 <Row gutter={12}>
                                   <Col span={12}>
                                     <Form.Item
                                       label={
-                                        <span>
-                                          GST{' '}
-                                          <span
-                                            style={{
-                                              fontSize: 11,
-                                              color: '#8c8c8c',
-                                              fontWeight: 400,
-                                            }}
-                                          >
-                                            (on Qty × Rate)
+                                        isRepeatOrder ? (
+                                          <span>
+                                            Product Amount{' '}
+                                            <Tag
+                                              color="green"
+                                              style={{ fontSize: 11 }}
+                                            >
+                                              ✏️ Auto
+                                            </Tag>
                                           </span>
-                                        </span>
+                                        ) : (
+                                          'Product Amount'
+                                        )
                                       }
-                                      name={[field.name, 'GST']}
-                                      initialValue={0}
+                                      name={[field.name, 'ProductAmount']}
                                     >
-                                      <Select
-                                        options={DROPDOWN_OPTIONS.gstOptions}
-                                        disabled={isRepeatOrder}
+                                      <Input
+                                        placeholder="Auto-calculated"
+                                        onInput={handleDecimalInput}
                                         onChange={() =>
-                                          handleRateOrQuantityChange(
-                                            `${idx}_GST`,
+                                          handleProductAmountChange(
+                                            `${idx}_ProductAmount`,
                                           )
                                         }
-                                        style={{
-                                          fontWeight: 600,
-                                        }}
+                                        prefix={
+                                          <span
+                                            style={{
+                                              color: '#52c41a',
+                                              fontWeight: 600,
+                                            }}
+                                          >
+                                            ₹
+                                          </span>
+                                        }
                                       />
                                     </Form.Item>
                                   </Col>
@@ -3872,48 +3959,6 @@ export default function Order() {
                                     );
                                   }}
                                 </Form.Item>
-                                <Row gutter={12}>
-                                  <Col span={12}>
-                                    <Form.Item
-                                      label={
-                                        isRepeatOrder ? (
-                                          <span>
-                                            Product Amount{' '}
-                                            <Tag
-                                              color="green"
-                                              style={{ fontSize: 11 }}
-                                            >
-                                              ✏️ Auto
-                                            </Tag>
-                                          </span>
-                                        ) : (
-                                          'Product Amount'
-                                        )
-                                      }
-                                      name={[field.name, 'ProductAmount']}
-                                    >
-                                      <Input
-                                        placeholder="Auto-calculated"
-                                        onInput={handleDecimalInput}
-                                        onChange={() =>
-                                          handleProductAmountChange(
-                                            `${idx}_ProductAmount`,
-                                          )
-                                        }
-                                        prefix={
-                                          <span
-                                            style={{
-                                              color: '#52c41a',
-                                              fontWeight: 600,
-                                            }}
-                                          >
-                                            ₹
-                                          </span>
-                                        }
-                                      />
-                                    </Form.Item>
-                                  </Col>
-                                </Row>
                               </Card>
                             );
                           }}
@@ -4013,7 +4058,7 @@ export default function Order() {
                     <Input
                       size="large"
                       placeholder="Auto-calculated"
-                      onInput={handleDecimalInput}
+                      disabled
                       prefix={
                         <span
                           style={{
@@ -4030,6 +4075,120 @@ export default function Order() {
                         fontSize: 15,
                         borderRadius: 8,
                         borderColor: '#b7eb8f',
+                      }}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* GST Dropdown */}
+              <Row gutter={16} style={{ marginTop: 12 }}>
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 14,
+                          color: '#1677ff',
+                        }}
+                      >
+                        GST (on Total Amount)
+                      </span>
+                    }
+                    name="OrderGST"
+                    style={{ marginBottom: 0 }}
+                    initialValue={0}
+                  >
+                    <Select
+                      options={DROPDOWN_OPTIONS.gstOptions}
+                      onChange={recalcTotalAmount}
+                      style={{
+                        fontWeight: 600,
+                      }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 14,
+                          color: '#ff4d4f',
+                        }}
+                      >
+                        GST Amount
+                      </span>
+                    }
+                    name="OrderGSTAmount"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Input
+                      size="large"
+                      placeholder="Auto-calculated"
+                      disabled
+                      prefix={
+                        <span
+                          style={{
+                            color: '#ff4d4f',
+                            fontWeight: 700,
+                            fontSize: 16,
+                          }}
+                        >
+                          ₹
+                        </span>
+                      }
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 15,
+                        borderRadius: 8,
+                        borderColor: '#ffccc7',
+                      }}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              {/* Final Total */}
+              <Row gutter={16} style={{ marginTop: 12 }}>
+                <Col span={12} offset={12}>
+                  <Form.Item
+                    label={
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 14,
+                          color: '#13c2c2',
+                        }}
+                      >
+                        Total Amount + GST
+                      </span>
+                    }
+                    name="FinalTotalAmount"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Input
+                      size="large"
+                      placeholder="Auto-calculated"
+                      disabled
+                      prefix={
+                        <span
+                          style={{
+                            color: '#13c2c2',
+                            fontWeight: 700,
+                            fontSize: 16,
+                          }}
+                        >
+                          ₹
+                        </span>
+                      }
+                      style={{
+                        fontWeight: 600,
+                        fontSize: 15,
+                        borderRadius: 8,
+                        borderColor: '#5cdbd3',
                       }}
                     />
                   </Form.Item>
