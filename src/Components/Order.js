@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, memo } from 'react';
 import {
   Table,
   Input,
@@ -389,304 +389,327 @@ const OtherSelectField = ({
   </Form.Item>
 );
 
-const ProductSizeField = ({
-  fieldName,
-  productType,
-  productCategory,
-  sizeOptions,
-  onNewSizeAdded,
-  disabled,
-  form,
-  required = true,
-}) => {
-  const sizeKey = getSizeKey(productType, productCategory);
-  const baseOptions = sizeKey ? sizeOptions[sizeKey] || [] : [];
-  const options = [...baseOptions, { label: 'Other', value: OTHER_SIZE_VALUE }];
-  return (
-    <Form.Item
-      noStyle
-      shouldUpdate={(prev, cur) => {
-        const p = prev.Products?.[fieldName]?.ProductSize;
-        const c = cur.Products?.[fieldName]?.ProductSize;
-        return p !== c;
-      }}
-    >
-      {() => {
-        const selectedValue = form.getFieldValue([
-          'Products',
-          fieldName,
-          'ProductSize',
-        ]);
-        const isOther = selectedValue === OTHER_SIZE_VALUE;
-        const handleSaveCustomSize = async () => {
-          const customVal = String(
-            form.getFieldValue(['Products', fieldName, 'ProductSizeCustom']) ||
-              '',
-          ).trim();
-          if (!customVal || !sizeKey) return;
-          try {
-            const res = await fetch(
-              `${API_BASE_URL}/api/sizes/${encodeURIComponent(sizeKey)}`,
-              {
+const ProductSizeField = memo(
+  ({
+    fieldName,
+    productType,
+    productCategory,
+    sizeOptions,
+    onNewSizeAdded,
+    disabled,
+    form,
+    required = true,
+  }) => {
+    const sizeKey = getSizeKey(productType, productCategory);
+    const baseOptions = sizeKey ? sizeOptions[sizeKey] || [] : [];
+    const options = [
+      ...baseOptions,
+      { label: 'Other', value: OTHER_SIZE_VALUE },
+    ];
+    return (
+      <Form.Item
+        noStyle
+        shouldUpdate={(prev, cur) => {
+          const p = prev.Products?.[fieldName]?.ProductSize;
+          const c = cur.Products?.[fieldName]?.ProductSize;
+          return p !== c;
+        }}
+      >
+        {() => {
+          const selectedValue = form.getFieldValue([
+            'Products',
+            fieldName,
+            'ProductSize',
+          ]);
+          const isOther = selectedValue === OTHER_SIZE_VALUE;
+          const handleSaveCustomSize = async () => {
+            const customVal = String(
+              form.getFieldValue([
+                'Products',
+                fieldName,
+                'ProductSizeCustom',
+              ]) || '',
+            ).trim();
+            if (!customVal || !sizeKey) return;
+            try {
+              const res = await fetch(
+                `${API_BASE_URL}/api/sizes/${encodeURIComponent(sizeKey)}`,
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ size: customVal }),
+                },
+              );
+              if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || 'Failed to save new size');
+              }
+              onNewSizeAdded(sizeKey, customVal);
+              const products = form.getFieldValue('Products') || [];
+              const updated = [...products];
+              updated[fieldName] = {
+                ...updated[fieldName],
+                ProductSize: customVal,
+                ProductSizeCustom: undefined,
+              };
+              form.setFieldValue('Products', updated);
+              message.success(
+                `Size "${customVal}" saved and added to the list.`,
+              );
+            } catch (err) {
+              message.error(err?.message || 'Failed to save custom size');
+            }
+          };
+          return (
+            <Row gutter={8} align="middle" style={{ marginBottom: 0 }}>
+              <Col flex={isOther ? '140px' : 'auto'}>
+                <Form.Item
+                  label="Product Size"
+                  name={[fieldName, 'ProductSize']}
+                  rules={
+                    required
+                      ? [
+                          {
+                            required: true,
+                            message: 'Please select Product Size.',
+                          },
+                        ]
+                      : []
+                  }
+                  style={{ marginBottom: 0 }}
+                >
+                  <Select
+                    placeholder="Select Product Size"
+                    options={options}
+                    disabled={disabled || (!sizeKey && !isOther)}
+                    onChange={(val) => {
+                      if (val !== OTHER_SIZE_VALUE) {
+                        const products = form.getFieldValue('Products') || [];
+                        const updated = [...products];
+                        if (updated[fieldName]) {
+                          updated[fieldName].ProductSizeCustom = undefined;
+                          form.setFieldValue('Products', updated);
+                        }
+                      }
+                    }}
+                  />
+                </Form.Item>
+              </Col>
+              {isOther && (
+                <Col flex="auto">
+                  <Form.Item
+                    label="Custom Size"
+                    name={[fieldName, 'ProductSizeCustom']}
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Please enter a custom size.',
+                      },
+                      {
+                        validator: (_, value) => {
+                          const v = String(value || '').trim();
+                          if (!v)
+                            return Promise.reject(
+                              new Error('Please enter a custom size.'),
+                            );
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Input
+                      placeholder="e.g., 12x16"
+                      allowClear
+                      disabled={disabled}
+                      onBlur={handleSaveCustomSize}
+                      onPressEnter={handleSaveCustomSize}
+                      suffix={
+                        <Button
+                          size="small"
+                          type="link"
+                          style={{ padding: 0, height: 'auto', fontSize: 12 }}
+                          onClick={handleSaveCustomSize}
+                        >
+                          Save
+                        </Button>
+                      }
+                    />
+                  </Form.Item>
+                </Col>
+              )}
+            </Row>
+          );
+        }}
+      </Form.Item>
+    );
+  },
+);
+
+const RollSizeField = memo(
+  ({
+    fieldName,
+    rollSizeOptions,
+    onNewRollSizeAdded,
+    disabled,
+    form,
+    required = false,
+  }) => {
+    const options = [
+      ...rollSizeOptions,
+      { label: 'Other', value: OTHER_ROLL_SIZE_VALUE },
+    ];
+    return (
+      <Form.Item
+        noStyle
+        shouldUpdate={(prev, cur) => {
+          const p = prev.Products?.[fieldName]?.RollSize;
+          const c = cur.Products?.[fieldName]?.RollSize;
+          return p !== c;
+        }}
+      >
+        {() => {
+          const selectedValue = form.getFieldValue([
+            'Products',
+            fieldName,
+            'RollSize',
+          ]);
+          const isOther = selectedValue === OTHER_ROLL_SIZE_VALUE;
+          const handleSaveCustomRollSize = async () => {
+            const customVal = String(
+              form.getFieldValue(['Products', fieldName, 'RollSizeCustom']) ||
+                '',
+            ).trim();
+            if (!customVal) return;
+            try {
+              const res = await fetch(`${API_BASE_URL}/api/roll-sizes`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ size: customVal }),
-              },
-            );
-            if (!res.ok) {
-              const errData = await res.json().catch(() => ({}));
-              throw new Error(errData.detail || 'Failed to save new size');
-            }
-            onNewSizeAdded(sizeKey, customVal);
-            const products = form.getFieldValue('Products') || [];
-            const updated = [...products];
-            updated[fieldName] = {
-              ...updated[fieldName],
-              ProductSize: customVal,
-              ProductSizeCustom: undefined,
-            };
-            form.setFieldValue('Products', updated);
-            message.success(`Size "${customVal}" saved and added to the list.`);
-          } catch (err) {
-            message.error(err?.message || 'Failed to save custom size');
-          }
-        };
-        return (
-          <Row gutter={8} align="middle" style={{ marginBottom: 0 }}>
-            <Col flex={isOther ? '140px' : 'auto'}>
-              <Form.Item
-                label="Product Size"
-                name={[fieldName, 'ProductSize']}
-                rules={
-                  required
-                    ? [
-                        {
-                          required: true,
-                          message: 'Please select Product Size.',
-                        },
-                      ]
-                    : []
+              });
+              if (!res.ok) {
+                if (res.status === 409) {
+                  onNewRollSizeAdded(customVal);
+                  const products = form.getFieldValue('Products') || [];
+                  const updated = [...products];
+                  updated[fieldName] = {
+                    ...updated[fieldName],
+                    RollSize: customVal,
+                    RollSizeCustom: undefined,
+                  };
+                  form.setFieldValue('Products', updated);
+                  message.info(
+                    `Roll size "${customVal}" already exists — selected.`,
+                  );
+                  return;
                 }
-                style={{ marginBottom: 0 }}
-              >
-                <Select
-                  placeholder="Select Product Size"
-                  options={options}
-                  disabled={disabled || (!sizeKey && !isOther)}
-                  onChange={(val) => {
-                    if (val !== OTHER_SIZE_VALUE) {
-                      const products = form.getFieldValue('Products') || [];
-                      const updated = [...products];
-                      if (updated[fieldName]) {
-                        updated[fieldName].ProductSizeCustom = undefined;
-                        form.setFieldValue('Products', updated);
-                      }
-                    }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-            {isOther && (
-              <Col flex="auto">
-                <Form.Item
-                  label="Custom Size"
-                  name={[fieldName, 'ProductSizeCustom']}
-                  rules={[
-                    { required: true, message: 'Please enter a custom size.' },
-                    {
-                      validator: (_, value) => {
-                        const v = String(value || '').trim();
-                        if (!v)
-                          return Promise.reject(
-                            new Error('Please enter a custom size.'),
-                          );
-                        return Promise.resolve();
-                      },
-                    },
-                  ]}
-                  style={{ marginBottom: 0 }}
-                >
-                  <Input
-                    placeholder="e.g., 12x16"
-                    allowClear
-                    disabled={disabled}
-                    onBlur={handleSaveCustomSize}
-                    onPressEnter={handleSaveCustomSize}
-                    suffix={
-                      <Button
-                        size="small"
-                        type="link"
-                        style={{ padding: 0, height: 'auto', fontSize: 12 }}
-                        onClick={handleSaveCustomSize}
-                      >
-                        Save
-                      </Button>
-                    }
-                  />
-                </Form.Item>
-              </Col>
-            )}
-          </Row>
-        );
-      }}
-    </Form.Item>
-  );
-};
-
-const RollSizeField = ({
-  fieldName,
-  rollSizeOptions,
-  onNewRollSizeAdded,
-  disabled,
-  form,
-  required = false,
-}) => {
-  const options = [
-    ...rollSizeOptions,
-    { label: 'Other', value: OTHER_ROLL_SIZE_VALUE },
-  ];
-  return (
-    <Form.Item
-      noStyle
-      shouldUpdate={(prev, cur) => {
-        const p = prev.Products?.[fieldName]?.RollSize;
-        const c = cur.Products?.[fieldName]?.RollSize;
-        return p !== c;
-      }}
-    >
-      {() => {
-        const selectedValue = form.getFieldValue([
-          'Products',
-          fieldName,
-          'RollSize',
-        ]);
-        const isOther = selectedValue === OTHER_ROLL_SIZE_VALUE;
-        const handleSaveCustomRollSize = async () => {
-          const customVal = String(
-            form.getFieldValue(['Products', fieldName, 'RollSizeCustom']) || '',
-          ).trim();
-          if (!customVal) return;
-          try {
-            const res = await fetch(`${API_BASE_URL}/api/roll-sizes`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ size: customVal }),
-            });
-            if (!res.ok) {
-              if (res.status === 409) {
-                onNewRollSizeAdded(customVal);
-                const products = form.getFieldValue('Products') || [];
-                const updated = [...products];
-                updated[fieldName] = {
-                  ...updated[fieldName],
-                  RollSize: customVal,
-                  RollSizeCustom: undefined,
-                };
-                form.setFieldValue('Products', updated);
-                message.info(
-                  `Roll size "${customVal}" already exists — selected.`,
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(
+                  errData.detail || 'Failed to save new roll size',
                 );
-                return;
               }
-              const errData = await res.json().catch(() => ({}));
-              throw new Error(errData.detail || 'Failed to save new roll size');
+              onNewRollSizeAdded(customVal);
+              const products = form.getFieldValue('Products') || [];
+              const updated = [...products];
+              updated[fieldName] = {
+                ...updated[fieldName],
+                RollSize: customVal,
+                RollSizeCustom: undefined,
+              };
+              form.setFieldValue('Products', updated);
+              message.success(
+                `Roll size "${customVal}" saved and added to the list.`,
+              );
+            } catch (err) {
+              message.error(err?.message || 'Failed to save custom roll size');
             }
-            onNewRollSizeAdded(customVal);
-            const products = form.getFieldValue('Products') || [];
-            const updated = [...products];
-            updated[fieldName] = {
-              ...updated[fieldName],
-              RollSize: customVal,
-              RollSizeCustom: undefined,
-            };
-            form.setFieldValue('Products', updated);
-            message.success(
-              `Roll size "${customVal}" saved and added to the list.`,
-            );
-          } catch (err) {
-            message.error(err?.message || 'Failed to save custom roll size');
-          }
-        };
-        return (
-          <Row gutter={8} align="middle" style={{ marginBottom: 0 }}>
-            <Col flex={isOther ? '140px' : 'auto'}>
-              <Form.Item
-                label="Roll Size"
-                name={[fieldName, 'RollSize']}
-                rules={
-                  required
-                    ? [{ required: true, message: 'Please select Roll Size.' }]
-                    : []
-                }
-                style={{ marginBottom: 0 }}
-              >
-                <Select
-                  placeholder="Select Roll Size"
-                  options={options}
-                  disabled={disabled}
-                  allowClear={!required}
-                  onChange={(val) => {
-                    if (val !== OTHER_ROLL_SIZE_VALUE) {
-                      const products = form.getFieldValue('Products') || [];
-                      const updated = [...products];
-                      if (updated[fieldName]) {
-                        updated[fieldName].RollSizeCustom = undefined;
-                        form.setFieldValue('Products', updated);
-                      }
-                    }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-            {isOther && (
-              <Col flex="auto">
+          };
+          return (
+            <Row gutter={8} align="middle" style={{ marginBottom: 0 }}>
+              <Col flex={isOther ? '140px' : 'auto'}>
                 <Form.Item
-                  label="Custom Roll Size"
-                  name={[fieldName, 'RollSizeCustom']}
-                  rules={[
-                    {
-                      required: true,
-                      message: 'Please enter a custom roll size.',
-                    },
-                    {
-                      validator: (_, value) => {
-                        const v = String(value || '').trim();
-                        if (!v)
-                          return Promise.reject(
-                            new Error('Please enter a custom roll size.'),
-                          );
-                        return Promise.resolve();
-                      },
-                    },
-                  ]}
+                  label="Roll Size"
+                  name={[fieldName, 'RollSize']}
+                  rules={
+                    required
+                      ? [
+                          {
+                            required: true,
+                            message: 'Please select Roll Size.',
+                          },
+                        ]
+                      : []
+                  }
                   style={{ marginBottom: 0 }}
                 >
-                  <Input
-                    placeholder="e.g., 45 Inches"
-                    allowClear
+                  <Select
+                    placeholder="Select Roll Size"
+                    options={options}
                     disabled={disabled}
-                    onBlur={handleSaveCustomRollSize}
-                    onPressEnter={handleSaveCustomRollSize}
-                    suffix={
-                      <Button
-                        size="small"
-                        type="link"
-                        style={{ padding: 0, height: 'auto', fontSize: 12 }}
-                        onClick={handleSaveCustomRollSize}
-                      >
-                        Save
-                      </Button>
-                    }
+                    allowClear={!required}
+                    onChange={(val) => {
+                      if (val !== OTHER_ROLL_SIZE_VALUE) {
+                        const products = form.getFieldValue('Products') || [];
+                        const updated = [...products];
+                        if (updated[fieldName]) {
+                          updated[fieldName].RollSizeCustom = undefined;
+                          form.setFieldValue('Products', updated);
+                        }
+                      }
+                    }}
                   />
                 </Form.Item>
               </Col>
-            )}
-          </Row>
-        );
-      }}
-    </Form.Item>
-  );
-};
+              {isOther && (
+                <Col flex="auto">
+                  <Form.Item
+                    label="Custom Roll Size"
+                    name={[fieldName, 'RollSizeCustom']}
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Please enter a custom roll size.',
+                      },
+                      {
+                        validator: (_, value) => {
+                          const v = String(value || '').trim();
+                          if (!v)
+                            return Promise.reject(
+                              new Error('Please enter a custom roll size.'),
+                            );
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Input
+                      placeholder="e.g., 45 Inches"
+                      allowClear
+                      disabled={disabled}
+                      onBlur={handleSaveCustomRollSize}
+                      onPressEnter={handleSaveCustomRollSize}
+                      suffix={
+                        <Button
+                          size="small"
+                          type="link"
+                          style={{ padding: 0, height: 'auto', fontSize: 12 }}
+                          onClick={handleSaveCustomRollSize}
+                        >
+                          Save
+                        </Button>
+                      }
+                    />
+                  </Form.Item>
+                </Col>
+              )}
+            </Row>
+          );
+        }}
+      </Form.Item>
+    );
+  },
+);
 
 export default function Order() {
   const [searchText, setSearchText] = useState('');
@@ -1563,26 +1586,29 @@ export default function Order() {
     return total;
   }, [form]);
 
-  const handleRateOrQuantityChange = (fieldName) => {
-    const products = form.getFieldValue('Products') || [];
-    const productIndex = parseInt(fieldName.split('_')[0]);
-    if (productIndex >= 0 && productIndex < products.length) {
-      const product = products[productIndex];
-      let productAmount;
-      // For both KG and Pieces: Product Amount = Rate × Quantity (GST calculated at order level)
-      const baseAmount =
-        (parseFloat(product.Rate) || 0) * (parseFloat(product.Quantity) || 0);
-      productAmount = baseAmount;
-      const updated = [...products];
-      updated[productIndex].ProductAmount = productAmount;
-      form.setFieldValue('Products', updated);
-      recalcTotalAmount();
-    }
-  };
+  const handleRateOrQuantityChange = useCallback(
+    (fieldName) => {
+      const products = form.getFieldValue('Products') || [];
+      const productIndex = parseInt(fieldName.split('_')[0]);
+      if (productIndex >= 0 && productIndex < products.length) {
+        const product = products[productIndex];
+        let productAmount;
+        // For both KG and Pieces: Product Amount = Rate × Quantity (GST calculated at order level)
+        const baseAmount =
+          (parseFloat(product.Rate) || 0) * (parseFloat(product.Quantity) || 0);
+        productAmount = baseAmount;
+        const updated = [...products];
+        updated[productIndex].ProductAmount = productAmount;
+        form.setFieldValue('Products', updated);
+        recalcTotalAmount();
+      }
+    },
+    [form, recalcTotalAmount],
+  );
 
-  const handleProductAmountChange = () => {
+  const handleProductAmountChange = useCallback(() => {
     recalcTotalAmount();
-  };
+  }, [recalcTotalAmount]);
 
   const computeFinalTotalAmount = (values) => {
     const products = values.Products || [];
@@ -3323,7 +3349,20 @@ export default function Order() {
                       />
                     ) : (
                       fields.map((field, idx) => (
-                        <Form.Item key={field.key} noStyle shouldUpdate>
+                        <Form.Item
+                          key={field.key}
+                          noStyle
+                          shouldUpdate={(prev, cur) => {
+                            const prevProduct = prev.Products?.[idx];
+                            const curProduct = cur.Products?.[idx];
+                            return (
+                              prevProduct?.ProductType !==
+                                curProduct?.ProductType ||
+                              prevProduct?.ProductCategory !==
+                                curProduct?.ProductCategory
+                            );
+                          }}
+                        >
                           {() => {
                             const productType =
                               form.getFieldValue('Products')?.[idx]
