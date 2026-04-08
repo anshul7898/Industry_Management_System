@@ -778,7 +778,12 @@ export default function Order() {
     e.target.value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
   };
   const handleNumbersOnlyInput = (e) => {
-    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+    let value = e.target.value.replace(/[^0-9]/g, '');
+    // Remove leading zeros but keep "0" if that's the only digit
+    if (value && value !== '0') {
+      value = String(parseInt(value, 10));
+    }
+    e.target.value = value;
   };
   const handlePincodeInput = (e) => {
     e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
@@ -787,10 +792,17 @@ export default function Order() {
     e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
   };
   const handleDecimalInput = (e) => {
-    const filtered = e.target.value.replace(/[^0-9.]/g, '');
-    const parts = filtered.split('.');
-    e.target.value =
-      parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : filtered;
+    let value = e.target.value.replace(/[^0-9.]/g, '');
+    const parts = value.split('.');
+    value = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : value;
+
+    // Remove leading zeros but preserve "0." and "0.x"
+    if (value && value !== '.' && !isNaN(parseFloat(value))) {
+      const numValue = parseFloat(value);
+      e.target.value = String(numValue);
+    } else {
+      e.target.value = value;
+    }
   };
 
   const validateEmail = (_, value) => {
@@ -810,6 +822,13 @@ export default function Order() {
     if (selectedValue !== OTHER_OPTION_VALUE) return selectedValue;
     const v = String(otherValue || '').trim();
     return v || null;
+  };
+
+  // Helper function to normalize numeric values (remove leading zeros)
+  const normalizeNumericValue = (value) => {
+    if (value === null || value === undefined || value === '') return null;
+    const num = parseFloat(String(value).trim());
+    return isNaN(num) ? null : num;
   };
 
   const loadSizes = useCallback(async () => {
@@ -1456,7 +1475,7 @@ export default function Order() {
             : p.ProductSize,
         RollSize: resolvedRollSize || null,
         BagMaterial: p.BagMaterial,
-        Quantity: p.Quantity,
+        Quantity: normalizeNumericValue(p.Quantity),
         QuantityType: p.QuantityType || null, // ── NEW ──
         SheetGSM: Number(p.SheetGSM),
         SheetColor: pickValueOrOther(p.SheetColor, p.SheetColorCustom),
@@ -1482,12 +1501,12 @@ export default function Order() {
         DesignStyle: p.DesignStyle || null,
         PlateBlockNumber: p.PlateBlockNumber || null,
         PlateType: p.PlateType || null,
-        PlateRate: p.PlateRate ? parseFloat(p.PlateRate) : null,
-        Rate: p.Rate,
-        FixAmount: p.FixAmount ? parseFloat(p.FixAmount) : null,
-        JobWorkRate: p.JobWorkRate ? parseFloat(p.JobWorkRate) : null,
+        PlateRate: normalizeNumericValue(p.PlateRate),
+        Rate: normalizeNumericValue(p.Rate),
+        FixAmount: normalizeNumericValue(p.FixAmount),
+        JobWorkRate: normalizeNumericValue(p.JobWorkRate),
         GST: p.GST !== undefined ? parseFloat(p.GST) : 0, // ── NEW ──
-        ProductAmount: p.ProductAmount || 0,
+        ProductAmount: normalizeNumericValue(p.ProductAmount),
         GSTAmount: p.GSTAmount || 0, // ── NEW ──
       };
     });
