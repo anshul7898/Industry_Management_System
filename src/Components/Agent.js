@@ -15,7 +15,6 @@ import {
   Avatar,
   Tag,
   Spin,
-  Descriptions,
 } from 'antd';
 import {
   EditOutlined,
@@ -116,10 +115,12 @@ export default function Agent() {
     form.setFieldValue('name', e.target.value.replace(/[^a-zA-Z\s]/g, ''));
   };
   const handleMobileChange = (e) => {
+    const mobile = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
     form.setFieldValue(
       'mobile',
-      e.target.value.replace(/[^0-9]/g, '').slice(0, 10),
+      mobile,
     );
+    syncDuplicateMobileValidation(mobile);
   };
   const handleAadharChange = (e) => {
     form.setFieldValue(
@@ -204,9 +205,60 @@ export default function Agent() {
     setIsModalOpen(true);
   };
 
+  const findDuplicateAgentByMobile = (mobile, currentAgentId = null) => {
+    const normalizedMobile = String(mobile || '').trim();
+
+    return data.find(
+      (agent) =>
+        String(agent.mobile || '').trim() === normalizedMobile &&
+        String(agent.agentId) !== String(currentAgentId),
+    );
+  };
+
+  const syncDuplicateMobileValidation = (mobile) => {
+    const normalizedMobile = String(mobile || '').trim();
+
+    if (normalizedMobile.length !== 10) {
+      form.setFields([{ name: 'mobile', errors: [] }]);
+      return null;
+    }
+
+    const duplicateAgent = findDuplicateAgentByMobile(
+      normalizedMobile,
+      modalMode === 'edit' ? editingAgentId : null,
+    );
+
+    form.setFields([
+      {
+        name: 'mobile',
+        errors: duplicateAgent
+          ? ['Agent with these details already exists.']
+          : [],
+      },
+    ]);
+
+    return duplicateAgent;
+  };
+
+  const showDuplicateAgentModal = () => {
+    Modal.warning({
+      title: 'Agent already exists',
+      content: 'Agent with these details already exists.',
+      centered: true,
+      okText: 'OK',
+    });
+  };
+
   const handleSubmitModal = async () => {
     try {
       const values = await form.validateFields();
+      const duplicateAgent = syncDuplicateMobileValidation(values.mobile);
+
+      if (duplicateAgent) {
+        showDuplicateAgentModal();
+        return;
+      }
+
       setLoading(true);
       const payload = {
         name: values.name,
@@ -915,6 +967,7 @@ export default function Agent() {
             <Input
               placeholder="Enter 10-digit mobile number"
               onChange={handleMobileChange}
+              onBlur={(e) => syncDuplicateMobileValidation(e.target.value)}
               onKeyDown={handleNumberKeyDown}
               onPaste={handleNumberPaste}
               maxLength={10}
