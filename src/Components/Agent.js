@@ -256,6 +256,20 @@ export default function Agent() {
     });
   };
 
+  const getApiErrorMessage = (errorBody) => {
+    if (!errorBody) return null;
+    if (typeof errorBody === 'string') return errorBody;
+    if (typeof errorBody.detail === 'string') return errorBody.detail;
+    if (Array.isArray(errorBody.detail)) {
+      const messages = errorBody.detail
+        .map((item) => item?.msg || item?.message || JSON.stringify(item))
+        .filter(Boolean);
+      return messages.join(' | ') || null;
+    }
+    if (typeof errorBody.message === 'string') return errorBody.message;
+    return null;
+  };
+
   const handleSubmitModal = async () => {
     try {
       const values = await form.validateFields();
@@ -281,8 +295,8 @@ export default function Agent() {
           body: JSON.stringify(payload),
         });
         if (!res.ok) {
-          const e = await res.json();
-          throw new Error(e.detail || 'Failed to create agent');
+          const body = await res.json().catch(() => null);
+          throw new Error(getApiErrorMessage(body) || 'Failed to create agent');
         }
         message.success('Agent created successfully');
       } else {
@@ -295,8 +309,8 @@ export default function Agent() {
           },
         );
         if (!res.ok) {
-          const e = await res.json();
-          throw new Error(e.detail || 'Failed to update agent');
+          const body = await res.json().catch(() => null);
+          throw new Error(getApiErrorMessage(body) || 'Failed to update agent');
         }
         message.success('Agent updated successfully');
       }
@@ -985,6 +999,7 @@ export default function Agent() {
             name="aadhar_Details"
             label="Aadhar Details"
             rules={[
+              { required: true, message: 'Please enter Aadhar number' },
               {
                 pattern: /^[0-9]{12}$/,
                 message: 'Aadhar Number should be of 12 digits',
