@@ -921,6 +921,9 @@ export default function Order() {
     }
   };
 
+  const isActiveRecord = (record) =>
+    record?.deleted !== true && String(record?.deleted).toLowerCase() !== 'true';
+
   async function fetchOrders() {
     const res = await fetch(`${API_BASE_URL}/api/orders`);
     if (!res.ok) {
@@ -928,7 +931,7 @@ export default function Order() {
       throw new Error(`Failed to fetch orders (${res.status}): ${text}`);
     }
     const orders = await res.json();
-    return Array.isArray(orders) ? orders : [];
+    return (Array.isArray(orders) ? orders : []).filter(isActiveRecord);
   }
 
   async function fetchAgents() {
@@ -937,7 +940,8 @@ export default function Order() {
       const text = await res.text().catch(() => '');
       throw new Error(`Failed to fetch agents (${res.status}): ${text}`);
     }
-    return res.json();
+    const agents = await res.json();
+    return (Array.isArray(agents) ? agents : []).filter(isActiveRecord);
   }
 
   async function fetchPartyByName(partyName) {

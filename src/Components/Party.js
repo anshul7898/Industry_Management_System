@@ -128,21 +128,26 @@ export default function Party() {
   };
 
   // ---------------- FETCH ----------------
+  const isActiveRecord = (record) =>
+    record?.deleted !== true && String(record?.deleted).toLowerCase() !== 'true';
+
   const fetchParties = async () => {
     const res = await fetch(`${API_BASE_URL}/api/party`);
     if (!res.ok) throw new Error('Failed to fetch parties');
-    return res.json();
+    const parties = await res.json();
+    return (Array.isArray(parties) ? parties : []).filter(isActiveRecord);
   };
   const fetchAgents = async () => {
     const res = await fetch(`${API_BASE_URL}/api/agents/lightweight`);
     if (!res.ok) throw new Error('Failed to fetch agents');
-    return res.json();
+    const agents = await res.json();
+    return (Array.isArray(agents) ? agents : []).filter(isActiveRecord);
   };
   const fetchOrders = async () => {
     const res = await fetch(`${API_BASE_URL}/api/orders`);
     if (!res.ok) throw new Error('Failed to fetch orders');
     const orders = await res.json();
-    return Array.isArray(orders) ? orders : [];
+    return (Array.isArray(orders) ? orders : []).filter(isActiveRecord);
   };
 
   const showDeleteBlockedModal = (orderIds) => {
@@ -174,7 +179,7 @@ export default function Party() {
       ]);
       setAgents(agentsData);
       setData(
-        parties.map((p, idx) => {
+        parties.filter(isActiveRecord).map((p, idx) => {
           const agent = agentsData.find((a) => a.agentId === p.agentId);
           return {
             key: p.partyId ?? String(idx),
