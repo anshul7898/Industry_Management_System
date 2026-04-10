@@ -57,7 +57,7 @@ const SectionBox = ({ title, children, accent = '#1677ff' }) => (
 
 export default function Party() {
   const [searchText, setSearchText] = useState('');
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 5 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [data, setData] = useState([]);
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);

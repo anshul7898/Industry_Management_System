@@ -32,7 +32,7 @@ import { API_BASE_URL } from '../config';
 
 export default function Agent() {
   const [searchText, setSearchText] = useState('');
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 5 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
