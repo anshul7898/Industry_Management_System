@@ -21,7 +21,7 @@ export default function ProtectedRoute({ allowedRoles, children }) {
   // logged in but not allowed
   if (allowedRoles && !allowedRoles.includes(role)) {
     const redirectMap = {
-      super_user: '/Home',
+      super_user: '/Order',
       inventory_admin: '/Inventory',
       accounts_admin: '/Accounts',
       machine_maintenance_admin: '/MachineMaintenance',
