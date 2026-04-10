@@ -52,11 +52,15 @@ export default function Agent() {
   const [isViewOrderModalOpen, setIsViewOrderModalOpen] = useState(false);
 
   // ---------------- FETCH ----------------
-  async function fetchAgents() {
+  const isActiveRecord = (record) =>
+    record?.deleted !== true && String(record?.deleted).toLowerCase() !== 'true';
+
+  const fetchAgents = useCallback(async () => {
     const res = await fetch(`${API_BASE_URL}/api/agents`);
     if (!res.ok) throw new Error('Failed to fetch agents');
-    return res.json();
-  }
+    const agents = await res.json();
+    return (Array.isArray(agents) ? agents : []).filter(isActiveRecord);
+  }, []);
 
   const refreshAgents = useCallback(async () => {
     setLoading(true);
@@ -71,7 +75,7 @@ export default function Agent() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchAgents]);
 
   useEffect(() => {
     refreshAgents();
@@ -88,8 +92,11 @@ export default function Agent() {
       const res = await fetch(`${API_BASE_URL}/api/orders`);
       if (!res.ok) throw new Error('Failed to fetch orders');
       const allOrders = await res.json();
-      const filtered = allOrders.filter(
-        (o) => String(o.AgentId) === String(record.agentId),
+      const filtered = (Array.isArray(allOrders) ? allOrders : []).filter(
+        (o) =>
+          o?.deleted !== true &&
+          String(o?.deleted).toLowerCase() !== 'true' &&
+          String(o.AgentId) === String(record.agentId),
       );
       setAgentOrders(filtered);
     } catch (err) {
