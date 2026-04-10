@@ -138,6 +138,32 @@ export default function Party() {
     if (!res.ok) throw new Error('Failed to fetch agents');
     return res.json();
   };
+  const fetchOrders = async () => {
+    const res = await fetch(`${API_BASE_URL}/api/orders`);
+    if (!res.ok) throw new Error('Failed to fetch orders');
+    const orders = await res.json();
+    return Array.isArray(orders) ? orders : [];
+  };
+
+  const showDeleteBlockedModal = (orderIds) => {
+    Modal.error({
+      title: 'Cannot delete party',
+      content: (
+        <div>
+          <p>
+            This party has associated order{orderIds.length > 1 ? 's' : ''}.
+            Please delete {orderIds.length > 1 ? 'these orders' : 'this order'} first.
+          </p>
+          <p>
+            <strong>Order ID{orderIds.length > 1 ? 's' : ''}:</strong>{' '}
+            {orderIds.join(', ')}
+          </p>
+        </div>
+      ),
+      okText: 'Close',
+      closable: true,
+    });
+  };
 
   const refreshParties = async () => {
     setLoading(true);
@@ -281,10 +307,25 @@ export default function Party() {
     }
   };
 
-  const handleDelete = async (partyId) => {
+  const handleDelete = async (record) => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/api/party/${partyId}`, {
+      const orders = await fetchOrders();
+      const matchingOrders = orders.filter((order) => {
+        const partyName = String(record.partyName || '').trim().toLowerCase();
+        const orderPartyName = String(order.Party_Name || order.PartyName || '').trim().toLowerCase();
+        return partyName && orderPartyName === partyName;
+      });
+
+      if (matchingOrders.length > 0) {
+        const orderIds = matchingOrders
+          .map((order) => order.OrderId ?? order.orderId ?? order.id)
+          .filter((id) => id !== undefined && id !== null);
+        showDeleteBlockedModal(orderIds.length > 0 ? orderIds : ['Unknown']);
+        return;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/api/party/${record.partyId}`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Failed to delete party');
@@ -533,7 +574,7 @@ export default function Party() {
           <Popconfirm
             title="Delete Party?"
             description="Are you sure you want to delete this party?"
-            onConfirm={() => handleDelete(record.partyId)}
+            onConfirm={() => handleDelete(record)}
             okText="Yes"
             cancelText="No"
           >
