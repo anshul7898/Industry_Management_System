@@ -713,7 +713,7 @@ const RollSizeField = memo(
 
 export default function Order() {
   const [searchText, setSearchText] = useState('');
-  const [pagination, setPagination] = useState({ current: 1, pageSize: 5 });
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [data, setData] = useState([]);
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(false);
