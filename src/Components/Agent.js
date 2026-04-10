@@ -999,7 +999,6 @@ export default function Agent() {
             name="aadhar_Details"
             label="Aadhar Details"
             rules={[
-              { required: true, message: 'Please enter Aadhar number' },
               {
                 pattern: /^[0-9]{12}$/,
                 message: 'Aadhar Number should be of 12 digits',
