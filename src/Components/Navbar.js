@@ -2,7 +2,6 @@ import { Button } from 'antd';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { signOut } from 'aws-amplify/auth';
 import {
-  HomeOutlined,
   ShoppingCartOutlined,
   AppstoreOutlined,
   UserOutlined,
@@ -37,11 +36,6 @@ export default function Navbar() {
   })();
 
   const ALL_ITEMS = [
-    {
-      key: 'home',
-      icon: <HomeOutlined />,
-      label: <Link to="/Home">Home</Link>,
-    },
     {
       key: 'order',
       icon: <ShoppingCartOutlined />,
@@ -83,6 +77,28 @@ export default function Navbar() {
 
   const safeSelectedKeys =
     selectedKey && allowedKeys.includes(selectedKey) ? [selectedKey] : [];
+
+  const getBrandLink = () => {
+    switch (role) {
+      case 'super_user':
+      case 'order_admin':
+        return '/Order';
+      case 'inventory_admin':
+        return '/Inventory';
+      case 'accounts_admin':
+        return '/Accounts';
+      case 'machine_maintenance_admin':
+        return '/MachineMaintenance';
+      case 'delivery_admin':
+        return '/Delivery';
+      case 'product_admin':
+        return '/Product';
+      default:
+        return '/Order';
+    }
+  };
+
+  const brandLink = getBrandLink();
 
   const handleLogout = async () => {
     sessionStorage.removeItem('role');
@@ -273,7 +289,7 @@ export default function Navbar() {
       <div className="navbar-root">
         <div className="navbar-inner">
           {/* ── Brand ── */}
-          <Link to="/Home" className="navbar-brand">
+          <Link to={brandLink} className="navbar-brand">
             <div className="navbar-brand-icon">E</div>
             <div>
               <span className="navbar-brand-text">Eco Packaging</span>

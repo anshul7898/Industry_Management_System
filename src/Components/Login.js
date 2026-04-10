@@ -32,7 +32,7 @@ export default function Login() {
   const [showNewPassword, setShowNewPassword] = useState(false);
 
   const ROLE_REDIRECT = {
-    super_user: '/Home',
+    super_user: '/Order',
     inventory_admin: '/Inventory',
     accounts_admin: '/Accounts',
     machine_maintenance_admin: '/MachineMaintenance',
