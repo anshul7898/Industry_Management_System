@@ -150,14 +150,31 @@ export default function Party() {
     return (Array.isArray(orders) ? orders : []).filter(isActiveRecord);
   };
 
+  const normalizeField = (value) => String(value || '').trim().toLowerCase();
+
+  const showDuplicatePartyModal = () => {
+    Modal.warning({
+      title: 'Duplicate party',
+      content: (
+        <div>
+          <p>
+            A party with the same Party Name, City and Mobile already exists.
+          </p>
+          <p>Please update at least one of these fields to continue.</p>
+        </div>
+      ),
+      centered: true,
+      okText: 'OK',
+    });
+  };
+
   const showDeleteBlockedModal = (orderIds) => {
     Modal.error({
       title: 'Cannot delete party',
       content: (
         <div>
           <p>
-            This party has associated order{orderIds.length > 1 ? 's' : ''}.
-            Please delete {orderIds.length > 1 ? 'these orders' : 'this order'} first.
+            This party has associated orders and cannot be deleted.
           </p>
           <p>
             <strong>Order ID{orderIds.length > 1 ? 's' : ''}:</strong>{' '}
@@ -165,8 +182,29 @@ export default function Party() {
           </p>
         </div>
       ),
+      centered: true,
       okText: 'Close',
       closable: true,
+    });
+  };
+
+  const isDuplicateParty = (values) => {
+    const partyName = normalizeField(values.partyName);
+    const city = normalizeField(values.city);
+    const mobile1 = normalizeField(values.mobile1);
+
+    if (!partyName || !city || !mobile1) return false;
+
+    return data.some((party) => {
+      if (!party) return false;
+      if (modalMode === 'edit' && String(party.partyId) === String(editingPartyId)) {
+        return false;
+      }
+      return (
+        normalizeField(party.partyName) === partyName &&
+        normalizeField(party.city) === city &&
+        normalizeField(party.mobile1) === mobile1
+      );
     });
   };
 
@@ -261,6 +299,10 @@ export default function Party() {
   const handleSubmitModal = async () => {
     try {
       const values = await form.validateFields();
+      if (isDuplicateParty(values)) {
+        showDuplicatePartyModal();
+        return;
+      }
       setLoading(true);
       const payload = {
         partyName: values.partyName,
