@@ -898,10 +898,18 @@ export default function Order() {
     const parts = value.split('.');
     value = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : value;
 
-    // Remove leading zeros but preserve "0." and "0.x"
-    if (value && value !== '.' && !isNaN(parseFloat(value))) {
-      const numValue = parseFloat(value);
-      e.target.value = String(numValue);
+    if (value.startsWith('.')) {
+      value = `0${value}`;
+    }
+
+    // Preserve a trailing decimal point while the user is typing
+    if (value === '.' || value.endsWith('.')) {
+      e.target.value = value;
+      return;
+    }
+
+    if (value && !Number.isNaN(Number(value))) {
+      e.target.value = String(Number(value));
     } else {
       e.target.value = value;
     }
