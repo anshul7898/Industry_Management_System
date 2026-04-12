@@ -905,16 +905,7 @@ export default function Party() {
                 <Form.Item
                   name="aliasOrCompanyName"
                   label="Alias / Company Name"
-                  rules={
-                    isViewMode
-                      ? []
-                      : [
-                          {
-                            required: true,
-                            message: 'Please enter alias or company name',
-                          },
-                        ]
-                  }
+                  rules={isViewMode ? [] : []}
                 >
                   <Input
                     placeholder="Enter alias or company name"
@@ -935,7 +926,20 @@ export default function Party() {
             </Form.Item>
             <Row gutter={12}>
               <Col span={8}>
-                <Form.Item name="state" label="State">
+                <Form.Item
+                  name="state"
+                  label="State"
+                  rules={
+                    isViewMode
+                      ? []
+                      : [
+                          {
+                            required: true,
+                            message: 'Please select a state',
+                          },
+                        ]
+                  }
+                >
                   <Select
                     placeholder="Select State"
                     options={stateOptions}
@@ -951,7 +955,20 @@ export default function Party() {
                 </Form.Item>
               </Col>
               <Col span={8}>
-                <Form.Item name="city" label="City">
+                <Form.Item
+                  name="city"
+                  label="City"
+                  rules={
+                    isViewMode
+                      ? []
+                      : [
+                          {
+                            required: true,
+                            message: 'Please select a city',
+                          },
+                        ]
+                  }
+                >
                   <Select
                     placeholder={
                       selectedState

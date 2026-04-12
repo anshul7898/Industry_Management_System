@@ -716,6 +716,9 @@ export default function Order() {
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [data, setData] = useState([]);
   const [agents, setAgents] = useState([]);
+  const [parties, setParties] = useState([]);
+  const [partySelectionMode, setPartySelectionMode] = useState('new');
+  const [selectedPartyId, setSelectedPartyId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -723,8 +726,6 @@ export default function Order() {
   const [modalMode, setModalMode] = useState('add');
   const [editingOrderId, setEditingOrderId] = useState(null);
   const [viewingOrder, setViewingOrder] = useState(null);
-  // eslint-disable-next-line no-unused-vars
-  const [selectedOrderType, setSelectedOrderType] = useState(null);
   const [selectedState, setSelectedState] = useState(null);
 
   const [sizeOptions, setSizeOptions] = useState({
@@ -797,22 +798,100 @@ export default function Order() {
   const handleCityChange = (value) => {
     form.setFieldValue('City', value);
   };
+
+  const normalizeText = (value) => String(value || '').trim().toLowerCase();
+  const getPartyDisplayLabel = (party) => {
+    const name = party.partyName || party.PartyName || '';
+    const alias = party.aliasOrCompanyName || party.AliasOrCompanyName || '';
+    return alias ? `${name} - ${alias}` : name;
+  };
+
+  const findDuplicateParty = ({ Party_Name, City, Mobile1 }) => {
+    const normalizedName = normalizeText(Party_Name);
+    const normalizedCity = normalizeText(City);
+    const normalizedMobile = normalizeText(Mobile1);
+    return parties.find((p) => {
+      const partyName = normalizeText(p.partyName || p.PartyName);
+      const city = normalizeText(p.city || p.City);
+      const mobile = normalizeText(p.mobile1 || p.Mobile1);
+      return (
+        partyName === normalizedName &&
+        city === normalizedCity &&
+        mobile === normalizedMobile
+      );
+    });
+  };
+
+  const handlePartyModeChange = (value) => {
+    setPartySelectionMode(value);
+    form.setFieldValue('partyMode', value);
+    if (value === 'new') {
+      form.setFieldValue('SelectedPartyId', null);
+    }
+  };
+
+  const handleExistingPartySelect = (partyId) => {
+    const party = parties.find(
+      (p) => String(p.partyId || p.PartyId) === String(partyId),
+    );
+    if (!party) return;
+    const state = party.state || party.State || null;
+    setSelectedState(state);
+    form.setFieldsValue({
+      SelectedPartyId: partyId,
+      Party_Name: party.partyName || party.PartyName || '',
+      AliasOrCompanyName:
+        party.aliasOrCompanyName || party.AliasOrCompanyName || '',
+      Address: party.address || party.Address || '',
+      State: state,
+      City: party.city || party.City || '',
+      Pincode: party.pincode || party.Pincode || '',
+      Contact_Person1:
+        party.contact_Person1 || party.Contact_Person1 || '',
+      Contact_Person2:
+        party.contact_Person2 || party.Contact_Person2 || '',
+      Mobile1: party.mobile1 || party.Mobile1 || '',
+      Mobile2: party.mobile2 || party.Mobile2 || '',
+      Email: party.email || party.Email || '',
+    });
+  };
+
+  const showDuplicatePartyWarning = (duplicateParty) => {
+    const label = getPartyDisplayLabel(duplicateParty);
+    Modal.warning({
+      title: 'Duplicate Party Detected',
+      content: `A party with these details already exists. Select Existing Party and choose ${label}.`,
+      width: 520,
+    });
+  };
+
+
+  const fetchParties = async () => {
+    const res = await fetch(`${API_BASE_URL}/api/party`);
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Failed to fetch parties (${res.status}): ${text}`);
+    }
+    const fetched = await res.json();
+    return (Array.isArray(fetched) ? fetched : []).filter(isActiveRecord);
+  };
+
   const handleAlphabetsOnlyInput = (e) => {
-    e.target.value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+    e.target.value = e.target.value.replaceAll(/[^a-zA-Z\s]/g, '');
   };
   const handleNumbersOnlyInput = (e) => {
-    let value = e.target.value.replace(/[^0-9]/g, '');
+    let value = e.target.value.replaceAll(/\D/g, '');
     // Remove leading zeros but keep "0" if that's the only digit
     if (value && value !== '0') {
-      value = String(parseInt(value, 10));
+      value = String(Number.parseInt(value, 10));
     }
     e.target.value = value;
   };
   const handlePincodeInput = (e) => {
-    e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+    e.target.value = e.target.value.replaceAll(/\D/g, '').slice(0, 6);
   };
   const handleMobileInput = (e) => {
-    e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+    e.target.value = e.target.value.replaceAll(/\D/g, '').slice(0, 10);
   };
   const handleDecimalInput = (e) => {
     let value = e.target.value.replace(/[^0-9.]/g, '');
@@ -893,6 +972,7 @@ export default function Order() {
   useEffect(() => {
     loadSizes();
     loadRollSizes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadSizes, loadRollSizes]);
 
   const handleProductTypeChange = (fieldName) => {
@@ -959,11 +1039,13 @@ export default function Order() {
   const refreshOrders = async () => {
     setLoading(true);
     try {
-      const [orders, agentsData] = await Promise.all([
+      const [orders, agentsData, partiesData] = await Promise.all([
         fetchOrders(),
         fetchAgents(),
+        fetchParties(),
       ]);
       setAgents(agentsData);
+      setParties(partiesData);
       setData(
         orders.map((o, idx) => {
           const agent = agentsData.find((a) => a.agentId === o.AgentId);
@@ -986,12 +1068,14 @@ export default function Order() {
     async function load() {
       setLoading(true);
       try {
-        const [orders, agentsData] = await Promise.all([
+        const [orders, agentsData, partiesData] = await Promise.all([
           fetchOrders(),
           fetchAgents(),
+          fetchParties(),
         ]);
         if (cancelled) return;
         setAgents(agentsData);
+        setParties(partiesData);
         setData(
           orders.map((o, idx) => {
             const agent = agentsData.find((a) => a.agentId === o.AgentId);
@@ -1012,6 +1096,7 @@ export default function Order() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const compareText = (a, b, field) =>
@@ -1064,6 +1149,10 @@ export default function Order() {
       setSelectedState(state);
       form.resetFields();
       form.setFieldsValue({
+        partyMode: partyData ? 'existing' : 'new',
+        SelectedPartyId: partyData
+          ? String(partyData.partyId || partyData.PartyId || '')
+          : null,
         AgentId: order.AgentId,
         Party_Name:
           partyData?.partyName ||
@@ -1314,7 +1403,6 @@ export default function Order() {
   const handleOrderTypeSelect = async (values) => {
     try {
       const orderType = values.orderType;
-      setSelectedOrderType(orderType);
       setOrderTypeModalOpen(false);
       if (orderType === 'new') openAddOrderModal();
       else if (orderType === 'repeat') openRepeatOrderAgentModal();
@@ -1326,30 +1414,37 @@ export default function Order() {
 
   const openOrderTypeModal = () => {
     orderTypeForm.resetFields();
-    setSelectedOrderType(null);
     setOrderTypeModalOpen(true);
   };
   const closeOrderTypeModal = () => {
     setOrderTypeModalOpen(false);
     orderTypeForm.resetFields();
-    setSelectedOrderType(null);
   };
 
   const openAddOrderModal = async () => {
     setModalMode('add');
     setEditingOrderId(null);
     setSelectedState(null);
+    setPartySelectionMode('new');
+    setSelectedPartyId(null);
     setIsRepeatOrder(false);
     form.resetFields();
-    form.setFieldValue('Products', [{ ...emptyProduct }]);
-    form.setFieldValue('TotalAmount', 0);
-    form.setFieldValue('Carting', 0);
+    form.setFieldsValue({
+      partyMode: 'new',
+      SelectedPartyId: null,
+      Products: [{ ...emptyProduct }],
+      TotalAmount: 0,
+      Carting: 0,
+    });
     try {
-      await Promise.all([
-        fetchAgents().then(setAgents),
+      const [agentsData, partiesData] = await Promise.all([
+        fetchAgents(),
+        fetchParties(),
         loadSizes(),
         loadRollSizes(),
       ]);
+      setAgents(agentsData);
+      setParties(partiesData);
     } catch (err) {
       message.error(err.message);
     }
@@ -1361,12 +1456,17 @@ export default function Order() {
     setEditingOrderId(record.OrderId);
     setSelectedState(record.State || null);
     setIsRepeatOrder(false);
+    let agentsData;
+    let partiesData;
     try {
-      await Promise.all([
-        fetchAgents().then(setAgents),
+      [agentsData, partiesData] = await Promise.all([
+        fetchAgents(),
+        fetchParties(),
         loadSizes(),
         loadRollSizes(),
       ]);
+      setAgents(agentsData);
+      setParties(partiesData);
     } catch (err) {
       message.error(err.message);
     }
@@ -1409,6 +1509,29 @@ export default function Order() {
         };
       },
     );
+    const matchingParty = partiesData.find((party) => {
+      return (
+        normalizeText(party.partyName || party.PartyName) ===
+          normalizeText(record.Party_Name) &&
+        normalizeText(party.city || party.City) ===
+          normalizeText(record.City) &&
+        normalizeText(party.mobile1 || party.Mobile1) ===
+          normalizeText(record.Mobile1)
+      );
+    });
+    if (matchingParty) {
+      setPartySelectionMode('existing');
+      const matchingPartyId = String(matchingParty.partyId || matchingParty.PartyId);
+      setSelectedPartyId(matchingPartyId);
+      form.setFieldsValue({
+        partyMode: 'existing',
+        SelectedPartyId: matchingPartyId,
+      });
+    } else {
+      setPartySelectionMode('new');
+      setSelectedPartyId(null);
+      form.setFieldsValue({ partyMode: 'new', SelectedPartyId: null });
+    }
     form.setFieldsValue({
       AgentId: record.AgentId,
       Party_Name: record.Party_Name,
@@ -1449,6 +1572,9 @@ export default function Order() {
   };
 
   const addPartyFromOrder = async (values, orderId) => {
+    if (values.partyMode !== 'new') {
+      return true;
+    }
     try {
       const res = await fetch(`${API_BASE_URL}/api/party`, {
         method: 'POST',
@@ -1761,9 +1887,19 @@ export default function Order() {
         setLoading(false);
         return;
       }
+      if (values.partyMode === 'new') {
+        const duplicate = findDuplicateParty(values);
+        if (duplicate) {
+          showDuplicatePartyWarning(duplicate);
+          setLoading(false);
+          return;
+        }
+      }
       if (modalMode === 'add') {
         const created = await handleAdd(values);
-        await addPartyFromOrder(values, created?.OrderId ?? null);
+        if (values.partyMode === 'new') {
+          await addPartyFromOrder(values, created?.OrderId ?? null);
+        }
         message.success(
           created?.OrderId
             ? `Created order ${created.OrderId} with ${values.Products.length} product(s)`
@@ -1795,6 +1931,13 @@ export default function Order() {
       setLoading(false);
     }
   };
+
+  const partyOptions = parties
+    .filter(isActiveRecord)
+    .map((p) => ({
+      label: getPartyDisplayLabel(p),
+      value: String(p.partyId || p.PartyId),
+    }));
 
   const agentOptions = agents.map((a) => ({ label: a.name, value: a.agentId }));
 
@@ -3082,6 +3225,54 @@ export default function Order() {
                   }
                 />
               </Form.Item>
+              {!isRepeatOrder && (
+                <>
+                  <Form.Item
+                    label="Party Type"
+                    name="partyMode"
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Please choose New Party or Existing Party.',
+                      },
+                    ]}
+                  >
+                    <Radio.Group
+                      onChange={(e) => handlePartyModeChange(e.target.value)}
+                      value={partySelectionMode}
+                    >
+                      <Radio value="new">New Party</Radio>
+                      <Radio value="existing">Existing Party</Radio>
+                    </Radio.Group>
+                  </Form.Item>
+                  {partySelectionMode === 'existing' && (
+                    <Form.Item
+                      label="Select Existing Party"
+                      name="SelectedPartyId"
+                      rules={[
+                        {
+                          required: true,
+                          message: 'Please select an existing party.',
+                        },
+                      ]}
+                    >
+                      <Select
+                        placeholder="Choose existing party"
+                        options={partyOptions}
+                        value={selectedPartyId}
+                        showSearch
+                        onChange={handleExistingPartySelect}
+                        disabled={partyOptions.length === 0}
+                        filterOption={(input, option) =>
+                          (option?.label ?? '')
+                            .toLowerCase()
+                            .includes(input.toLowerCase())
+                        }
+                      />
+                    </Form.Item>
+                  )}
+                </>
+              )}
               <Row gutter={12}>
                 <Col span={12}>
                   <Form.Item
@@ -3102,12 +3293,7 @@ export default function Order() {
                   <Form.Item
                     label="Alias / Company Name"
                     name="AliasOrCompanyName"
-                    rules={[
-                      {
-                        required: true,
-                        message: 'Please enter Alias or Company Name.',
-                      },
-                    ]}
+                    rules={[]}
                   >
                     <Input
                       placeholder="e.g., ABC Pack"
@@ -3117,11 +3303,7 @@ export default function Order() {
                   </Form.Item>
                 </Col>
               </Row>
-              <Form.Item
-                label="Address"
-                name="Address"
-                rules={[{ required: true, message: 'Please enter Address.' }]}
-              >
+              <Form.Item label="Address" name="Address" rules={[]}> 
                 <Input
                   placeholder="e.g., Plot 123, Industrial Area"
                   disabled={isRepeatOrder}
@@ -3176,7 +3358,6 @@ export default function Order() {
                     label="Pincode"
                     name="Pincode"
                     rules={[
-                      { required: true, message: 'Please enter Pincode.' },
                       {
                         pattern: /^\d{6}$/,
                         message: 'Pincode must be 6 digits.',
@@ -4112,7 +4293,7 @@ export default function Order() {
                           fontWeight: 600,
                         }}
                       >
-                        + Add Product
+                        Add Product
                       </Button>
                     )}
                   </>
