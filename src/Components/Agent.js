@@ -1106,7 +1106,10 @@ export default function Agent() {
                 ? order.Products.length
                 : null;
               const orderId = order.OrderId;
-              const displayName = alias || partyName;
+              const displayName =
+                String(partyName).trim() !== '' && partyName !== '—'
+                  ? partyName
+                  : alias;
               const contactLine = [contactP1, contactP2]
                 .filter(Boolean)
                 .join(' / ');
