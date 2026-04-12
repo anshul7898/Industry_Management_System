@@ -270,6 +270,11 @@ export default function Agent() {
     return null;
   };
 
+  const normalizeOptionalText = (value) => {
+    const normalizedValue = String(value || '').trim();
+    return normalizedValue || undefined;
+  };
+
   const handleSubmitModal = async () => {
     try {
       const values = await form.validateFields();
@@ -282,10 +287,10 @@ export default function Agent() {
 
       setLoading(true);
       const payload = {
-        name: values.name,
-        mobile: values.mobile,
-        aadhar_Details: values.aadhar_Details,
-        address: values.address,
+        name: String(values.name || '').trim(),
+        mobile: String(values.mobile || '').trim(),
+        aadhar_Details: normalizeOptionalText(values.aadhar_Details),
+        address: normalizeOptionalText(values.address),
       };
 
       if (modalMode === 'add') {
