@@ -3227,7 +3227,6 @@ export default function Order() {
                   placeholder="Select Agent"
                   options={agentOptions}
                   showSearch
-                  disabled={isRepeatOrder}
                   filterOption={(input, option) =>
                     (option?.label ?? '')
                       .toLowerCase()
@@ -3295,7 +3294,6 @@ export default function Order() {
                     <Input
                       placeholder="e.g., ABC Packaging Solutions"
                       onInput={handleAlphabetsOnlyInput}
-                      disabled={isRepeatOrder}
                     />
                   </Form.Item>
                 </Col>
@@ -3308,7 +3306,6 @@ export default function Order() {
                     <Input
                       placeholder="e.g., ABC Pack"
                       onInput={handleAlphabetsOnlyInput}
-                      disabled={isRepeatOrder}
                     />
                   </Form.Item>
                 </Col>
@@ -3316,7 +3313,6 @@ export default function Order() {
               <Form.Item label="Address" name="Address" rules={[]}> 
                 <Input
                   placeholder="e.g., Plot 123, Industrial Area"
-                  disabled={isRepeatOrder}
                 />
               </Form.Item>
               <Row gutter={12}>
@@ -3331,7 +3327,6 @@ export default function Order() {
                       options={stateOptions}
                       showSearch
                       onChange={handleStateChange}
-                      disabled={isRepeatOrder}
                       filterOption={(input, option) =>
                         (option?.label ?? '')
                           .toLowerCase()
@@ -3378,7 +3373,6 @@ export default function Order() {
                       placeholder="e.g., 400001"
                       maxLength={6}
                       onInput={handlePincodeInput}
-                      disabled={isRepeatOrder}
                     />
                   </Form.Item>
                 </Col>
@@ -3406,7 +3400,6 @@ export default function Order() {
                     <Input
                       placeholder="e.g., Rajesh Kumar"
                       onInput={handleAlphabetsOnlyInput}
-                      disabled={isRepeatOrder}
                     />
                   </Form.Item>
                 </Col>
@@ -3418,7 +3411,6 @@ export default function Order() {
                     <Input
                       placeholder="e.g., Priya Sharma"
                       onInput={handleAlphabetsOnlyInput}
-                      disabled={isRepeatOrder}
                     />
                   </Form.Item>
                 </Col>
@@ -3440,7 +3432,6 @@ export default function Order() {
                       placeholder="e.g., 9876543210"
                       maxLength={10}
                       onInput={handleMobileInput}
-                      disabled={isRepeatOrder}
                     />
                   </Form.Item>
                 </Col>
@@ -3454,7 +3445,6 @@ export default function Order() {
                       placeholder="e.g., 9876543211"
                       maxLength={10}
                       onInput={handleMobileInput}
-                      disabled={isRepeatOrder}
                     />
                   </Form.Item>
                 </Col>
@@ -3466,7 +3456,6 @@ export default function Order() {
                   >
                     <Input
                       placeholder="e.g., rajesh@abcpack.com (optional)"
-                      disabled={isRepeatOrder}
                     />
                   </Form.Item>
                 </Col>
@@ -3484,7 +3473,6 @@ export default function Order() {
                   <Form.Item label="Booking Name" name="BookingName">
                     <Input
                       placeholder="e.g., Rajesh Transport Booking"
-                      disabled={isRepeatOrder}
                     />
                   </Form.Item>
                 </Col>
@@ -3492,7 +3480,6 @@ export default function Order() {
                   <Form.Item label="Transport Name" name="TransportName">
                     <Input
                       placeholder="e.g., Shree Ram Transport"
-                      disabled={isRepeatOrder}
                     />
                   </Form.Item>
                 </Col>
@@ -3508,7 +3495,6 @@ export default function Order() {
                       placeholder="e.g., 9876543210"
                       maxLength={10}
                       onInput={handleMobileInput}
-                      disabled={isRepeatOrder}
                     />
                   </Form.Item>
                 </Col>
@@ -3516,7 +3502,6 @@ export default function Order() {
                   <Form.Item label="Destination" name="Destination">
                     <Input
                       placeholder="e.g., Mumbai, Maharashtra"
-                      disabled={isRepeatOrder}
                     />
                   </Form.Item>
                 </Col>
@@ -3629,7 +3614,6 @@ export default function Order() {
                                       <Select
                                         placeholder="Select Product Type"
                                         options={DROPDOWN_OPTIONS.productTypes}
-                                        disabled={isRepeatOrder}
                                         onChange={() =>
                                           handleProductTypeChange(
                                             `${idx}_ProductType`,
@@ -3656,7 +3640,6 @@ export default function Order() {
                                           options={
                                             DROPDOWN_OPTIONS.productCategory
                                           }
-                                          disabled={isRepeatOrder}
                                           onChange={() =>
                                             handleProductCategoryChange(
                                               `${idx}_ProductCategory`,
@@ -3675,7 +3658,6 @@ export default function Order() {
                                       productCategory={productCategory}
                                       sizeOptions={sizeOptions}
                                       onNewSizeAdded={handleNewSizeAdded}
-                                      disabled={isRepeatOrder}
                                       form={form}
                                       required={true}
                                     />
@@ -3691,7 +3673,6 @@ export default function Order() {
                                       onNewRollSizeAdded={
                                         handleNewRollSizeAdded
                                       }
-                                      disabled={isRepeatOrder}
                                       form={form}
                                       required={false}
                                     />
@@ -3715,7 +3696,6 @@ export default function Order() {
                                       <Select
                                         placeholder="Select Bag Material"
                                         options={DROPDOWN_OPTIONS.bagMaterials}
-                                        disabled={isRepeatOrder}
                                       />
                                     </Form.Item>
                                   </Col>
@@ -3735,7 +3715,6 @@ export default function Order() {
                                       <Select
                                         placeholder="Select Type"
                                         options={DROPDOWN_OPTIONS.quantityTypes}
-                                        disabled={isRepeatOrder}
                                         onChange={() =>
                                           handleRateOrQuantityChange(
                                             `${idx}_QuantityType`,
@@ -3799,7 +3778,6 @@ export default function Order() {
                                       <Select
                                         placeholder="Select Sheet GSM"
                                         options={DROPDOWN_OPTIONS.sheetGSMs}
-                                        disabled={isRepeatOrder}
                                       />
                                     </Form.Item>
                                   </Col>
@@ -3810,7 +3788,6 @@ export default function Order() {
                                       customFieldKey="SheetColorCustom"
                                       label="Sheet Colour"
                                       options={DROPDOWN_OPTIONS.sheetColors}
-                                      disabled={isRepeatOrder}
                                       form={form}
                                       required={true}
                                     />
@@ -3839,7 +3816,6 @@ export default function Order() {
                                             options={
                                               DROPDOWN_OPTIONS.borderGSMs
                                             }
-                                            disabled={isRepeatOrder}
                                           />
                                         </Form.Item>
                                       </Col>
@@ -3852,7 +3828,6 @@ export default function Order() {
                                           options={
                                             DROPDOWN_OPTIONS.borderColors
                                           }
-                                          disabled={isRepeatOrder}
                                           form={form}
                                           required={true}
                                         />
@@ -3878,7 +3853,6 @@ export default function Order() {
                                       <Select
                                         placeholder="Select Handle Type"
                                         options={DROPDOWN_OPTIONS.handleTypes}
-                                        disabled={isRepeatOrder}
                                       />
                                     </Form.Item>
                                   </Col>
@@ -3889,7 +3863,6 @@ export default function Order() {
                                       customFieldKey="HandleColorCustom"
                                       label="Handle Colour"
                                       options={DROPDOWN_OPTIONS.handleColors}
-                                      disabled={isRepeatOrder}
                                       form={form}
                                       required={true}
                                     />
@@ -3908,7 +3881,6 @@ export default function Order() {
                                       <Select
                                         placeholder="Select Handle GSM"
                                         options={DROPDOWN_OPTIONS.handleGSMs}
-                                        disabled={isRepeatOrder}
                                       />
                                     </Form.Item>
                                   </Col>
@@ -3932,7 +3904,6 @@ export default function Order() {
                                       <Select
                                         placeholder="Select Printing Type"
                                         options={DROPDOWN_OPTIONS.printingTypes}
-                                        disabled={isRepeatOrder}
                                       />
                                     </Form.Item>
                                   </Col>
@@ -3951,7 +3922,6 @@ export default function Order() {
                                       <Select
                                         placeholder="Select Print Colour"
                                         options={DROPDOWN_OPTIONS.printColors}
-                                        disabled={isRepeatOrder}
                                       />
                                     </Form.Item>
                                   </Col>
@@ -3962,7 +3932,6 @@ export default function Order() {
                                       customFieldKey="ColorCustom"
                                       label="Colour"
                                       options={DROPDOWN_OPTIONS.colors}
-                                      disabled={isRepeatOrder}
                                       form={form}
                                       required={true}
                                     />
@@ -3977,7 +3946,7 @@ export default function Order() {
                                       label="Design Type"
                                       name={[field.name, 'DesignType']}
                                     >
-                                      <Radio.Group disabled={isRepeatOrder}>
+                                      <Radio.Group>
                                         <Radio value="Old">Old Design</Radio>
                                         <Radio value="New">New Design</Radio>
                                       </Radio.Group>
@@ -3991,7 +3960,6 @@ export default function Order() {
                                       <Select
                                         placeholder="Select Design Style"
                                         options={DROPDOWN_OPTIONS.designStyles}
-                                        disabled={isRepeatOrder}
                                         allowClear
                                       />
                                     </Form.Item>
@@ -4006,7 +3974,7 @@ export default function Order() {
                                       label="Plate Type"
                                       name={[field.name, 'PlateType']}
                                     >
-                                      <Radio.Group disabled={isRepeatOrder}>
+                                      <Radio.Group>
                                         <Radio value="Old">Old Plate</Radio>
                                         <Radio value="New">New Plate</Radio>
                                       </Radio.Group>
@@ -4022,7 +3990,6 @@ export default function Order() {
                                         options={
                                           DROPDOWN_OPTIONS.plateBlockNumbers
                                         }
-                                        disabled={isRepeatOrder}
                                         allowClear
                                       />
                                     </Form.Item>
@@ -4034,7 +4001,6 @@ export default function Order() {
                                     >
                                       <Input
                                         placeholder="e.g., 500"
-                                        disabled={isRepeatOrder}
                                         onInput={handleDecimalInput}
                                         onChange={recalcTotalAmount}
                                         prefix={
@@ -4068,7 +4034,6 @@ export default function Order() {
                                     >
                                       <Input
                                         placeholder="e.g., 5.50"
-                                        disabled={isRepeatOrder}
                                         onInput={handleDecimalInput}
                                         onChange={() =>
                                           handleRateOrQuantityChange(
