@@ -874,7 +874,7 @@ export default function Order() {
 
 
   const fetchParties = async () => {
-    const res = await fetch(`${API_BASE_URL}/api/party`);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/party`);
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(`Failed to fetch parties (${res.status}): ${text}`);
@@ -948,9 +948,16 @@ export default function Order() {
     return isNaN(num) ? null : num;
   };
 
+  const fetchWithTimeout = useCallback((url, options = {}, timeoutMs = 15000) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { ...options, signal: controller.signal })
+      .finally(() => clearTimeout(timer));
+  }, []);
+
   const loadSizes = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/sizes`);
+      const res = await fetchWithTimeout(`${API_BASE_URL}/api/sizes`);
       if (!res.ok) throw new Error(`Failed to fetch sizes (${res.status})`);
       const fetched = await res.json();
       setSizeOptions({
@@ -968,11 +975,11 @@ export default function Order() {
     } catch {
       message.error('Failed to load product size options');
     }
-  }, []);
+  }, [fetchWithTimeout]);
 
   const loadRollSizes = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/roll-sizes`);
+      const res = await fetchWithTimeout(`${API_BASE_URL}/api/roll-sizes`);
       if (!res.ok)
         throw new Error(`Failed to fetch roll sizes (${res.status})`);
       const data = await res.json();
@@ -982,7 +989,7 @@ export default function Order() {
     } catch {
       message.error('Failed to load roll size options');
     }
-  }, []);
+  }, [fetchWithTimeout]);
 
   useEffect(() => {
     loadSizes();
@@ -1020,7 +1027,7 @@ export default function Order() {
     record?.deleted !== true && String(record?.deleted).toLowerCase() !== 'true';
 
   async function fetchOrders() {
-    const res = await fetch(`${API_BASE_URL}/api/orders`);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/orders`);
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(`Failed to fetch orders (${res.status}): ${text}`);
@@ -1030,7 +1037,7 @@ export default function Order() {
   }
 
   async function fetchAgents() {
-    const res = await fetch(`${API_BASE_URL}/api/agents/lightweight`);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/agents/lightweight`);
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(`Failed to fetch agents (${res.status}): ${text}`);
@@ -1041,7 +1048,7 @@ export default function Order() {
 
   async function fetchPartyByName(partyName) {
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `${API_BASE_URL}/api/party/by-name/${encodeURIComponent(partyName)}`,
       );
       if (!res.ok) return null;
@@ -2052,26 +2059,6 @@ export default function Order() {
       sorter: (a, b) => compareNumber(a, b, 'TotalAmount'),
     },
     {
-      title: 'Order Status',
-      dataIndex: 'OrderStatus',
-      key: 'OrderStatus',
-      width: 130,
-      sorter: (a, b) => compareText(a, b, 'OrderStatus'),
-      sortDirections: ['ascend', 'descend'],
-      render: (status) => {
-        const colorMap = {
-          'ToDo': 'orange',
-          'In-Progress': 'blue',
-          'Done': 'green',
-        };
-        return (
-          <Tag color={colorMap[status] || 'default'} style={{ fontWeight: 500 }}>
-            {status || '-'}
-          </Tag>
-        );
-      },
-    },
-    {
       title: 'Action',
       key: 'action',
       width: 200,
@@ -2858,28 +2845,6 @@ export default function Order() {
                   </Descriptions.Item>
                 </Descriptions>
               </SectionBox>
-              <SectionBox title="Order Status" accent="#722ed1">
-                <Descriptions bordered size="small" column={1}>
-                  <Descriptions.Item label="Status">
-                    {viewingOrder.OrderStatus ? (
-                      <Tag
-                        color={
-                          viewingOrder.OrderStatus === 'ToDo'
-                            ? 'orange'
-                            : viewingOrder.OrderStatus === 'In-Progress'
-                              ? 'blue'
-                              : 'green'
-                        }
-                        style={{ fontWeight: 600 }}
-                      >
-                        {viewingOrder.OrderStatus}
-                      </Tag>
-                    ) : (
-                      '-'
-                    )}
-                  </Descriptions.Item>
-                </Descriptions>
-              </SectionBox>
               <SectionBox
                 title={`Products (${viewingOrder.Products?.length || 0})`}
                 accent="#52c41a"
@@ -3241,10 +3206,7 @@ export default function Order() {
                 }}
               >
                 <p style={{ margin: 0, color: '#531dab', fontSize: 13 }}>
-                  <strong>🔒 Repeat Order Mode:</strong> All party, contact, and
-                  product details are locked. Only <strong>Quantity</strong> can
-                  be edited. ProductAmount and TotalAmount will
-                  auto-recalculate.
+                  <strong>🔒 Repeat Order Mode:</strong>
                 </p>
               </div>
             ) : (
