@@ -191,6 +191,11 @@ const DROPDOWN_OPTIONS = {
     { label: 'Repeat Order', value: 'repeat' },
     { label: 'Old Order', value: 'old' },
   ],
+  orderStatuses: [
+    { label: 'ToDo', value: 'ToDo' },
+    { label: 'In-Progress', value: 'In-Progress' },
+    { label: 'Done', value: 'Done' },
+  ],
   designStyles: [
     { label: 'Same Front/Back', value: 'Same Front/Back' },
     { label: 'Different Front/Back', value: 'Different Front/Back' },
@@ -1199,6 +1204,7 @@ export default function Order() {
         TransportName: '',
         DispatchContactNumber: '',
         Destination: '',
+        OrderStatus: 'ToDo',
         Products: [{ ...emptyProduct }],
         TotalAmount: 0,
         Carting: 0,
@@ -1369,6 +1375,7 @@ export default function Order() {
         TransportName: order.TransportName || '',
         DispatchContactNumber: order.DispatchContactNumber || '',
         Destination: order.Destination || '',
+        OrderStatus: 'ToDo',
         Products: copiedProducts,
         TotalAmount: order.TotalAmount || 0,
         Carting: order.Carting || 0,
@@ -1442,6 +1449,7 @@ export default function Order() {
     form.setFieldsValue({
       partyMode: 'new',
       SelectedPartyId: null,
+      OrderStatus: 'ToDo',
       Products: [{ ...emptyProduct }],
       TotalAmount: 0,
       Carting: 0,
@@ -1559,6 +1567,7 @@ export default function Order() {
       TransportName: record.TransportName || '',
       DispatchContactNumber: record.DispatchContactNumber || '',
       Destination: record.Destination || '',
+      OrderStatus: record.OrderStatus || 'ToDo',
       Products: normalisedProducts,
       TotalAmount: record.TotalAmount || 0,
       Carting: record.Carting || 0,
@@ -1820,6 +1829,7 @@ export default function Order() {
         TransportName: values.TransportName || null,
         DispatchContactNumber: values.DispatchContactNumber || null,
         Destination: values.Destination || null,
+        OrderStatus: values.OrderStatus || 'ToDo',
         TotalAmount: totalAmount,
         Carting: parseFloat(values.Carting || 0),
         OrderGST: parseFloat(values.OrderGST || 0),
@@ -1861,6 +1871,7 @@ export default function Order() {
           TransportName: values.TransportName || null,
           DispatchContactNumber: values.DispatchContactNumber || null,
           Destination: values.Destination || null,
+          OrderStatus: values.OrderStatus || 'ToDo',
           TotalAmount: totalAmount,
           Carting: parseFloat(values.Carting || 0),
           OrderGST: parseFloat(values.OrderGST || 0),
@@ -2039,6 +2050,26 @@ export default function Order() {
         </span>
       ),
       sorter: (a, b) => compareNumber(a, b, 'TotalAmount'),
+    },
+    {
+      title: 'Order Status',
+      dataIndex: 'OrderStatus',
+      key: 'OrderStatus',
+      width: 130,
+      sorter: (a, b) => compareText(a, b, 'OrderStatus'),
+      sortDirections: ['ascend', 'descend'],
+      render: (status) => {
+        const colorMap = {
+          'ToDo': 'orange',
+          'In-Progress': 'blue',
+          'Done': 'green',
+        };
+        return (
+          <Tag color={colorMap[status] || 'default'} style={{ fontWeight: 500 }}>
+            {status || '-'}
+          </Tag>
+        );
+      },
     },
     {
       title: 'Action',
@@ -2827,6 +2858,28 @@ export default function Order() {
                   </Descriptions.Item>
                 </Descriptions>
               </SectionBox>
+              <SectionBox title="Order Status" accent="#722ed1">
+                <Descriptions bordered size="small" column={1}>
+                  <Descriptions.Item label="Status">
+                    {viewingOrder.OrderStatus ? (
+                      <Tag
+                        color={
+                          viewingOrder.OrderStatus === 'ToDo'
+                            ? 'orange'
+                            : viewingOrder.OrderStatus === 'In-Progress'
+                              ? 'blue'
+                              : 'green'
+                        }
+                        style={{ fontWeight: 600 }}
+                      >
+                        {viewingOrder.OrderStatus}
+                      </Tag>
+                    ) : (
+                      '-'
+                    )}
+                  </Descriptions.Item>
+                </Descriptions>
+              </SectionBox>
               <SectionBox
                 title={`Products (${viewingOrder.Products?.length || 0})`}
                 accent="#52c41a"
@@ -3506,6 +3559,23 @@ export default function Order() {
                   </Form.Item>
                 </Col>
               </Row>
+            </SectionBox>
+
+            {/* ── Order Status ── */}
+            <SectionBox
+              title="Order Status"
+              accent="#722ed1"
+            >
+              <Form.Item
+                label="Order Status"
+                name="OrderStatus"
+                rules={[{ required: true, message: 'Please select Order Status.' }]}
+              >
+                <Select
+                  placeholder="Select Order Status"
+                  options={DROPDOWN_OPTIONS.orderStatuses}
+                />
+              </Form.Item>
             </SectionBox>
 
             {/* ── Products Section ── */}
