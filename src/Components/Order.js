@@ -235,6 +235,8 @@ const emptyProduct = {
   HandleType: undefined,
   HandleColor: undefined,
   HandleColorCustom: undefined,
+  AlternativeHandleColor: undefined,
+  AlternativeHandleColorCustom: undefined,
   HandleGSM: undefined,
   PrintingType: undefined,
   PrintColor: undefined,
@@ -1338,6 +1340,10 @@ export default function Order() {
           p.HandleColor,
           DROPDOWN_OPTIONS.handleColors,
         );
+        const ahc = normaliseColorForForm(
+          p.AlternativeHandleColor,
+          DROPDOWN_OPTIONS.handleColors,
+        );
         const cc = normaliseColorForForm(p.Color, DROPDOWN_OPTIONS.colors);
         const rs = normaliseRollSizeForForm(p.RollSize, rollSizeOptions);
         return {
@@ -1360,6 +1366,8 @@ export default function Order() {
           HandleType: p.HandleType,
           HandleColor: hc.selected,
           HandleColorCustom: hc.custom,
+          AlternativeHandleColor: ahc.selected,
+          AlternativeHandleColorCustom: ahc.custom,
           HandleGSM: p.HandleGSM,
           PrintingType: p.PrintingType,
           PrintColor: p.PrintColor,
@@ -1527,6 +1535,10 @@ export default function Order() {
           p.HandleColor,
           DROPDOWN_OPTIONS.handleColors,
         );
+        const ahc = normaliseColorForForm(
+          p.AlternativeHandleColor,
+          DROPDOWN_OPTIONS.handleColors,
+        );
         const cc = normaliseColorForForm(p.Color, DROPDOWN_OPTIONS.colors);
         const rs = normaliseRollSizeForForm(p.RollSize, rollSizeOptions);
         return {
@@ -1541,6 +1553,8 @@ export default function Order() {
           BorderColorCustom: bc.custom ?? p.BorderColorCustom ?? undefined,
           HandleColor: hc.selected,
           HandleColorCustom: hc.custom ?? p.HandleColorCustom ?? undefined,
+          AlternativeHandleColor: ahc.selected,
+          AlternativeHandleColorCustom: ahc.custom ?? p.AlternativeHandleColorCustom ?? undefined,
           Color: cc.selected,
           ColorCustom: cc.custom ?? p.ColorCustom ?? undefined,
           DesignType: p.DesignType ?? undefined,
@@ -1692,6 +1706,7 @@ export default function Order() {
             : pickValueOrOther(p.BorderColor, p.BorderColorCustom),
         HandleType: p.HandleType,
         HandleColor: pickValueOrOther(p.HandleColor, p.HandleColorCustom),
+        AlternativeHandleColor: pickValueOrOther(p.AlternativeHandleColor, p.AlternativeHandleColorCustom),
         HandleGSM: Number(p.HandleGSM),
         PrintingType: p.PrintingType,
         PrintColor: p.PrintColor,
@@ -3981,6 +3996,17 @@ export default function Order() {
                                       options={DROPDOWN_OPTIONS.handleColors}
                                       form={form}
                                       required={true}
+                                    />
+                                  </Col>
+                                  <Col span={8}>
+                                    <OtherSelectField
+                                      fieldName={field.name}
+                                      selectFieldKey="AlternativeHandleColor"
+                                      customFieldKey="AlternativeHandleColorCustom"
+                                      label="Alternative Handle Colour"
+                                      options={DROPDOWN_OPTIONS.handleColors}
+                                      form={form}
+                                      required={false}
                                     />
                                   </Col>
                                   <Col span={8}>
