@@ -1724,10 +1724,30 @@ export default function Order() {
           </div>
         </div>
 
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 10px; color: #999;">
-          <p style="margin: 5px 0;">Order Status: <strong>${order.OrderStatus || 'Pending'}</strong></p>
-          <p style="margin: 5px 0;">Order Date: ${order.OrderStartDate ? dayjs(order.OrderStartDate).format('DD/MM/YYYY') : 'N/A'}</p>
-          <p style="margin: 5px 0; margin-top: 10px;">This is a computer-generated invoice. No signature required.</p>
+        <div style="margin-top: 30px; margin-bottom: 15px;">
+          <h3 style="margin: 0 0 10px 0; font-size: 13px; color: #333; font-weight: bold; border-bottom: 1px solid #1677ff; padding-bottom: 5px;">DISPATCH INFORMATION</h3>
+          <div style="display: flex; justify-content: space-between; font-size: 11px;">
+            <div style="flex: 1;">
+              <p style="margin: 3px 0;"><strong>Booking Name:</strong></p>
+              <p style="margin: 3px 0; color: #666;">${order.BookingName || '-'}</p>
+            </div>
+            <div style="flex: 1;">
+              <p style="margin: 3px 0;"><strong>Transport Name:</strong></p>
+              <p style="margin: 3px 0; color: #666;">${order.TransportName || '-'}</p>
+            </div>
+            <div style="flex: 1;">
+              <p style="margin: 3px 0;"><strong>Contact Number:</strong></p>
+              <p style="margin: 3px 0; color: #666;">${order.DispatchContactNumber || '-'}</p>
+            </div>
+            <div style="flex: 1;">
+              <p style="margin: 3px 0;"><strong>Destination:</strong></p>
+              <p style="margin: 3px 0; color: #666;">${order.Destination || '-'}</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 10px; color: #999;">
+          <p style="margin: 5px 0;">This is a computer-generated invoice. No signature required.</p>
         </div>
       `;
 
