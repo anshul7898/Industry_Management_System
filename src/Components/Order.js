@@ -1,5 +1,7 @@
 import { useMemo, useState, useEffect, useCallback, memo } from 'react';
 import dayjs from 'dayjs';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import {
   Table,
   Input,
@@ -34,6 +36,7 @@ import {
   ReloadOutlined,
   EditOutlined,
   EyeOutlined,
+  FilePdfOutlined,
 } from '@ant-design/icons';
 import Navbar from './Navbar';
 import { API_BASE_URL } from '../config';
@@ -1631,6 +1634,164 @@ export default function Order() {
     setViewingOrder(null);
   };
 
+  const generateInvoicePDF = async (order) => {
+    const key = 'invoice-gen';
+    message.loading({ content: 'Generating invoice...', key, duration: 0 });
+    try {
+      // Create a temporary container for invoice content
+      const invoiceContainer = document.createElement('div');
+      invoiceContainer.style.width = '210mm';
+      invoiceContainer.style.padding = '20px';
+      invoiceContainer.style.backgroundColor = 'white';
+      invoiceContainer.style.fontFamily = 'Arial, sans-serif';
+      invoiceContainer.style.lineHeight = '1.4';
+
+      // Generate invoice HTML
+      const invoiceHTML = `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #1677ff; padding-bottom: 10px;">
+          <div>
+            <h1 style="margin: 0; font-size: 24px; color: #1677ff;">INVOICE</h1>
+            <p style="margin: 5px 0; font-size: 14px; color: #666;">Order ID: <strong>#${order.OrderId}</strong></p>
+          </div>
+          <div style="text-align: right;">
+            <p style="margin: 0; font-weight: bold; font-size: 14px;">Invoice Date: ${dayjs().format('DD/MM/YYYY')}</p>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+          <div style="flex: 1;">
+            <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #333;">FROM:</h3>
+            <p style="margin: 3px 0; font-weight: bold; font-size: 13px;">Industry Management System</p>
+            <p style="margin: 3px 0; font-size: 11px; color: #666;">Company Address</p>
+          </div>
+          <div style="flex: 1;">
+            <h3 style="margin: 0 0 10px 0; font-size: 14px; color: #333;">BILL TO:</h3>
+            <p style="margin: 3px 0; font-weight: bold; font-size: 13px;">${order.Party_Name}</p>
+            <p style="margin: 3px 0; font-size: 11px; color: #666;">${order.Address}</p>
+            <p style="margin: 3px 0; font-size: 11px; color: #666;">${order.City}, ${order.State} ${order.Pincode}</p>
+            <p style="margin: 3px 0; font-size: 11px; color: #666;">Contact: ${order.Contact_Person1}${order.Mobile1 ? ' (' + order.Mobile1 + ')' : ''}</p>
+            ${order.Email ? `<p style="margin: 3px 0; font-size: 11px; color: #666;">Email: ${order.Email}</p>` : ''}
+          </div>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 11px;">
+          <thead>
+            <tr style="background-color: #1677ff; color: white;">
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Item</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Qty</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Unit</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Rate</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(order.Products || []).map((product, idx) => `
+              <tr>
+                <td style="border: 1px solid #ddd; padding: 8px;">
+                  <strong>${product.ProductType || 'N/A'}</strong> - ${product.ProductCategory || ''} (${product.ProductSize || 'N/A'})
+                </td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${Number(product.Quantity || 0).toFixed(2)}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${product.QuantityType || 'N/A'}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">₹${Number(product.Rate || 0).toFixed(2)}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">₹${Number(product.ProductAmount || 0).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+          <div style="width: 300px;">
+            <div style="display: flex; justify-content: space-between; border-top: 1px solid #ddd; padding: 8px 0; font-size: 12px;">
+              <span>Subtotal:</span>
+              <span>₹${Number(order.TotalAmount || 0).toFixed(2)}</span>
+            </div>
+            ${order.Carting ? `
+              <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 12px;">
+                <span>Carting:</span>
+                <span>₹${Number(order.Carting || 0).toFixed(2)}</span>
+              </div>
+            ` : ''}
+            ${order.OrderGST ? `
+              <div style="display: flex; justify-content: space-between; padding: 8px 0; font-size: 12px;">
+                <span>GST (${Number(order.OrderGST || 0)}%):</span>
+                <span>₹${(Number(order.TotalAmount || 0) * (Number(order.OrderGST || 0) / 100)).toFixed(2)}</span>
+              </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; border-top: 2px solid #1677ff; padding: 12px 0; font-weight: bold; font-size: 14px;">
+              <span>TOTAL:</span>
+              <span style="color: #1677ff;">₹${(Number(order.TotalAmount || 0) + Number(order.Carting || 0) + (Number(order.TotalAmount || 0) * (Number(order.OrderGST || 0) / 100))).toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 10px; color: #999;">
+          <p style="margin: 5px 0;">Order Status: <strong>${order.OrderStatus || 'Pending'}</strong></p>
+          <p style="margin: 5px 0;">Order Date: ${order.OrderStartDate ? dayjs(order.OrderStartDate).format('DD/MM/YYYY') : 'N/A'}</p>
+          <p style="margin: 5px 0; margin-top: 10px;">This is a computer-generated invoice. No signature required.</p>
+        </div>
+      `;
+
+      invoiceContainer.innerHTML = invoiceHTML;
+      document.body.appendChild(invoiceContainer);
+
+      // Convert to canvas
+      const canvas = await html2canvas(invoiceContainer, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
+
+      // Create PDF with proper multi-page handling
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pageHeight = 297;
+      let heightRemaining = imgHeight;
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, pageHeight));
+      heightRemaining -= pageHeight;
+
+      // Add remaining pages if needed
+      while (heightRemaining > 0) {
+        pdf.addPage();
+        position += pageHeight;
+        const remainingHeight = Math.min(heightRemaining, pageHeight);
+        pdf.addImage(
+          imgData,
+          'PNG',
+          0,
+          -position,
+          imgWidth,
+          imgHeight
+        );
+        heightRemaining -= pageHeight;
+      }
+
+      // Download
+      pdf.save(`Invoice_${order.OrderId}_${dayjs().format('DDMMYYYY')}.pdf`);
+
+      // Clean up
+      document.body.removeChild(invoiceContainer);
+
+      message.success({
+        content: `Invoice generated successfully for Order #${order.OrderId}`,
+        key,
+        duration: 3,
+      });
+    } catch (err) {
+      console.error('Error generating invoice:', err);
+      message.error({
+        content: 'Failed to generate invoice. Please try again.',
+        key,
+        duration: 3,
+      });
+    }
+  };
+
   const addPartyFromOrder = async (values, orderId) => {
     if (values.partyMode !== 'new') {
       return true;
@@ -2805,8 +2966,16 @@ export default function Order() {
           onCancel={closeViewModal}
           footer={[
             <Button
-              key="close"
+              key="invoice"
               type="primary"
+              icon={<FilePdfOutlined />}
+              onClick={() => generateInvoicePDF(viewingOrder)}
+              style={{ borderRadius: 8 }}
+            >
+              Generate Invoice
+            </Button>,
+            <Button
+              key="close"
               onClick={closeViewModal}
               style={{ borderRadius: 8 }}
             >
