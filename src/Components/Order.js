@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useCallback, memo } from 'react';
+import dayjs from 'dayjs';
 import {
   Table,
   Input,
@@ -22,6 +23,7 @@ import {
   Spin,
   Badge,
   Radio,
+  DatePicker,
 } from 'antd';
 import {
   DeleteOutlined,
@@ -997,6 +999,16 @@ export default function Order() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadSizes, loadRollSizes]);
 
+  const handleOrderStatusChange = (value) => {
+    if (value === 'Done') {
+      // Auto-set OrderEndDate to today when status is "Done"
+      const currentEndDate = form.getFieldValue('OrderEndDate');
+      if (!currentEndDate) {
+        form.setFieldValue('OrderEndDate', dayjs());
+      }
+    }
+  };
+
   const handleProductTypeChange = (fieldName) => {
     const products = form.getFieldValue('Products') || [];
     const productIndex = parseInt(fieldName.split('_')[0]);
@@ -1212,6 +1224,8 @@ export default function Order() {
         DispatchContactNumber: '',
         Destination: '',
         OrderStatus: 'ToDo',
+        OrderStartDate: dayjs(),
+        OrderEndDate: undefined,
         Products: [{ ...emptyProduct }],
         TotalAmount: 0,
         Carting: 0,
@@ -1383,6 +1397,8 @@ export default function Order() {
         DispatchContactNumber: order.DispatchContactNumber || '',
         Destination: order.Destination || '',
         OrderStatus: 'ToDo',
+        OrderStartDate: dayjs(),
+        OrderEndDate: undefined,
         Products: copiedProducts,
         TotalAmount: order.TotalAmount || 0,
         Carting: order.Carting || 0,
@@ -1457,6 +1473,8 @@ export default function Order() {
       partyMode: 'new',
       SelectedPartyId: null,
       OrderStatus: 'ToDo',
+      OrderStartDate: dayjs(),
+      OrderEndDate: undefined,
       Products: [{ ...emptyProduct }],
       TotalAmount: 0,
       Carting: 0,
@@ -1575,6 +1593,8 @@ export default function Order() {
       DispatchContactNumber: record.DispatchContactNumber || '',
       Destination: record.Destination || '',
       OrderStatus: record.OrderStatus || 'ToDo',
+      OrderStartDate: record.OrderStartDate ? dayjs(record.OrderStartDate) : undefined,
+      OrderEndDate: record.OrderEndDate ? dayjs(record.OrderEndDate) : undefined,
       Products: normalisedProducts,
       TotalAmount: record.TotalAmount || 0,
       Carting: record.Carting || 0,
@@ -1837,6 +1857,8 @@ export default function Order() {
         DispatchContactNumber: values.DispatchContactNumber || null,
         Destination: values.Destination || null,
         OrderStatus: values.OrderStatus || 'ToDo',
+        OrderStartDate: values.OrderStartDate ? values.OrderStartDate.format('YYYY-MM-DD') : null,
+        OrderEndDate: values.OrderEndDate ? values.OrderEndDate.format('YYYY-MM-DD') : null,
         TotalAmount: totalAmount,
         Carting: parseFloat(values.Carting || 0),
         OrderGST: parseFloat(values.OrderGST || 0),
@@ -1879,6 +1901,8 @@ export default function Order() {
           DispatchContactNumber: values.DispatchContactNumber || null,
           Destination: values.Destination || null,
           OrderStatus: values.OrderStatus || 'ToDo',
+          OrderStartDate: values.OrderStartDate ? values.OrderStartDate.format('YYYY-MM-DD') : null,
+          OrderEndDate: values.OrderEndDate ? values.OrderEndDate.format('YYYY-MM-DD') : null,
           TotalAmount: totalAmount,
           Carting: parseFloat(values.Carting || 0),
           OrderGST: parseFloat(values.OrderGST || 0),
@@ -2845,6 +2869,37 @@ export default function Order() {
                   </Descriptions.Item>
                 </Descriptions>
               </SectionBox>
+              <SectionBox title="Order Status & Dates" accent="#722ed1">
+                <Descriptions bordered size="small" column={3}>
+                  <Descriptions.Item label="Order Status">
+                    {viewingOrder.OrderStatus ? (
+                      <Tag
+                        color={
+                          viewingOrder.OrderStatus === 'Done'
+                            ? 'green'
+                            : viewingOrder.OrderStatus === 'In-Progress'
+                            ? 'orange'
+                            : 'default'
+                        }
+                      >
+                        {viewingOrder.OrderStatus}
+                      </Tag>
+                    ) : (
+                      '-'
+                    )}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Order Start Date">
+                    {viewingOrder.OrderStartDate
+                      ? dayjs(viewingOrder.OrderStartDate).format('DD/MM/YYYY')
+                      : '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Order End Date">
+                    {viewingOrder.OrderEndDate
+                      ? dayjs(viewingOrder.OrderEndDate).format('DD/MM/YYYY')
+                      : '-'}
+                  </Descriptions.Item>
+                </Descriptions>
+              </SectionBox>
               <SectionBox
                 title={`Products (${viewingOrder.Products?.length || 0})`}
                 accent="#52c41a"
@@ -3523,21 +3578,50 @@ export default function Order() {
               </Row>
             </SectionBox>
 
-            {/* ── Order Status ── */}
+            {/* ── Order Status & Dates ── */}
             <SectionBox
-              title="Order Status"
+              title="Order Status & Dates"
               accent="#722ed1"
             >
-              <Form.Item
-                label="Order Status"
-                name="OrderStatus"
-                rules={[{ required: true, message: 'Please select Order Status.' }]}
-              >
-                <Select
-                  placeholder="Select Order Status"
-                  options={DROPDOWN_OPTIONS.orderStatuses}
-                />
-              </Form.Item>
+              <Row gutter={12}>
+                <Col span={8}>
+                  <Form.Item
+                    label="Order Status"
+                    name="OrderStatus"
+                    rules={[{ required: true, message: 'Please select Order Status.' }]}
+                  >
+                    <Select
+                      placeholder="Select Order Status"
+                      options={DROPDOWN_OPTIONS.orderStatuses}
+                      onChange={handleOrderStatusChange}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    label="Order Start Date"
+                    name="OrderStartDate"
+                    rules={[{ required: true, message: 'Please select Order Start Date.' }]}
+                  >
+                    <DatePicker
+                      placeholder="Select start date"
+                      style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    label="Order End Date"
+                    name="OrderEndDate"
+                    rules={[]}
+                  >
+                    <DatePicker
+                      placeholder="Auto-filled when Done"
+                      style={{ width: '100%' }}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
             </SectionBox>
 
             {/* ── Products Section ── */}
