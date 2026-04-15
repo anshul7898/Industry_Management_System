@@ -5,6 +5,7 @@ import html2canvas from 'html2canvas';
 import {
   Table,
   Input,
+  InputNumber,
   Space,
   Button,
   Popconfirm,
@@ -224,6 +225,9 @@ const emptyProduct = {
   ProductCategory: undefined,
   ProductSize: undefined,
   ProductSizeCustom: undefined,
+  SizeWidth: undefined,
+  SizeHeight: undefined,
+  SizeGusset: undefined,
   RollSize: undefined,
   RollSizeCustom: undefined,
   BagMaterial: undefined,
@@ -437,14 +441,15 @@ const ProductSizeField = memo(
           ]);
           const isOther = selectedValue === OTHER_SIZE_VALUE;
           const handleSaveCustomSize = async () => {
-            const customVal = String(
-              form.getFieldValue([
-                'Products',
-                fieldName,
-                'ProductSizeCustom',
-              ]) || '',
-            ).trim();
-            if (!customVal || !sizeKey) return;
+            const w = form.getFieldValue(['Products', fieldName, 'SizeWidth']);
+            const h = form.getFieldValue(['Products', fieldName, 'SizeHeight']);
+            const g = form.getFieldValue(['Products', fieldName, 'SizeGusset']);
+            if (!w || !h || !g) {
+              message.warning('Please fill in Width, Height, and Gusset values.');
+              return;
+            }
+            if (!sizeKey) return;
+            const customVal = `${w} X ${h} X ${g}`;
             try {
               const res = await fetch(
                 `${API_BASE_URL}/api/sizes/${encodeURIComponent(sizeKey)}`,
@@ -464,7 +469,9 @@ const ProductSizeField = memo(
               updated[fieldName] = {
                 ...updated[fieldName],
                 ProductSize: customVal,
-                ProductSizeCustom: undefined,
+                SizeWidth: w,
+                SizeHeight: h,
+                SizeGusset: g,
               };
               form.setFieldValue('Products', updated);
               message.success(
@@ -475,7 +482,7 @@ const ProductSizeField = memo(
             }
           };
           return (
-            <Row gutter={8} align="middle" style={{ marginBottom: 0 }}>
+            <Row gutter={8} align="top" style={{ marginBottom: 0 }}>
               <Col flex={isOther ? '140px' : 'auto'}>
                 <Form.Item
                   label="Product Size"
@@ -497,13 +504,15 @@ const ProductSizeField = memo(
                     options={options}
                     disabled={disabled || (!sizeKey && !isOther)}
                     onChange={(val) => {
-                      if (val !== OTHER_SIZE_VALUE) {
-                        const products = form.getFieldValue('Products') || [];
-                        const updated = [...products];
-                        if (updated[fieldName]) {
-                          updated[fieldName].ProductSizeCustom = undefined;
-                          form.setFieldValue('Products', updated);
+                      const products = form.getFieldValue('Products') || [];
+                      const updated = [...products];
+                      if (updated[fieldName]) {
+                        if (val !== OTHER_SIZE_VALUE) {
+                          updated[fieldName].SizeWidth = undefined;
+                          updated[fieldName].SizeHeight = undefined;
+                          updated[fieldName].SizeGusset = undefined;
                         }
+                        form.setFieldValue('Products', updated);
                       }
                     }}
                   />
@@ -511,45 +520,116 @@ const ProductSizeField = memo(
               </Col>
               {isOther && (
                 <Col flex="auto">
-                  <Form.Item
-                    label="Custom Size"
-                    name={[fieldName, 'ProductSizeCustom']}
-                    rules={[
-                      {
-                        required: true,
-                        message: 'Please enter a custom size.',
-                      },
-                      {
-                        validator: (_, value) => {
-                          const v = String(value || '').trim();
-                          if (!v)
-                            return Promise.reject(
-                              new Error('Please enter a custom size.'),
-                            );
-                          return Promise.resolve();
-                        },
-                      },
-                    ]}
-                    style={{ marginBottom: 0 }}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      gap: 6,
+                      flexWrap: 'nowrap',
+                    }}
                   >
-                    <Input
-                      placeholder="e.g., 12x16"
-                      allowClear
+                    <div style={{ flex: 1 }}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: '#374151',
+                          marginBottom: 4,
+                        }}
+                      >
+                        Width
+                      </div>
+                      <Form.Item
+                        noStyle
+                        name={[fieldName, 'SizeWidth']}
+                      >
+                        <InputNumber
+                          placeholder="Width"
+                          min={0}
+                          precision={0}
+                          style={{ width: '100%' }}
+                          disabled={disabled}
+                        />
+                      </Form.Item>
+                    </div>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 14,
+                        paddingBottom: 6,
+                        color: '#374151',
+                      }}
+                    >
+                      X
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: '#374151',
+                          marginBottom: 4,
+                        }}
+                      >
+                        Height
+                      </div>
+                      <Form.Item
+                        noStyle
+                        name={[fieldName, 'SizeHeight']}
+                      >
+                        <InputNumber
+                          placeholder="Height"
+                          min={0}
+                          precision={0}
+                          style={{ width: '100%' }}
+                          disabled={disabled}
+                        />
+                      </Form.Item>
+                    </div>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        fontSize: 14,
+                        paddingBottom: 6,
+                        color: '#374151',
+                      }}
+                    >
+                      X
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          color: '#374151',
+                          marginBottom: 4,
+                        }}
+                      >
+                        Gusset
+                      </div>
+                      <Form.Item
+                        noStyle
+                        name={[fieldName, 'SizeGusset']}
+                      >
+                        <InputNumber
+                          placeholder="Gusset"
+                          min={0}
+                          precision={0}
+                          style={{ width: '100%' }}
+                          disabled={disabled}
+                        />
+                      </Form.Item>
+                    </div>
+                    <Button
+                      size="small"
+                      type="primary"
+                      style={{ marginBottom: 1, borderRadius: 4 }}
+                      onClick={handleSaveCustomSize}
                       disabled={disabled}
-                      onBlur={handleSaveCustomSize}
-                      onPressEnter={handleSaveCustomSize}
-                      suffix={
-                        <Button
-                          size="small"
-                          type="link"
-                          style={{ padding: 0, height: 'auto', fontSize: 12 }}
-                          onClick={handleSaveCustomSize}
-                        >
-                          Save
-                        </Button>
-                      }
-                    />
-                  </Form.Item>
+                    >
+                      Save
+                    </Button>
+                  </div>
                 </Col>
               )}
             </Row>
@@ -1355,6 +1435,9 @@ export default function Order() {
           ProductCategory: p.ProductCategory,
           ProductSize: p.ProductSize,
           ProductSizeCustom: undefined,
+          SizeWidth: p.Width ? parseInt(p.Width, 10) : undefined,
+          SizeHeight: p.Height ? parseInt(p.Height, 10) : undefined,
+          SizeGusset: p.Gusset ? parseInt(p.Gusset, 10) : undefined,
           RollSize: rs.selected,
           RollSizeCustom: rs.custom,
           BagMaterial: p.BagMaterial,
@@ -1548,6 +1631,9 @@ export default function Order() {
           ...emptyProduct,
           ...p,
           ProductSizeCustom: undefined,
+          SizeWidth: p.Width ? parseInt(p.Width, 10) : undefined,
+          SizeHeight: p.Height ? parseInt(p.Height, 10) : undefined,
+          SizeGusset: p.Gusset ? parseInt(p.Gusset, 10) : undefined,
           RollSize: rs.selected,
           RollSizeCustom: rs.custom ?? undefined,
           SheetColor: sc.selected,
@@ -1852,6 +1938,19 @@ export default function Order() {
     }
   };
 
+  const parseSizeDimensions = (sizeStr) => {
+    if (!sizeStr) return { Width: null, Height: null, Gusset: null };
+    const match = String(sizeStr).match(/^(\d+)\s*X\s*(\d+)\s*X\s*(\d+)$/i);
+    if (match) {
+      return {
+        Width: parseInt(match[1], 10),
+        Height: parseInt(match[2], 10),
+        Gusset: parseInt(match[3], 10),
+      };
+    }
+    return { Width: null, Height: null, Gusset: null };
+  };
+
   // ── UPDATED: include QuantityType in payload ──
   const buildProductsPayload = (products) =>
     (products || []).map((p) => {
@@ -1859,14 +1958,24 @@ export default function Order() {
       if (p.RollSize === OTHER_ROLL_SIZE_VALUE) {
         resolvedRollSize = String(p.RollSizeCustom || '').trim() || null;
       }
+      const finalSize =
+        p.ProductSize === OTHER_SIZE_VALUE
+          ? p.SizeWidth && p.SizeHeight && p.SizeGusset
+            ? `${p.SizeWidth} X ${p.SizeHeight} X ${p.SizeGusset}`
+            : null
+          : p.ProductSize || null;
+      const dims = parseSizeDimensions(finalSize);
+      const Width = dims.Width ?? (p.SizeWidth ? parseInt(p.SizeWidth, 10) : null);
+      const Height = dims.Height ?? (p.SizeHeight ? parseInt(p.SizeHeight, 10) : null);
+      const Gusset = dims.Gusset ?? (p.SizeGusset ? parseInt(p.SizeGusset, 10) : null);
       return {
         ProductType: p.ProductType,
         ProductId: p.ProductId,
         ProductCategory: p.ProductCategory,
-        ProductSize:
-          p.ProductSize === OTHER_SIZE_VALUE
-            ? String(p.ProductSizeCustom || '').trim() || null
-            : p.ProductSize,
+        ProductSize: finalSize,
+        Width,
+        Height,
+        Gusset,
         RollSize: resolvedRollSize || null,
         BagMaterial: p.BagMaterial,
         Quantity: normalizeNumericValue(p.Quantity),
