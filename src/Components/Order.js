@@ -38,11 +38,13 @@ import {
   EditOutlined,
   EyeOutlined,
   FilePdfOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import Navbar from './Navbar';
 import { API_BASE_URL } from '../config';
 import { getStateOptions } from '../data/states';
 import { getCityOptions } from '../data/cities';
+import * as XLSX from 'xlsx-js-style';
 
 const OTHER_OPTION_VALUE = '__OTHER__';
 const OTHER_SIZE_VALUE = '__OTHER_SIZE__';
@@ -2623,7 +2625,7 @@ export default function Order() {
           }}
           bodyStyle={{ padding: '14px 20px' }}
         >
-          <Row gutter={12} align="middle">
+          <Row gutter={12} align="middle" wrap={false}>
             <Col flex="auto">
               <Input.Search
                 allowClear
@@ -2636,7 +2638,172 @@ export default function Order() {
                 style={{ borderRadius: 8 }}
               />
             </Col>
-            <Col>
+            <Col flex="none" style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+              <Button
+                size="large"
+                icon={<DownloadOutlined />}
+                onClick={() => {
+                  const todoOrders = data.filter(
+                    (o) => o.OrderStatus === 'ToDo',
+                  );
+                  if (!todoOrders.length) {
+                    message.info('No orders with ToDo status to download.');
+                    return;
+                  }
+
+                  // Build one row per product
+                  const rows = [];
+                  todoOrders.forEach((order) => {
+                    const products = order.Products || [];
+                    if (products.length === 0) {
+                      rows.push({
+                        Size: '', Comment: '', Bag: '', GSM: '', Qty: '',
+                        Color: '', Handle: '',
+                        Party: order.Party_Name || '',
+                        Design: '', Plate: '', 'Plate ': '', Folding: '',
+                        Agent: order.agentName || '',
+                        Date: order.OrderStartDate || '',
+                        Contact: order.Mobile1 || '',
+                        City: order.City || '',
+                        Transport: order.TransportName || '',
+                      });
+                    } else {
+                      products.forEach((p) => {
+                        rows.push({
+                          Size: p.ProductSize || '',
+                          Comment: p.PrintingType || '',
+                          Bag: p.SheetColor || '',
+                          GSM: p.SheetGSM || '',
+                          Qty: p.Quantity || '',
+                          Color: p.Color || p.PrintColor || '',
+                          Handle: p.HandleColor || '',
+                          Party: order.Party_Name || '',
+                          Design: p.PlateBlockNumber || '',
+                          Plate: p.PlateType || '',
+                          'Plate ': p.PlateRate || '',
+                          Folding: p.BorderColor
+                            ? `${p.BorderColor}${p.BorderGSM ? ' ' + p.BorderGSM + 'gsm' : ''}`
+                            : '',
+                          Agent: order.agentName || '',
+                          Date: order.OrderStartDate || '',
+                          Contact: order.Mobile1 || '',
+                          City: order.City || '',
+                          Transport: order.TransportName || '',
+                        });
+                      });
+                    }
+                  });
+
+                  // Sort rows by Color field (same colors grouped together)
+                  rows.sort((a, b) => {
+                    const ca = String(a.Color || '').toLowerCase();
+                    const cb = String(b.Color || '').toLowerCase();
+                    if (ca < cb) return -1;
+                    if (ca > cb) return 1;
+                    return 0;
+                  });
+
+                  // Color name → hex mapping
+                  const COLOR_HEX = {
+                    black: '000000', brown: '8B4513', red: 'FF0000',
+                    green: '008000', blue: '0000FF', white: 'FFFFFF',
+                    orange: 'FFA500', yellow: 'FFFF00', pink: 'FFC0CB',
+                    magenta: 'FF00FF', cream: 'FFFDD0', beige: 'F5F5DC',
+                    gold: 'FFD700', silver: 'C0C0C0', ivory: 'FFFFF0',
+                    maroon: '800000', navy: '000080', cyan: '00FFFF',
+                    'navy blue': '000080', 'p-blue': '4169E1',
+                    'r-green': '228B22', 'l yellow': 'FFFFE0',
+                    'g yellow': 'ADFF2F',
+                  };
+                  const getColorHex = (name) => {
+                    if (!name) return null;
+                    const key = String(name).trim().toLowerCase();
+                    if (COLOR_HEX[key]) return COLOR_HEX[key];
+                    // try partial match (e.g. "Cyan / Black" → cyan)
+                    for (const [k, v] of Object.entries(COLOR_HEX)) {
+                      if (key.includes(k)) return v;
+                    }
+                    return null;
+                  };
+
+                  const ws = XLSX.utils.json_to_sheet(rows);
+                  const wb = XLSX.utils.book_new();
+                  XLSX.utils.book_append_sheet(wb, ws, 'Printing');
+
+                  // Column widths — narrow enough to trigger text wrapping
+                  // Order: Size, Comment, Bag, GSM, Qty, Color, Handle,
+                  //        Party, Design, Plate, Plate(rate), Folding,
+                  //        Agent, Date, Contact, City, Transport
+                  const colWidths = [
+                    { wch: 10 }, { wch: 8 },  { wch: 10 }, { wch: 5 },
+                    { wch: 6 },  { wch: 10 }, { wch: 10 }, { wch: 18 },
+                    { wch: 6 },  { wch: 6 },  { wch: 7 },  { wch: 14 },
+                    { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 12 },
+                    { wch: 12 },
+                  ];
+                  ws['!cols'] = colWidths;
+
+                  // Style constants
+                  const thinBorder = {
+                    top: { style: 'thin', color: { rgb: '000000' } },
+                    bottom: { style: 'thin', color: { rgb: '000000' } },
+                    left: { style: 'thin', color: { rgb: '000000' } },
+                    right: { style: 'thin', color: { rgb: '000000' } },
+                  };
+                  const headerStyle = {
+                    font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 },
+                    fill: { fgColor: { rgb: '4472C4' } },
+                    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+                    border: thinBorder,
+                  };
+                  const cellStyle = {
+                    border: thinBorder,
+                    alignment: { vertical: 'center', wrapText: true },
+                  };
+
+                  // Determine range
+                  const range = XLSX.utils.decode_range(ws['!ref']);
+                  const headers = Object.keys(rows[0] || {});
+                  const colorColIdx = headers.indexOf('Color');
+
+                  for (let R = range.s.r; R <= range.e.r; R++) {
+                    for (let C = range.s.c; C <= range.e.c; C++) {
+                      const addr = XLSX.utils.encode_cell({ r: R, c: C });
+                      if (!ws[addr]) ws[addr] = { v: '', t: 's' };
+                      if (R === 0) {
+                        // Header row
+                        ws[addr].s = headerStyle;
+                      } else if (C === colorColIdx) {
+                        // Color column — fill with the actual color
+                        const hex = getColorHex(ws[addr].v);
+                        if (hex) {
+                          const needsDarkText = ['FFFFFF', 'FFFFE0', 'FFFFF0', 'FFFDD0', 'F5F5DC', 'FFFF00', 'ADFF2F', 'FFC0CB', 'FFD700', 'C0C0C0'].includes(hex);
+                          ws[addr].s = {
+                            ...cellStyle,
+                            fill: { fgColor: { rgb: hex } },
+                            font: { color: { rgb: needsDarkText ? '000000' : 'FFFFFF' }, bold: true },
+                          };
+                        } else {
+                          ws[addr].s = cellStyle;
+                        }
+                      } else {
+                        ws[addr].s = cellStyle;
+                      }
+                    }
+                  }
+
+                  XLSX.writeFile(wb, `Printing_Schedule_${new Date().toISOString().slice(0, 10)}.xlsx`);
+                  message.success(`Downloaded ${rows.length} product row(s) from ${todoOrders.length} ToDo order(s).`);
+                }}
+                style={{
+                  borderRadius: 8,
+                  fontWeight: 600,
+                  borderColor: '#52c41a',
+                  color: '#52c41a',
+                }}
+              >
+                Download Printing Schedule
+              </Button>
               <Button
                 size="large"
                 icon={<ReloadOutlined />}
@@ -2646,8 +2813,6 @@ export default function Order() {
               >
                 Refresh
               </Button>
-            </Col>
-            <Col>
               <Button
                 type="primary"
                 size="large"
