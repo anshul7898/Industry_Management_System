@@ -112,7 +112,7 @@ const DROPDOWN_OPTIONS = {
     { label: 'Flexo', value: 'Flexo' },
     { label: 'Offset', value: 'Offset' },
     { label: 'Screen', value: 'Screen' },
-    { label: 'Roto Gravaier', value: 'Roto Gravaier' },
+    { label: 'Roto Gravure', value: 'Roto Gravure' },
   ],
   sheetColors: [
     { label: 'White', value: 'White' },
@@ -157,9 +157,9 @@ const DROPDOWN_OPTIONS = {
     { label: 'Other', value: OTHER_OPTION_VALUE },
   ],
   printColors: [
-    { label: 'Single ', value: 'Single ' },
+    { label: 'Single', value: 'Single' },
     { label: '2 Colour', value: '2 Colour' },
-    { label: '3 Colour ', value: '3 Colour ' },
+    { label: '3 Colour', value: '3 Colour' },
     { label: 'Multi Colour', value: 'Multi Colour' },
   ],
   sheetGSMs: [
@@ -498,6 +498,7 @@ const ProductSizeField = memo(
                       : []
                   }
                   style={{ marginBottom: 0 }}
+                  extra={!sizeKey && !isOther ? 'Select Product Type & Category first' : undefined}
                 >
                   <Select
                     placeholder="Select Product Size"
