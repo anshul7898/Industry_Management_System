@@ -315,6 +315,57 @@ const SubHeading = ({ children }) => (
   </div>
 );
 
+/**
+ * Keyboard-accessible Select: pressing Enter when the dropdown is closed
+ * opens it (instead of submitting the form), while Tab still moves focus
+ * to the next field as expected.
+ */
+const KeyboardSelect = ({ onKeyDown, open: openProp, onOpenChange: onOpenChangeProp, ...props }) => {
+  const [open, setOpen] = useState(openProp ?? false);
+  return (
+    <Select
+      {...props}
+      open={open}
+      onOpenChange={(vis) => {
+        setOpen(vis);
+        onOpenChangeProp?.(vis);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && !open) {
+          e.preventDefault();
+          setOpen(true);
+        }
+        onKeyDown?.(e);
+      }}
+    />
+  );
+};
+
+/**
+ * Keyboard-accessible DatePicker: pressing Enter when the picker is closed
+ * opens the calendar panel.
+ */
+const KeyboardDatePicker = ({ onKeyDown, open: openProp, onOpenChange: onOpenChangeProp, ...props }) => {
+  const [open, setOpen] = useState(openProp ?? false);
+  return (
+    <DatePicker
+      {...props}
+      open={open}
+      onOpenChange={(vis) => {
+        setOpen(vis);
+        onOpenChangeProp?.(vis);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && !open) {
+          e.preventDefault();
+          setOpen(true);
+        }
+        onKeyDown?.(e);
+      }}
+    />
+  );
+};
+
 const OtherSelectField = ({
   fieldName,
   selectFieldKey,
@@ -353,7 +404,7 @@ const OtherSelectField = ({
               }
               style={{ marginBottom: 0 }}
             >
-              <Select
+              <KeyboardSelect
                 placeholder={`Select ${label}`}
                 options={options}
                 disabled={disabled}
@@ -502,7 +553,7 @@ const ProductSizeField = memo(
                   style={{ marginBottom: 0 }}
                   extra={!sizeKey && !isOther ? 'Select Product Type & Category first' : undefined}
                 >
-                  <Select
+                  <KeyboardSelect
                     placeholder="Select Product Size"
                     options={options}
                     disabled={disabled || (!sizeKey && !isOther)}
@@ -739,7 +790,7 @@ const RollSizeField = memo(
                   }
                   style={{ marginBottom: 0 }}
                 >
-                  <Select
+                  <KeyboardSelect
                     placeholder="Select Roll Size"
                     options={options}
                     disabled={disabled}
@@ -2891,7 +2942,7 @@ export default function Order() {
                 { required: true, message: 'Please select an order type' },
               ]}
             >
-              <Select
+              <KeyboardSelect
                 placeholder="Choose order type"
                 options={DROPDOWN_OPTIONS.orderTypes}
                 size="large"
@@ -2950,7 +3001,7 @@ export default function Order() {
               name="agentId"
               rules={[{ required: true, message: 'Please select an agent.' }]}
             >
-              <Select
+              <KeyboardSelect
                 placeholder="Search and select an agent"
                 options={agentOptions}
                 showSearch
@@ -3114,7 +3165,7 @@ export default function Order() {
               name="agentId"
               rules={[{ required: true, message: 'Please select an agent.' }]}
             >
-              <Select
+              <KeyboardSelect
                 placeholder="Search and select an agent"
                 options={agentOptions}
                 showSearch
@@ -3772,7 +3823,7 @@ export default function Order() {
                 name="AgentId"
                 rules={[{ required: true, message: 'Please select an Agent.' }]}
               >
-                <Select
+                <KeyboardSelect
                   placeholder="Select Agent"
                   options={agentOptions}
                   showSearch
@@ -3814,7 +3865,7 @@ export default function Order() {
                         },
                       ]}
                     >
-                      <Select
+                      <KeyboardSelect
                         placeholder="Choose existing party"
                         options={partyOptions}
                         value={selectedPartyId}
@@ -3871,7 +3922,7 @@ export default function Order() {
                     name="State"
                     rules={[{ required: true, message: 'Please enter State.' }]}
                   >
-                    <Select
+                    <KeyboardSelect
                       placeholder="Select State"
                       options={stateOptions}
                       showSearch
@@ -3890,7 +3941,7 @@ export default function Order() {
                     name="City"
                     rules={[{ required: true, message: 'Please enter City.' }]}
                   >
-                    <Select
+                    <KeyboardSelect
                       placeholder="Select City"
                       options={cityOptions}
                       showSearch
@@ -4069,7 +4120,7 @@ export default function Order() {
                     name="OrderStatus"
                     rules={[{ required: true, message: 'Please select Order Status.' }]}
                   >
-                    <Select
+                    <KeyboardSelect
                       placeholder="Select Order Status"
                       options={DROPDOWN_OPTIONS.orderStatuses}
                       onChange={handleOrderStatusChange}
@@ -4082,7 +4133,7 @@ export default function Order() {
                     name="OrderStartDate"
                     rules={[{ required: true, message: 'Please select Order Start Date.' }]}
                   >
-                    <DatePicker
+                    <KeyboardDatePicker
                       placeholder="Select start date"
                       style={{ width: '100%' }}
                     />
@@ -4094,7 +4145,7 @@ export default function Order() {
                     name="OrderEndDate"
                     rules={[]}
                   >
-                    <DatePicker
+                    <KeyboardDatePicker
                       placeholder="Auto-filled when Done"
                       style={{ width: '100%' }}
                     />
@@ -4206,7 +4257,7 @@ export default function Order() {
                                         },
                                       ]}
                                     >
-                                      <Select
+                                      <KeyboardSelect
                                         placeholder="Select Product Type"
                                         options={DROPDOWN_OPTIONS.productTypes}
                                         onChange={() =>
@@ -4230,7 +4281,7 @@ export default function Order() {
                                           },
                                         ]}
                                       >
-                                        <Select
+                                        <KeyboardSelect
                                           placeholder="Select Product Category"
                                           options={
                                             DROPDOWN_OPTIONS.productCategory
@@ -4288,7 +4339,7 @@ export default function Order() {
                                         },
                                       ]}
                                     >
-                                      <Select
+                                      <KeyboardSelect
                                         placeholder="Select Bag Material"
                                         options={DROPDOWN_OPTIONS.bagMaterials}
                                       />
@@ -4307,7 +4358,7 @@ export default function Order() {
                                         },
                                       ]}
                                     >
-                                      <Select
+                                      <KeyboardSelect
                                         placeholder="Select Type"
                                         options={DROPDOWN_OPTIONS.quantityTypes}
                                         onChange={() =>
@@ -4370,7 +4421,7 @@ export default function Order() {
                                         },
                                       ]}
                                     >
-                                      <Select
+                                      <KeyboardSelect
                                         placeholder="Select Sheet GSM"
                                         options={DROPDOWN_OPTIONS.sheetGSMs}
                                       />
@@ -4406,7 +4457,7 @@ export default function Order() {
                                             },
                                           ]}
                                         >
-                                          <Select
+                                          <KeyboardSelect
                                             placeholder="Select Border GSM"
                                             options={
                                               DROPDOWN_OPTIONS.borderGSMs
@@ -4445,7 +4496,7 @@ export default function Order() {
                                         },
                                       ]}
                                     >
-                                      <Select
+                                      <KeyboardSelect
                                         placeholder="Select Handle Type"
                                         options={DROPDOWN_OPTIONS.handleTypes}
                                       />
@@ -4484,7 +4535,7 @@ export default function Order() {
                                         },
                                       ]}
                                     >
-                                      <Select
+                                      <KeyboardSelect
                                         placeholder="Select Handle GSM"
                                         options={DROPDOWN_OPTIONS.handleGSMs}
                                       />
@@ -4507,7 +4558,7 @@ export default function Order() {
                                         },
                                       ]}
                                     >
-                                      <Select
+                                      <KeyboardSelect
                                         placeholder="Select Printing Type"
                                         options={DROPDOWN_OPTIONS.printingTypes}
                                       />
@@ -4525,7 +4576,7 @@ export default function Order() {
                                         },
                                       ]}
                                     >
-                                      <Select
+                                      <KeyboardSelect
                                         placeholder="Select Print Colour"
                                         options={DROPDOWN_OPTIONS.printColors}
                                       />
@@ -4563,7 +4614,7 @@ export default function Order() {
                                       label="Design Style"
                                       name={[field.name, 'DesignStyle']}
                                     >
-                                      <Select
+                                      <KeyboardSelect
                                         placeholder="Select Design Style"
                                         options={DROPDOWN_OPTIONS.designStyles}
                                         allowClear
@@ -4591,7 +4642,7 @@ export default function Order() {
                                       label="Number of Plate"
                                       name={[field.name, 'PlateBlockNumber']}
                                     >
-                                      <Select
+                                      <KeyboardSelect
                                         placeholder="Select Number of Plate"
                                         options={
                                           DROPDOWN_OPTIONS.plateBlockNumbers
@@ -4995,7 +5046,7 @@ export default function Order() {
                     style={{ marginBottom: 0 }}
                     initialValue={0}
                   >
-                    <Select
+                    <KeyboardSelect
                       options={DROPDOWN_OPTIONS.gstOptions}
                       onChange={recalcTotalAmount}
                       style={{
