@@ -35,12 +35,9 @@ const API_BASE_URL = `${BASE_URL}/api`;
 
 const DROPDOWN_OPTIONS = {
   bagMaterial: [
-    { label: 'Cotton Canvas', value: 'Cotton Canvas' },
-    { label: 'Cotton Blend', value: 'Cotton Blend' },
-    { label: 'Jute', value: 'Jute' },
-    { label: 'Organic Cotton', value: 'Organic Cotton' },
-    { label: 'Recycled Polyester', value: 'Recycled Polyester' },
-    { label: 'Linen', value: 'Linen' },
+    { label: 'Non-woven', value: 'Non-woven' },
+    { label: 'Laminated Non Woven', value: 'Laminated Non Woven' },
+    { label: 'Bopp', value: 'Bopp' },
   ],
   sheetGSM: [
     { label: '200', value: 200 },
@@ -123,23 +120,16 @@ const DROPDOWN_OPTIONS = {
     { label: 'Gray', value: 'Gray' },
   ],
   printingType: [
-    { label: 'Screen Printing', value: 'Screen Printing' },
-    { label: 'Digital Printing', value: 'Digital Printing' },
-    { label: 'Flexography', value: 'Flexography' },
-    { label: 'Offset Printing', value: 'Offset Printing' },
-    { label: 'Embroidery', value: 'Embroidery' },
-    { label: 'Stamping', value: 'Stamping' },
+    { label: 'Flexo', value: 'Flexo' },
+    { label: 'Offset', value: 'Offset' },
+    { label: 'Screen', value: 'Screen' },
+    { label: 'Roto Gravure', value: 'Roto Gravure' },
   ],
   printColor: [
-    { label: 'Navy Blue', value: 'Navy Blue' },
-    { label: 'Black', value: 'Black' },
-    { label: 'White', value: 'White' },
-    { label: 'Red', value: 'Red' },
-    { label: 'Gold', value: 'Gold' },
-    { label: 'Silver', value: 'Silver' },
-    { label: 'Green', value: 'Green' },
-    { label: 'Brown', value: 'Brown' },
-    { label: 'Maroon', value: 'Maroon' },
+    { label: 'Single', value: 'Single' },
+    { label: '2 Colour', value: '2 Colour' },
+    { label: '3 Colour', value: '3 Colour' },
+    { label: 'Multi Colour', value: 'Multi Colour' },
   ],
 };
 
