@@ -497,19 +497,21 @@ const ProductSizeField = memo(
             const w = form.getFieldValue(['Products', fieldName, 'SizeWidth']);
             const h = form.getFieldValue(['Products', fieldName, 'SizeHeight']);
             const g = form.getFieldValue(['Products', fieldName, 'SizeGusset']);
-            if (!w || !h || !g) {
-              message.warning('Please fill in Width, Height, and Gusset values.');
+            if (!w || !h) {
+              message.warning('Please fill in Width and Height values.');
               return;
             }
             if (!sizeKey) return;
-            const customVal = `${w} X ${h} X ${g}`;
+            const customVal = g ? `${w} X ${h} X ${g}` : `${w} X ${h}`;
             try {
+              const sizePayload = { size: customVal, width: Number(w), height: Number(h) };
+              if (g) sizePayload.gusset = Number(g);
               const res = await fetch(
                 `${API_BASE_URL}/api/sizes/${encodeURIComponent(sizeKey)}`,
                 {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ size: customVal }),
+                  body: JSON.stringify(sizePayload),
                 },
               );
               if (!res.ok) {
@@ -1994,12 +1996,20 @@ export default function Order() {
 
   const parseSizeDimensions = (sizeStr) => {
     if (!sizeStr) return { Width: null, Height: null, Gusset: null };
-    const match = String(sizeStr).match(/^(\d+)\s*X\s*(\d+)\s*X\s*(\d+)$/i);
-    if (match) {
+    const match3 = String(sizeStr).match(/^(\d+)\s*X\s*(\d+)\s*X\s*(\d+)$/i);
+    if (match3) {
       return {
-        Width: parseInt(match[1], 10),
-        Height: parseInt(match[2], 10),
-        Gusset: parseInt(match[3], 10),
+        Width: parseInt(match3[1], 10),
+        Height: parseInt(match3[2], 10),
+        Gusset: parseInt(match3[3], 10),
+      };
+    }
+    const match2 = String(sizeStr).match(/^(\d+)\s*X\s*(\d+)$/i);
+    if (match2) {
+      return {
+        Width: parseInt(match2[1], 10),
+        Height: parseInt(match2[2], 10),
+        Gusset: null,
       };
     }
     return { Width: null, Height: null, Gusset: null };
@@ -2014,8 +2024,10 @@ export default function Order() {
       }
       const finalSize =
         p.ProductSize === OTHER_SIZE_VALUE
-          ? p.SizeWidth && p.SizeHeight && p.SizeGusset
-            ? `${p.SizeWidth} X ${p.SizeHeight} X ${p.SizeGusset}`
+          ? p.SizeWidth && p.SizeHeight
+            ? p.SizeGusset
+              ? `${p.SizeWidth} X ${p.SizeHeight} X ${p.SizeGusset}`
+              : `${p.SizeWidth} X ${p.SizeHeight}`
             : null
           : p.ProductSize || null;
       const dims = parseSizeDimensions(finalSize);
