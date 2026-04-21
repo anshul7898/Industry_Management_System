@@ -40,6 +40,7 @@ import {
   FilePdfOutlined,
   DownloadOutlined,
   CalculatorOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import Navbar from './Navbar';
 import { API_BASE_URL } from '../config';
@@ -933,6 +934,8 @@ export default function Order() {
   const [repeatOrderSearch, setRepeatOrderSearch] = useState('');
   const [isRepeatOrder, setIsRepeatOrder] = useState(false);
   const [repeatOrderAgentForm] = Form.useForm();
+  const [submitConfirmModalOpen, setSubmitConfirmModalOpen] = useState(false);
+  const [pendingFormValues, setPendingFormValues] = useState(null);
   const [materialCalcModal, setMaterialCalcModal] = useState({ open: false, meters: null, kg: null, productLabel: '' });
 
   const [form] = Form.useForm();
@@ -2380,6 +2383,24 @@ export default function Order() {
           return;
         }
       }
+      // If repeat order, show confirmation modal
+      if (isRepeatOrder && modalMode === 'add') {
+        setPendingFormValues(values);
+        setSubmitConfirmModalOpen(true);
+        setLoading(false);
+        return;
+      }
+      // Otherwise proceed with submission
+      await submitOrder(values);
+    } catch (err) {
+      if (err?.message) message.error(err.message);
+      setLoading(false);
+    }
+  };
+
+  const submitOrder = async (values) => {
+    try {
+      setLoading(true);
       if (modalMode === 'add') {
         const created = await handleAdd(values);
         if (values.partyMode === 'new') {
@@ -5321,6 +5342,41 @@ export default function Order() {
               </Row>
             </div>
           </Form>
+        </Modal>
+
+        {/* ── Repeat Order Confirmation Modal ── */}
+        <Modal
+          title="Confirm Order Submission"
+          open={submitConfirmModalOpen}
+          onCancel={() => {
+            setSubmitConfirmModalOpen(false);
+            setPendingFormValues(null);
+          }}
+          onOk={() => {
+            if (pendingFormValues) {
+              submitOrder(pendingFormValues);
+              setSubmitConfirmModalOpen(false);
+              setPendingFormValues(null);
+            }
+          }}
+          okText="Submit Order"
+          cancelText="Cancel"
+          okButtonProps={{ style: { borderRadius: 8, fontWeight: 600 } }}
+          cancelButtonProps={{ style: { borderRadius: 8 } }}
+          centered
+          width={500}
+        >
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <ExclamationCircleOutlined
+              style={{ fontSize: 48, color: '#faad14', marginBottom: 16 }}
+            />
+            <p style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>
+              Please check all the details properly before submitting the order.
+            </p>
+            <p style={{ fontSize: 14, color: '#666' }}>
+              Make sure all product quantities, specifications, and customer information are correct.
+            </p>
+          </div>
         </Modal>
       </div>
     </div>
