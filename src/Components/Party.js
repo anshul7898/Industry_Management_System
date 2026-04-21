@@ -119,14 +119,6 @@ export default function Party() {
       : Promise.reject(new Error('Mobile number should be 10 digits'));
   };
 
-  // ── NEW: Order ID must be numeric only ──────────────────────────
-  const validateOrderId = (_, value) => {
-    if (!value) return Promise.resolve();
-    return /^[0-9]+$/.test(String(value))
-      ? Promise.resolve()
-      : Promise.reject(new Error('Order ID must contain numbers only'));
-  };
-
   // ---------------- FETCH ----------------
   const isActiveRecord = (record) =>
     record?.deleted !== true && String(record?.deleted).toLowerCase() !== 'true';
@@ -253,7 +245,6 @@ export default function Party() {
       state: record.state,
       pincode: record.pincode,
       agentId: record.agentId,
-      orderId: record.orderId,
     });
   };
 
@@ -317,7 +308,6 @@ export default function Party() {
         email: values.email || null,
         mobile1: values.mobile1 || null,
         mobile2: values.mobile2 || null,
-        orderId: values.orderId || null,
       };
 
       if (modalMode === 'add') {
@@ -560,22 +550,6 @@ export default function Party() {
         String(a.pincode || '').localeCompare(String(b.pincode || '')),
       render: (v) =>
         v ? <span style={{ fontFamily: 'monospace' }}>{v}</span> : '-',
-    },
-    {
-      title: 'Order ID',
-      dataIndex: 'orderId',
-      key: 'orderId',
-      width: 120,
-      sorter: (a, b) =>
-        String(a.orderId || '').localeCompare(String(b.orderId || '')),
-      render: (text) =>
-        text ? (
-          <Tag color="cyan" style={{ fontSize: 11 }}>
-            {truncateText(text, 15)}
-          </Tag>
-        ) : (
-          '-'
-        ),
     },
     {
       title: 'Agent',
@@ -1031,21 +1005,6 @@ export default function Party() {
                         .toLowerCase()
                         .includes(input.toLowerCase())
                     }
-                  />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                {/* ── Order ID: numbers only ── */}
-                <Form.Item
-                  name="orderId"
-                  label="Order ID"
-                  rules={isViewMode ? [] : [{ validator: validateOrderId }]}
-                >
-                  <Input
-                    placeholder="Enter numeric order ID (optional)"
-                    disabled={isViewMode || modalMode === 'edit'}
-                    onInput={handleNumbersOnlyInput}
-                    style={{ borderRadius: 8, fontFamily: 'monospace' }}
                   />
                 </Form.Item>
               </Col>
