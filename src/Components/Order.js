@@ -502,6 +502,19 @@ const ProductSizeField = memo(
               message.warning('Please fill in Width and Height values.');
               return;
             }
+            // Validate size constraints
+            if (Number(h) > 35) {
+              message.error('Height value should not be greater than 35');
+              return;
+            }
+            if (Number(w) > 30) {
+              message.error('Width value should not be greater than 30');
+              return;
+            }
+            if (g && Number(g) > 20) {
+              message.error('Gusset value should not be greater than 20');
+              return;
+            }
             if (!sizeKey) return;
             const customVal = g ? `${w} X ${h} X ${g}` : `${w} X ${h}`;
             try {
@@ -732,6 +745,13 @@ const RollSizeField = memo(
                 '',
             ).trim();
             if (!rawVal) return;
+            // Extract numeric value from the input
+            const numericVal = parseFloat(rawVal);
+            // Validate roll size constraint
+            if (numericVal > 63) {
+              message.error('Roll size should not be greater than 63 inches');
+              return;
+            }
             // Append apostrophe if not already present
             const customVal = rawVal.endsWith("'") ? rawVal : `${rawVal}'`;
             try {
