@@ -5198,7 +5198,7 @@ export default function Order() {
                           color: '#1677ff',
                         }}
                       >
-                        GST (on Total Amount)
+                        GST (%)
                       </span>
                     }
                     name="OrderGST"
@@ -5224,7 +5224,7 @@ export default function Order() {
                           color: '#ff4d4f',
                         }}
                       >
-                        GST Amount
+                        GST
                       </span>
                     }
                     name="OrderGSTAmount"
@@ -5268,7 +5268,7 @@ export default function Order() {
                           color: '#13c2c2',
                         }}
                       >
-                        Total Amount + GST
+                        Final Amount (Including GST)
                       </span>
                     }
                     name="FinalTotalAmount"
