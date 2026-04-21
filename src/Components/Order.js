@@ -39,6 +39,7 @@ import {
   EyeOutlined,
   FilePdfOutlined,
   DownloadOutlined,
+  CalculatorOutlined,
 } from '@ant-design/icons';
 import Navbar from './Navbar';
 import { API_BASE_URL } from '../config';
@@ -202,7 +203,7 @@ const DROPDOWN_OPTIONS = {
   orderStatuses: [
     { label: 'ToDo', value: 'ToDo' },
     { label: 'In-Progress', value: 'In-Progress' },
-    { label: 'Done', value: 'Done' },
+    { label: 'Delivered', value: 'Delivered' },
   ],
   designStyles: [
     { label: 'Same Front/Back', value: 'Same Front/Back' },
@@ -726,11 +727,13 @@ const RollSizeField = memo(
           ]);
           const isOther = selectedValue === OTHER_ROLL_SIZE_VALUE;
           const handleSaveCustomRollSize = async () => {
-            const customVal = String(
+            const rawVal = String(
               form.getFieldValue(['Products', fieldName, 'RollSizeCustom']) ||
                 '',
             ).trim();
-            if (!customVal) return;
+            if (!rawVal) return;
+            // Append apostrophe if not already present
+            const customVal = rawVal.endsWith("'") ? rawVal : `${rawVal}'`;
             try {
               const res = await fetch(`${API_BASE_URL}/api/roll-sizes`, {
                 method: 'POST',
@@ -910,6 +913,7 @@ export default function Order() {
   const [repeatOrderSearch, setRepeatOrderSearch] = useState('');
   const [isRepeatOrder, setIsRepeatOrder] = useState(false);
   const [repeatOrderAgentForm] = Form.useForm();
+  const [materialCalcModal, setMaterialCalcModal] = useState({ open: false, meters: null, kg: null, productLabel: '' });
 
   const [form] = Form.useForm();
   const [orderTypeForm] = Form.useForm();
@@ -1141,8 +1145,8 @@ export default function Order() {
   }, [loadSizes, loadRollSizes]);
 
   const handleOrderStatusChange = (value) => {
-    if (value === 'Done') {
-      // Auto-set OrderEndDate to today when status is "Done"
+    if (value === 'Delivered') {
+      // Auto-set OrderEndDate to today when status is "Delivered"
       const currentEndDate = form.getFieldValue('OrderEndDate');
       if (!currentEndDate) {
         form.setFieldValue('OrderEndDate', dayjs());
@@ -1992,6 +1996,44 @@ export default function Order() {
       );
       return false;
     }
+  };
+
+  const handleCalculateMaterial = (productIdx) => {
+    const products = form.getFieldValue('Products') || [];
+    const p = products[productIdx] || {};
+    const quantity = Number(p.Quantity);
+    if (!quantity || quantity <= 0) {
+      message.warning('Please enter a valid Quantity before calculating.');
+      return;
+    }
+    // Resolve Width: from custom SizeWidth or parse from selected size string
+    let width = null;
+    if (p.ProductSize === OTHER_SIZE_VALUE) {
+      width = p.SizeWidth ? Number(p.SizeWidth) : null;
+    } else {
+      const dims = parseSizeDimensions(p.ProductSize);
+      width = dims.Width;
+    }
+    if (!width || width <= 0) {
+      message.warning('Could not determine Width from the selected Product Size.');
+      return;
+    }
+    const meters = (width * quantity) / 39.37;
+
+    // KG calculation: Quantity × Width × RollSize × GSM × 13 / 20000000
+    let kg = null;
+    const gsm = Number(p.SheetGSM);
+    // RollSize may be stored as "33'" or "33" — strip apostrophe and parse
+    const rollSizeRaw = String(
+      p.RollSize === OTHER_ROLL_SIZE_VALUE ? (p.RollSizeCustom || '') : (p.RollSize || '')
+    ).replace(/'/g, '').trim();
+    const rollSize = parseFloat(rollSizeRaw);
+    if (rollSize > 0 && gsm > 0) {
+      kg = (quantity * width * rollSize * gsm * 13) / 20000000;
+    }
+
+    const productLabel = `Product ${productIdx + 1}`;
+    setMaterialCalcModal({ open: true, meters, kg, productLabel });
   };
 
   const parseSizeDimensions = (sizeStr) => {
@@ -3417,7 +3459,7 @@ export default function Order() {
                     {viewingOrder.OrderStatus ? (
                       <Tag
                         color={
-                          viewingOrder.OrderStatus === 'Done'
+                          viewingOrder.OrderStatus === 'Delivered'
                             ? 'green'
                             : viewingOrder.OrderStatus === 'In-Progress'
                             ? 'orange'
@@ -3748,6 +3790,73 @@ export default function Order() {
               </SectionBox>
             </div>
           )}
+        </Modal>
+
+        {/* ── Material Calculation Result Modal ── */}
+        <Modal
+          title={
+            <Space>
+              <CalculatorOutlined style={{ color: '#1677ff' }} />
+              <span>Material Required — {materialCalcModal.productLabel}</span>
+            </Space>
+          }
+          open={materialCalcModal.open}
+          onCancel={() => setMaterialCalcModal({ open: false, meters: null, kg: null, productLabel: '' })}
+          footer={
+            <Button
+              type="primary"
+              onClick={() => setMaterialCalcModal({ open: false, meters: null, kg: null, productLabel: '' })}
+            >
+              Close
+            </Button>
+          }
+          centered
+          width={400}
+        >
+          <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div
+              style={{
+                background: '#f0f7ff',
+                border: '1px solid #91caff',
+                borderRadius: 8,
+                padding: '16px 20px',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>
+                Material in Meters Required
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#1677ff' }}>
+                {materialCalcModal.meters !== null
+                  ? `${materialCalcModal.meters.toFixed(2)} m`
+                  : '—'}
+              </div>
+              <div style={{ fontSize: 11, color: '#999', marginTop: 6 }}>
+                Formula: Width × Quantity ÷ 39.37
+              </div>
+            </div>
+            <div
+              style={{
+                background: '#f6ffed',
+                border: '1px solid #b7eb8f',
+                borderRadius: 8,
+                padding: '16px 20px',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>
+                Material in KG Required
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: '#52c41a' }}>
+                {materialCalcModal.kg !== null
+                  ? `${materialCalcModal.kg.toFixed(2)} kg`
+                  : <span style={{ fontSize: 14, color: '#999' }}>Enter Roll Size &amp; Sheet GSM to calculate</span>}
+              </div>
+              <div style={{ fontSize: 11, color: '#999', marginTop: 6 }}>
+                Formula: Quantity × Width × Roll Size × GSM × 13 ÷ 20,000,000
+              </div>
+            </div>
+          </div>
         </Modal>
 
         {/* ── Add / Edit Order Modal ── */}
@@ -4158,7 +4267,7 @@ export default function Order() {
                     rules={[]}
                   >
                     <KeyboardDatePicker
-                      placeholder="Auto-filled when Done"
+                      placeholder="Auto-filled when Delivered"
                       style={{ width: '100%' }}
                     />
                   </Form.Item>
@@ -4451,6 +4560,42 @@ export default function Order() {
                                     />
                                   </Col>
                                 </Row>
+                                <Form.Item
+                                  noStyle
+                                  shouldUpdate={(prev, cur) =>
+                                    prev.Products?.[idx]?.QuantityType !==
+                                    cur.Products?.[idx]?.QuantityType
+                                  }
+                                >
+                                  {() => {
+                                    const qtyType = form.getFieldValue([
+                                      'Products',
+                                      idx,
+                                      'QuantityType',
+                                    ]);
+                                    const isPieces = qtyType === 'Pieces';
+                                    return (
+                                      <Row style={{ marginBottom: 16 }}>
+                                        <Col span={24}>
+                                          <Button
+                                            type="default"
+                                            icon={<CalculatorOutlined />}
+                                            disabled={!isPieces}
+                                            style={{
+                                              borderRadius: 6,
+                                              fontWeight: 600,
+                                              borderColor: isPieces ? '#1677ff' : undefined,
+                                              color: isPieces ? '#1677ff' : undefined,
+                                            }}
+                                            onClick={() => handleCalculateMaterial(idx)}
+                                          >
+                                            Calculate Material Required
+                                          </Button>
+                                        </Col>
+                                      </Row>
+                                    );
+                                  }}
+                                </Form.Item>
 
                                 {/* Border Information (Stitching only) */}
                                 {!isMachine && (
