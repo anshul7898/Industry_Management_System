@@ -450,7 +450,7 @@ const OtherSelectField = ({
                 <Input
                   placeholder={`Type custom ${label}…`}
                   disabled={disabled}
-                  allowClear
+                    placeholder="Search by Order ID, Party Name, Contact Person, Mobile, Email, or Agent"
                 />
               </Form.Item>
             </Col>
@@ -2560,6 +2560,8 @@ export default function Order() {
         row.OrderId,
         row.Party_Name,
         row.Contact_Person1,
+        row.Mobile1,
+        row.Mobile2,
         row.Email,
         row.agentName,
       ].some((v) =>
