@@ -2460,6 +2460,25 @@ export default function Order() {
       ),
     },
     {
+      title: 'Order Status',
+      dataIndex: 'OrderStatus',
+      key: 'OrderStatus',
+      width: 130,
+      sorter: (a, b) => compareText(a, b, 'OrderStatus'),
+      sortDirections: ['ascend', 'descend'],
+      render: (status) => {
+        let color = 'default';
+        if (status === 'ToDo') color = 'volcano';
+        else if (status === 'In-Progress') color = 'gold';
+        else if (status === 'Delivered') color = 'green';
+        return (
+          <Tag color={color} style={{ fontWeight: 500 }}>
+            {status || '-'}
+          </Tag>
+        );
+      },
+    },
+    {
       title: 'Agent',
       dataIndex: 'agentName',
       key: 'agentName',
