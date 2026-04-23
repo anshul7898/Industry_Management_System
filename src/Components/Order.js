@@ -264,6 +264,7 @@ const emptyProduct = {
   GST: 0, // ── NEW: GST percentage (0, 5, or 18) ──
   ProductAmount: undefined,
   GSTAmount: 0, // ── NEW: Display GST Amount ──
+  ProductStatus: 'ToDo', // ── NEW: Product Status (ToDo, In-Progress, Delivered) ──
 };
 
 const SectionBox = ({ title, lockedTag, children, accent = '#1677ff' }) => (
@@ -1174,6 +1175,48 @@ export default function Order() {
       if (!currentEndDate) {
         form.setFieldValue('OrderEndDate', dayjs());
       }
+      
+      // Cascade status change to all products based on product count
+      const products = form.getFieldValue('Products') || [];
+      const productCount = products.length;
+      
+      // Single product: mark it as Delivered
+      if (productCount === 1) {
+        const updated = [...products];
+        updated[0].ProductStatus = 'Delivered';
+        form.setFieldValue('Products', updated);
+        message.info('Product marked as Delivered');
+      }
+      // Multiple products: mark all as Delivered
+      else if (productCount > 1) {
+        const updated = products.map((p) => ({
+          ...p,
+          ProductStatus: 'Delivered',
+        }));
+        form.setFieldValue('Products', updated);
+        message.info('All products marked as Delivered');
+      }
+    } else if (value === 'In-Progress') {
+      // Cascade In-Progress status to products based on count
+      const products = form.getFieldValue('Products') || [];
+      const productCount = products.length;
+      
+      // Single product: mark it as In-Progress
+      if (productCount === 1) {
+        const updated = [...products];
+        updated[0].ProductStatus = 'In-Progress';
+        form.setFieldValue('Products', updated);
+        message.info('Product marked as In-Progress');
+      }
+      // Multiple products: mark all as In-Progress
+      else if (productCount > 1) {
+        const updated = products.map((p) => ({
+          ...p,
+          ProductStatus: 'In-Progress',
+        }));
+        form.setFieldValue('Products', updated);
+        message.info('All products marked as In-Progress');
+      }
     }
   };
 
@@ -1735,6 +1778,7 @@ export default function Order() {
           PlateRate: p.PlateRate ?? undefined,
           QuantityType: p.QuantityType ?? undefined, // ── NEW ──
           GST: p.GST !== undefined ? p.GST : 0, // ── NEW ──
+          ProductStatus: p.ProductStatus ?? 'ToDo', // ── NEW: Product Status ──
         };
       },
     );
@@ -2143,6 +2187,7 @@ export default function Order() {
         GST: p.GST !== undefined ? parseFloat(p.GST) : 0, // ── NEW ──
         ProductAmount: normalizeNumericValue(p.ProductAmount),
         GSTAmount: p.GSTAmount || 0, // ── NEW ──
+        ProductStatus: p.ProductStatus || 'ToDo', // ── FIXED: Include ProductStatus ──
       };
     });
 
@@ -2272,6 +2317,31 @@ export default function Order() {
     const totalAmount = computeFinalTotalAmount(values);
     if (isNaN(totalAmount) || totalAmount < 0)
       throw new Error('Total Amount must be a valid non-negative number');
+    
+    // ── NEW: Auto-cascade OrderStatus based on product count and statuses ──
+    let orderStatus = values.OrderStatus || 'ToDo';
+    const productCount = values.Products.length;
+    
+    if (productCount === 1) {
+      // Single product: if product is Delivered or In-Progress, order matches it
+      const productStatus = values.Products[0].ProductStatus || 'ToDo';
+      if (productStatus === 'Delivered' || productStatus === 'In-Progress') {
+        orderStatus = productStatus;
+      }
+    } else if (productCount > 1) {
+      // Multiple products: cascade only if ALL have the same status
+      if (values.Products.every(p => p.ProductStatus === 'Delivered')) {
+        orderStatus = 'Delivered';
+      } else if (values.Products.every(p => p.ProductStatus === 'In-Progress')) {
+        orderStatus = 'In-Progress';
+      } else if (values.Products.every(p => p.ProductStatus === 'ToDo')) {
+        orderStatus = 'ToDo';
+      } else {
+        // Mixed statuses - keep as provided or default to ToDo
+        orderStatus = values.OrderStatus || 'ToDo';
+      }
+    }
+    
     const res = await fetch(`${API_BASE_URL}/api/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2292,7 +2362,7 @@ export default function Order() {
         TransportName: values.TransportName || null,
         DispatchContactNumber: values.DispatchContactNumber || null,
         Destination: values.Destination || null,
-        OrderStatus: values.OrderStatus || 'ToDo',
+        OrderStatus: orderStatus,
         OrderStartDate: values.OrderStartDate ? values.OrderStartDate.format('YYYY-MM-DD') : null,
         OrderEndDate: values.OrderEndDate ? values.OrderEndDate.format('YYYY-MM-DD') : null,
         TotalAmount: totalAmount,
@@ -2314,6 +2384,31 @@ export default function Order() {
     const totalAmount = computeFinalTotalAmount(values);
     if (isNaN(totalAmount) || totalAmount < 0)
       throw new Error('Total Amount must be a valid non-negative number');
+    
+    // ── NEW: Auto-cascade OrderStatus based on product count and statuses ──
+    let orderStatus = values.OrderStatus || 'ToDo';
+    const productCount = values.Products.length;
+    
+    if (productCount === 1) {
+      // Single product: if product is Delivered or In-Progress, order matches it
+      const productStatus = values.Products[0].ProductStatus || 'ToDo';
+      if (productStatus === 'Delivered' || productStatus === 'In-Progress') {
+        orderStatus = productStatus;
+      }
+    } else if (productCount > 1) {
+      // Multiple products: cascade only if ALL have the same status
+      if (values.Products.every(p => p.ProductStatus === 'Delivered')) {
+        orderStatus = 'Delivered';
+      } else if (values.Products.every(p => p.ProductStatus === 'In-Progress')) {
+        orderStatus = 'In-Progress';
+      } else if (values.Products.every(p => p.ProductStatus === 'ToDo')) {
+        orderStatus = 'ToDo';
+      } else {
+        // Mixed statuses - keep as provided or default to ToDo
+        orderStatus = values.OrderStatus || 'ToDo';
+      }
+    }
+    
     const res = await fetch(
       `${API_BASE_URL}/api/orders/${encodeURIComponent(orderId)}`,
       {
@@ -2336,7 +2431,7 @@ export default function Order() {
           TransportName: values.TransportName || null,
           DispatchContactNumber: values.DispatchContactNumber || null,
           Destination: values.Destination || null,
-          OrderStatus: values.OrderStatus || 'ToDo',
+          OrderStatus: orderStatus,
           OrderStartDate: values.OrderStartDate ? values.OrderStartDate.format('YYYY-MM-DD') : null,
           OrderEndDate: values.OrderEndDate ? values.OrderEndDate.format('YYYY-MM-DD') : null,
           TotalAmount: totalAmount,
@@ -2438,6 +2533,135 @@ export default function Order() {
     }
   };
 
+  // ── NEW: Handle inline Order Status update from table ──
+  const handleOrderStatusUpdateFromTable = async (orderId, newStatus, orderRecord) => {
+    // Show confirmation modal first
+    Modal.confirm({
+      title: 'Confirm Order Status Change',
+      content: (
+        <div>
+          <p>
+            Changing the order status to <strong>{newStatus}</strong> will also result in changing the status of all the products in it to <strong>{newStatus}</strong>.
+          </p>
+          <p>Do you want to continue?</p>
+        </div>
+      ),
+      okText: 'OK',
+      cancelText: 'Cancel',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          setLoading(true);
+          
+          const productCount = (orderRecord.Products || []).length;
+          
+          // Apply cascading logic based on product count
+          let productStatuses = [];
+          
+          if (productCount === 1) {
+            // Single product: cascade status only if it's Delivered or In-Progress
+            const currentProductStatus = orderRecord.Products[0].ProductStatus || 'ToDo';
+            if (newStatus === 'Delivered' || newStatus === 'In-Progress') {
+              productStatuses = [newStatus];
+            } else {
+              productStatuses = [currentProductStatus];
+            }
+          } else if (productCount > 1) {
+            // Multiple products: cascade status to all
+            productStatuses = new Array(productCount).fill(newStatus);
+          }
+          
+          // Prepare the products with cascaded status
+          const updatedProducts = (orderRecord.Products || []).map((p, index) => ({
+            ProductType: p.ProductType,
+            ProductId: p.ProductId,
+            ProductCategory: p.ProductCategory,
+            ProductSize: p.ProductSize,
+            Width: p.Width,
+            Height: p.Height,
+            Gusset: p.Gusset,
+            RollSize: p.RollSize,
+            BagMaterial: p.BagMaterial,
+            Quantity: p.Quantity,
+            QuantityType: p.QuantityType,
+            SheetGSM: p.SheetGSM,
+            SheetColor: p.SheetColor,
+            BorderGSM: p.BorderGSM,
+            BorderColor: p.BorderColor,
+            HandleType: p.HandleType,
+            HandleColor: p.HandleColor,
+            AlternativeHandleColor: p.AlternativeHandleColor,
+            HandleGSM: p.HandleGSM,
+            PrintingType: p.PrintingType,
+            PrintColor: p.PrintColor,
+            Color: p.Color,
+            DesignType: p.DesignType,
+            DesignStyle: p.DesignStyle,
+            PlateBlockNumber: p.PlateBlockNumber,
+            PlateType: p.PlateType,
+            PlateRate: p.PlateRate,
+            Rate: p.Rate,
+            FixAmount: p.FixAmount,
+            JobWorkRate: p.JobWorkRate,
+            GST: p.GST,
+            ProductAmount: p.ProductAmount,
+            ProductStatus: productStatuses[index] || 'ToDo',
+          }));
+          
+          // Build the payload
+          const payload = {
+            AgentId: orderRecord.AgentId,
+            Party_Name: orderRecord.Party_Name,
+            AliasOrCompanyName: orderRecord.AliasOrCompanyName,
+            Address: orderRecord.Address,
+            City: orderRecord.City,
+            State: orderRecord.State,
+            Pincode: orderRecord.Pincode,
+            Contact_Person1: orderRecord.Contact_Person1,
+            Contact_Person2: orderRecord.Contact_Person2 || null,
+            Mobile1: orderRecord.Mobile1,
+            Mobile2: orderRecord.Mobile2 || null,
+            Email: orderRecord.Email || null,
+            BookingName: orderRecord.BookingName || null,
+            TransportName: orderRecord.TransportName || null,
+            DispatchContactNumber: orderRecord.DispatchContactNumber || null,
+            Destination: orderRecord.Destination || null,
+            OrderStatus: newStatus,
+            OrderStartDate: orderRecord.OrderStartDate,
+            OrderEndDate: orderRecord.OrderEndDate,
+            TotalAmount: orderRecord.TotalAmount,
+            Carting: orderRecord.Carting || 0,
+            OrderGST: orderRecord.OrderGST || 0,
+            Products: updatedProducts,
+          };
+          
+          const res = await fetch(
+            `${API_BASE_URL}/api/orders/${encodeURIComponent(orderId)}`,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            }
+          );
+          
+          if (!res.ok) {
+            throw new Error(`Failed to update order status: ${res.status}`);
+          }
+          
+          message.success(`Order status updated to ${newStatus}`);
+          await refreshOrders();
+        } catch (err) {
+          message.error(err?.message || 'Failed to update order status');
+        } finally {
+          setLoading(false);
+        }
+      },
+      onCancel: () => {
+        // User clicked Cancel, do nothing
+      },
+    });
+  };
+
   const partyOptions = parties
     .filter(isActiveRecord)
     .map((p) => ({
@@ -2466,17 +2690,15 @@ export default function Order() {
       width: 130,
       sorter: (a, b) => compareText(a, b, 'OrderStatus'),
       sortDirections: ['ascend', 'descend'],
-      render: (status) => {
-        let color = 'default';
-        if (status === 'ToDo') color = 'volcano';
-        else if (status === 'In-Progress') color = 'gold';
-        else if (status === 'Delivered') color = 'green';
-        return (
-          <Tag color={color} style={{ fontWeight: 500 }}>
-            {status || '-'}
-          </Tag>
-        );
-      },
+      render: (status, record) => (
+        <Select
+          value={status || 'ToDo'}
+          style={{ width: '100%' }}
+          onChange={(newStatus) => handleOrderStatusUpdateFromTable(record.OrderId, newStatus, record)}
+          options={DROPDOWN_OPTIONS.orderStatuses}
+          disabled={loading}
+        />
+      ),
     },
     {
       title: 'Agent',
@@ -2810,33 +3032,15 @@ export default function Order() {
                 size="large"
                 icon={<DownloadOutlined />}
                 onClick={() => {
-                  const todoOrders = data.filter(
-                    (o) => o.OrderStatus === 'ToDo',
-                  );
-                  if (!todoOrders.length) {
-                    message.info('No orders with ToDo status to download.');
-                    return;
-                  }
-
-                  // Build one row per product
+                  // Collect all products with "ToDo" status from all orders
                   const rows = [];
-                  todoOrders.forEach((order) => {
+                  data.forEach((order) => {
                     const products = order.Products || [];
-                    if (products.length === 0) {
-                      rows.push({
-                        Size: '', Comment: '', Bag: '', GSM: '', Qty: '',
-                        Color: '', Handle: '',
-                        Party: order.Party_Name || '',
-                        Design: '', Plate: '', 'Plate ': '', Folding: '',
-                        Agent: order.agentName || '',
-                        Date: order.OrderStartDate || '',
-                        Contact: order.Mobile1 || '',
-                        City: order.City || '',
-                        Transport: order.TransportName || '',
-                      });
-                    } else {
-                      products.forEach((p) => {
+                    products.forEach((p) => {
+                      // Only include products with "ToDo" status
+                      if (p.ProductStatus === 'ToDo' || !p.ProductStatus) {
                         rows.push({
+                          'Order ID': order.OrderId || '',
                           Size: p.ProductSize || '',
                           Comment: p.PrintingType || '',
                           Bag: p.SheetColor || '',
@@ -2857,9 +3061,14 @@ export default function Order() {
                           City: order.City || '',
                           Transport: order.TransportName || '',
                         });
-                      });
-                    }
+                      }
+                    });
                   });
+
+                  if (!rows.length) {
+                    message.info('No products with ToDo status to download.');
+                    return;
+                  }
 
                   // Sort rows by Color field (same colors grouped together)
                   rows.sort((a, b) => {
@@ -2898,11 +3107,11 @@ export default function Order() {
                   XLSX.utils.book_append_sheet(wb, ws, 'Printing');
 
                   // Column widths — narrow enough to trigger text wrapping
-                  // Order: Size, Comment, Bag, GSM, Qty, Color, Handle,
+                  // Order: Order ID, Size, Comment, Bag, GSM, Qty, Color, Handle,
                   //        Party, Design, Plate, Plate(rate), Folding,
                   //        Agent, Date, Contact, City, Transport
                   const colWidths = [
-                    { wch: 10 }, { wch: 8 },  { wch: 10 }, { wch: 5 },
+                    { wch: 12 }, { wch: 10 }, { wch: 8 },  { wch: 10 }, { wch: 5 },
                     { wch: 6 },  { wch: 10 }, { wch: 10 }, { wch: 18 },
                     { wch: 6 },  { wch: 6 },  { wch: 7 },  { wch: 14 },
                     { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 12 },
@@ -2960,7 +3169,7 @@ export default function Order() {
                   }
 
                   XLSX.writeFile(wb, `Printing_Schedule_${new Date().toISOString().slice(0, 10)}.xlsx`);
-                  message.success(`Downloaded ${rows.length} product row(s) from ${todoOrders.length} ToDo order(s).`);
+                  message.success(`Downloaded ${rows.length} product(s) with 'ToDo' status.`);
                 }}
                 style={{
                   borderRadius: 8,
@@ -3569,6 +3778,20 @@ export default function Order() {
                             )}
                             {product.ProductCategory && (
                               <Tag color="cyan">{product.ProductCategory}</Tag>
+                            )}
+                            {product.ProductStatus && (
+                              <Tag
+                                color={
+                                  product.ProductStatus === 'Delivered'
+                                    ? 'green'
+                                    : product.ProductStatus === 'In-Progress'
+                                    ? 'orange'
+                                    : 'volcano'
+                                }
+                                style={{ fontWeight: 500 }}
+                              >
+                                {product.ProductStatus}
+                              </Tag>
                             )}
                           </Space>
                         }
@@ -4585,6 +4808,27 @@ export default function Order() {
                                             `${idx}_Quantity`,
                                           )
                                         }
+                                      />
+                                    </Form.Item>
+                                  </Col>
+                                </Row>
+
+                                {/* Product Status */}
+                                <Row gutter={12} style={{ marginTop: 12 }}>
+                                  <Col span={8}>
+                                    <Form.Item
+                                      label="Product Status"
+                                      name={[field.name, 'ProductStatus']}
+                                      rules={[
+                                        {
+                                          required: true,
+                                          message: 'Please select Product Status.',
+                                        },
+                                      ]}
+                                    >
+                                      <KeyboardSelect
+                                        placeholder="Select Product Status"
+                                        options={DROPDOWN_OPTIONS.orderStatuses}
                                       />
                                     </Form.Item>
                                   </Col>
