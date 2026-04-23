@@ -414,7 +414,7 @@ export default function Agent() {
       dataIndex: 'agentId',
       key: 'agentId',
       width: 120,
-      sorter: (a, b) => (a.agentId || 0) - (b.agentId || 0),
+      sorter: (a, b) => String(a.agentId || '').localeCompare(String(b.agentId || '')),
       render: (v) => (
         <span style={{ fontWeight: 600, color: '#1677ff' }}>{v}</span>
       ),

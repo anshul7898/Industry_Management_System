@@ -302,7 +302,7 @@ export default function Party() {
         city: values.city || null,
         state: values.state || null,
         pincode: values.pincode || null,
-        agentId: values.agentId ? parseInt(values.agentId) : null,
+        agentId: values.agentId || null,
         contact_Person1: values.contact_Person1 || null,
         contact_Person2: values.contact_Person2 || null,
         email: values.email || null,
@@ -424,7 +424,7 @@ export default function Party() {
       dataIndex: 'partyId',
       key: 'partyId',
       width: 80,
-      sorter: (a, b) => (a.partyId || 0) - (b.partyId || 0),
+      sorter: (a, b) => String(a.partyId || '').localeCompare(String(b.partyId || '')),
       fixed: 'left',
       render: (v) => (
         <span style={{ fontWeight: 600, color: '#1677ff' }}>{v}</span>
