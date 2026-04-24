@@ -43,15 +43,15 @@ export default function Login() {
 
   const roleOptions = [
     { value: 'super_user', label: '👑 Super User' },
-    { value: 'inventory_admin', label: '📦 Inventory Admin' },
-    { value: 'accounts_admin', label: '💼 Accounts Admin' },
-    {
-      value: 'machine_maintenance_admin',
-      label: '🔧 Machine Maintenance Admin',
-    },
-    { value: 'delivery_admin', label: '🚚 Delivery Admin' },
-    { value: 'product_admin', label: '🏭 Product Admin' },
-    { value: 'order_admin', label: '📋 Order Admin' },
+    // { value: 'inventory_admin', label: '📦 Inventory Admin' },
+    // { value: 'accounts_admin', label: '💼 Accounts Admin' },
+    // {
+    //   value: 'machine_maintenance_admin',
+    //   label: '🔧 Machine Maintenance Admin',
+    // },
+    // { value: 'delivery_admin', label: '🚚 Delivery Admin' },
+    // { value: 'product_admin', label: '🏭 Product Admin' },
+    // { value: 'order_admin', label: '📋 Order Admin' },
   ];
 
   const persistRole = () => {
