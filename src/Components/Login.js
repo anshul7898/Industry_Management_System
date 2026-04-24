@@ -15,6 +15,7 @@ import {
   ArrowRightOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
+import { initializeSession } from '../utils/sessionManager';
 import './Login.css';
 
 export default function Login() {
@@ -57,6 +58,7 @@ export default function Login() {
   const persistRole = () => {
     sessionStorage.setItem('role', role);
     localStorage.removeItem('role');
+    initializeSession();
   };
 
   const redirectAfterLogin = () => {
