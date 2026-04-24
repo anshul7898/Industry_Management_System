@@ -1,10 +1,19 @@
 import { Navigate } from 'react-router-dom';
+import { isSessionValid } from '../utils/sessionManager';
 
 /**
  * allowedRoles: array of roles allowed to view this route
  * Example: allowedRoles={["super_user", "inventory_admin"]}
  */
 export default function ProtectedRoute({ allowedRoles, children }) {
+  // ✅ Check if session is still valid
+  if (!isSessionValid()) {
+    // Clear any stale session data
+    sessionStorage.removeItem('role');
+    localStorage.removeItem('role');
+    return <Navigate to="/" replace />;
+  }
+
   // ✅ Read from sessionStorage first, fallback to localStorage (for migration)
   const role =
     sessionStorage.getItem('role') || localStorage.getItem('role') || '';

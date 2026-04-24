@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import ProtectedRoute from './Components/ProtectedRoute';
+import { SessionProvider } from './Components/SessionProvider';
 
 import Home from './Components/Home';
 import Login from './Components/Login';
@@ -16,7 +17,8 @@ import Party from './Components/Party';
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <SessionProvider>
+        <Routes>
         <Route path="/" element={<Login />} />
 
         <Route
@@ -98,7 +100,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-      </Routes>
+        </Routes>
+      </SessionProvider>
     </BrowserRouter>
   );
 }
