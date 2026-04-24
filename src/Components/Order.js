@@ -199,7 +199,6 @@ const DROPDOWN_OPTIONS = {
   orderTypes: [
     { label: 'New Order', value: 'new' },
     { label: 'Repeat Order', value: 'repeat' },
-    { label: 'Old Order', value: 'old' },
   ],
   orderStatuses: [
     { label: 'ToDo', value: 'ToDo' },
@@ -1502,7 +1501,10 @@ export default function Order() {
     setRepeatOrdersLoading(true);
     try {
       const all = await fetchOrders();
-      setRepeatOrdersForAgent(all.filter((o) => o.AgentId === agentId));
+      // Match AgentId using string comparison to handle both "A01" and numeric formats
+      setRepeatOrdersForAgent(
+        all.filter((o) => String(o.AgentId ?? '').toLowerCase() === String(agentId).toLowerCase())
+      );
     } catch {
       message.error('Failed to load orders for this agent');
       setRepeatOrdersForAgent([]);
@@ -1556,33 +1558,22 @@ export default function Order() {
         const cc = normaliseColorForForm(p.Color, DROPDOWN_OPTIONS.colors);
         const rs = normaliseRollSizeForForm(p.RollSize, rollSizeOptions);
         return {
-          ProductType: p.ProductType,
-          ProductId: p.ProductId,
-          ProductCategory: p.ProductCategory,
-          ProductSize: p.ProductSize,
+          ...emptyProduct,
+          ...p,
           ProductSizeCustom: undefined,
           SizeWidth: p.Width ? parseInt(p.Width, 10) : undefined,
           SizeHeight: p.Height ? parseInt(p.Height, 10) : undefined,
           SizeGusset: p.Gusset ? parseInt(p.Gusset, 10) : undefined,
           RollSize: rs.selected,
           RollSizeCustom: rs.custom,
-          BagMaterial: p.BagMaterial,
-          Quantity: p.Quantity,
-          QuantityType: p.QuantityType || undefined, // ── NEW ──
-          SheetGSM: p.SheetGSM,
           SheetColor: sc.selected,
           SheetColorCustom: sc.custom,
-          BorderGSM: p.BorderGSM,
           BorderColor: bc.selected,
           BorderColorCustom: bc.custom,
-          HandleType: p.HandleType,
           HandleColor: hc.selected,
           HandleColorCustom: hc.custom,
           AlternativeHandleColor: ahc.selected,
           AlternativeHandleColorCustom: ahc.custom,
-          HandleGSM: p.HandleGSM,
-          PrintingType: p.PrintingType,
-          PrintColor: p.PrintColor,
           Color: cc.selected,
           ColorCustom: cc.custom,
           DesignType: p.DesignType || undefined,
@@ -1590,17 +1581,20 @@ export default function Order() {
           PlateBlockNumber: p.PlateBlockNumber || undefined,
           PlateType: p.PlateType || undefined,
           PlateRate: p.PlateRate || undefined,
-          Rate: p.Rate,
           FixAmount: p.FixAmount || undefined,
           JobWorkRate: p.JobWorkRate || undefined,
-          GST: p.GST !== undefined ? p.GST : 0, // ── NEW ──
-          ProductAmount: p.ProductAmount || 0,
-          GSTAmount: p.GSTAmount || 0, // ── NEW ──
+          GST: p.GST !== undefined ? p.GST : 0,
+          GSTAmount: p.GSTAmount || 0,
+          // Always default QuantityType to 'Pieces' if not set (old orders)
+          QuantityType: p.QuantityType ?? 'Pieces',
+          // Always reset ProductStatus to 'ToDo' for new repeat orders
+          ProductStatus: 'ToDo',
         };
       });
       form.resetFields();
       form.setFieldsValue({
-        AgentId: order.AgentId,
+        // Use selectedRepeatAgent.agentId as fallback if old order has null AgentId
+        AgentId: order.AgentId || selectedRepeatAgent?.agentId || '',
         Party_Name: order.Party_Name || '',
         AliasOrCompanyName: order.AliasOrCompanyName || '',
         Address: order.Address || '',
@@ -1666,7 +1660,6 @@ export default function Order() {
       setOrderTypeModalOpen(false);
       if (orderType === 'new') openAddOrderModal();
       else if (orderType === 'repeat') openRepeatOrderAgentModal();
-      else if (orderType === 'old') openOldOrderAgentModal();
     } catch {
       message.error('Please select an order type');
     }
@@ -1776,7 +1769,7 @@ export default function Order() {
           DesignStyle: p.DesignStyle ?? undefined,
           PlateType: p.PlateType ?? undefined,
           PlateRate: p.PlateRate ?? undefined,
-          QuantityType: p.QuantityType ?? undefined, // ── NEW ──
+          QuantityType: p.QuantityType ?? 'Pieces', // ── Default to 'Pieces' for old orders ──
           GST: p.GST !== undefined ? p.GST : 0, // ── NEW ──
           ProductStatus: p.ProductStatus ?? 'ToDo', // ── NEW: Product Status ──
         };
@@ -2040,7 +2033,7 @@ export default function Order() {
           city: values.City,
           state: values.State,
           pincode: String(values.Pincode),
-          agentId: values.AgentId ? parseInt(values.AgentId) : null,
+          agentId: values.AgentId || null,
           contact_Person1: values.Contact_Person1,
           contact_Person2: values.Contact_Person2 || null,
           email: values.Email || null,
@@ -2314,6 +2307,8 @@ export default function Order() {
   const handleAdd = async (values) => {
     if (!values.Products || values.Products.length === 0)
       throw new Error('Please add at least one product');
+    const agentId = String(values.AgentId ?? '').trim();
+    if (!agentId) throw new Error('Agent is required. Please select an Agent.');
     const totalAmount = computeFinalTotalAmount(values);
     if (isNaN(totalAmount) || totalAmount < 0)
       throw new Error('Total Amount must be a valid non-negative number');
@@ -2346,7 +2341,7 @@ export default function Order() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        AgentId: values.AgentId ? parseInt(values.AgentId) : null,
+        AgentId: agentId,
         Party_Name: values.Party_Name,
         AliasOrCompanyName: values.AliasOrCompanyName,
         Address: values.Address,
@@ -2381,6 +2376,8 @@ export default function Order() {
   const handleUpdate = async (orderId, values) => {
     if (!values.Products || values.Products.length === 0)
       throw new Error('Please add at least one product');
+    const agentId = String(values.AgentId ?? '').trim();
+    if (!agentId) throw new Error('Agent is required. Please select an Agent.');
     const totalAmount = computeFinalTotalAmount(values);
     if (isNaN(totalAmount) || totalAmount < 0)
       throw new Error('Total Amount must be a valid non-negative number');
@@ -2415,7 +2412,7 @@ export default function Order() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          AgentId: values.AgentId ? parseInt(values.AgentId) : null,
+          AgentId: agentId,
           Party_Name: values.Party_Name,
           AliasOrCompanyName: values.AliasOrCompanyName,
           Address: values.Address,
@@ -2488,7 +2485,13 @@ export default function Order() {
       // Otherwise proceed with submission
       await submitOrder(values);
     } catch (err) {
-      if (err?.message) message.error(err.message);
+      // Ant Design validateFields throws { errorFields: [...] } with no .message
+      if (err?.errorFields && err.errorFields.length > 0) {
+        const firstError = err.errorFields[0]?.errors?.[0];
+        message.error(firstError || 'Please fill in all required fields correctly.');
+      } else if (err?.message) {
+        message.error(err.message);
+      }
       setLoading(false);
     }
   };
@@ -2511,7 +2514,7 @@ export default function Order() {
         setIsRepeatOrder(false);
         setPagination((p) => ({ ...p, current: 1 }));
         await refreshOrders();
-        return;
+        return true;
       }
       if (modalMode === 'edit') {
         if (!editingOrderId) throw new Error('Missing OrderId for update.');
@@ -2525,9 +2528,12 @@ export default function Order() {
         setSelectedState(null);
         setIsRepeatOrder(false);
         await refreshOrders();
+        return true;
       }
+      return false;
     } catch (err) {
       if (err?.message) message.error(err.message);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -4352,10 +4358,7 @@ export default function Order() {
                       options={cityOptions}
                       showSearch
                       onChange={handleCityChange}
-                      disabled={
-                        isRepeatOrder ||
-                        (!selectedState && cityOptions.length === 0)
-                      }
+                      disabled={!selectedState && cityOptions.length === 0}
                       filterOption={(input, option) =>
                         (option?.label ?? '')
                           .toLowerCase()
@@ -5615,11 +5618,13 @@ export default function Order() {
             setSubmitConfirmModalOpen(false);
             setPendingFormValues(null);
           }}
-          onOk={() => {
+          onOk={async () => {
             if (pendingFormValues) {
-              submitOrder(pendingFormValues);
-              setSubmitConfirmModalOpen(false);
-              setPendingFormValues(null);
+              const submitted = await submitOrder(pendingFormValues);
+              if (submitted) {
+                setSubmitConfirmModalOpen(false);
+                setPendingFormValues(null);
+              }
             }
           }}
           okText="Submit Order"
