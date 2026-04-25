@@ -29,7 +29,7 @@ export default function Navbar() {
   const selectedKey = (() => {
     if (path === '/home') return 'home';
     if (path === '/order') return 'order';
-    if (path === '/product') return 'product';
+    // if (path === '/product') return 'product';
     if (path === '/agent') return 'agent';
     if (path === '/party') return 'party';
     return '';
@@ -41,11 +41,11 @@ export default function Navbar() {
       icon: <ShoppingCartOutlined />,
       label: <Link to="/Order">Order</Link>,
     },
-    {
-      key: 'product',
-      icon: <AppstoreOutlined />,
-      label: <Link to="/Product">Product</Link>,
-    },
+    // {
+    //   key: 'product',
+    //   icon: <AppstoreOutlined />,
+    //   label: <Link to="/Product">Product</Link>,
+    // },
     {
       key: 'agent',
       icon: <UserOutlined />,
@@ -59,12 +59,12 @@ export default function Navbar() {
   ];
 
   const ROLE_ALLOWED_KEYS = {
-    super_user: ['home', 'order', 'product', 'agent', 'party'],
+    super_user: ['home', 'order', 'agent', 'party'],
     inventory_admin: ['inventory'],
     accounts_admin: ['accounts'],
     machine_maintenance_admin: ['machineMaintenance'],
     delivery_admin: ['delivery'],
-    product_admin: ['product'],
+    // product_admin: ['product'],
     order_admin: ['order'],
   };
 
@@ -91,8 +91,8 @@ export default function Navbar() {
         return '/MachineMaintenance';
       case 'delivery_admin':
         return '/Delivery';
-      case 'product_admin':
-        return '/Product';
+      // case 'product_admin':
+      //   return '/Product';
       default:
         return '/Order';
     }
