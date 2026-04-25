@@ -252,7 +252,24 @@ export default function Party() {
     setModalMode('add');
     setEditingPartyId(null);
     setSelectedState(null);
+    
+    // ✅ CRITICAL: Explicitly clear ALL form fields to prevent pre-filled values
     form.resetFields();
+    form.setFieldsValue({
+      partyName: '',
+      aliasOrCompanyName: '',
+      contact_Person1: '',
+      contact_Person2: '',
+      mobile1: '',
+      mobile2: '',
+      email: '',
+      address: '',
+      city: '',
+      state: '',
+      pincode: '',
+      agentId: '',
+    });
+    
     try {
       setAgents(await fetchAgents());
     } catch (err) {
@@ -312,7 +329,8 @@ export default function Party() {
 
       // ✅ EXPLICITLY CHECK MODE FOR ADD vs EDIT
       if (modalMode === 'add' && !editingPartyId) {
-        // ✅ CREATE NEW PARTY
+        // ✅ CREATE NEW PARTY - POST
+        console.log('📝 Creating NEW party (POST):', payload);
         const res = await fetch(`${API_BASE_URL}/api/party`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -322,9 +340,11 @@ export default function Party() {
           const e = await res.text();
           throw new Error(e || 'Failed to create party');
         }
+        console.log('✅ Party created successfully');
         message.success('Party created successfully');
       } else if (modalMode === 'edit' && editingPartyId) {
-        // ✅ UPDATE EXISTING PARTY
+        // ✅ UPDATE EXISTING PARTY - PUT
+        console.log('✏️ Updating party (PUT):', editingPartyId, payload);
         const res = await fetch(`${API_BASE_URL}/api/party/${editingPartyId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -334,18 +354,41 @@ export default function Party() {
           const e = await res.text();
           throw new Error(e || 'Failed to update party');
         }
+        console.log('✅ Party updated successfully');
         message.success('Party updated successfully');
       } else {
         // ✅ SAFETY CHECK: Invalid state
-        throw new Error(`Invalid modal state: mode=${modalMode}, editingPartyId=${editingPartyId}`);
+        const errorMsg = `Invalid modal state: modalMode=${modalMode}, editingPartyId=${editingPartyId}`;
+        console.error('❌', errorMsg);
+        throw new Error(errorMsg);
       }
 
+      // ✅ RESET STATE COMPLETELY AFTER SUCCESSFUL SUBMISSION
       setIsModalOpen(false);
       setSelectedState(null);
       setModalMode('add');
       setEditingPartyId(null);
+      
+      // ✅ CLEAR FORM COMPLETELY
+      form.resetFields();
+      form.setFieldsValue({
+        partyName: '',
+        aliasOrCompanyName: '',
+        contact_Person1: '',
+        contact_Person2: '',
+        mobile1: '',
+        mobile2: '',
+        email: '',
+        address: '',
+        city: '',
+        state: '',
+        pincode: '',
+        agentId: '',
+      });
+      
       await refreshParties();
     } catch (err) {
+      console.error('❌ Error submitting party:', err);
       message.error(err?.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -384,8 +427,28 @@ export default function Party() {
   };
 
   const handleCloseModal = () => {
+    // ✅ RESET ALL STATE WHEN CLOSING
     setIsModalOpen(false);
     setSelectedState(null);
+    setModalMode('add');
+    setEditingPartyId(null);
+    
+    // ✅ CLEAR FORM COMPLETELY
+    form.resetFields();
+    form.setFieldsValue({
+      partyName: '',
+      aliasOrCompanyName: '',
+      contact_Person1: '',
+      contact_Person2: '',
+      mobile1: '',
+      mobile2: '',
+      email: '',
+      address: '',
+      city: '',
+      state: '',
+      pincode: '',
+      agentId: '',
+    });
   };
 
   // ---------------- SEARCH ----------------
