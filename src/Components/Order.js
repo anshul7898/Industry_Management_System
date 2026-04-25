@@ -198,7 +198,7 @@ const DROPDOWN_OPTIONS = {
   ],
   orderTypes: [
     { label: 'New Order', value: 'new' },
-    { label: 'Repeat Order', value: 'repeat' },
+    { label: 'Repeat Order', value: 'repeat' }
   ],
   orderStatuses: [
     { label: 'ToDo', value: 'ToDo' },
