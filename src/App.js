@@ -5,7 +5,7 @@ import { SessionProvider } from './Components/SessionProvider';
 
 import Home from './Components/Home';
 import Login from './Components/Login';
-// import Product from './Components/Product';
+// import Product from './Components/Product'
 import Accounts from './Components/Accounts';
 import Order from './Components/Order';
 import MachineMaintenance from './Components/MachineMaintenance';
