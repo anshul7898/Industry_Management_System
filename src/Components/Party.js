@@ -310,7 +310,9 @@ export default function Party() {
         mobile2: values.mobile2 || null,
       };
 
-      if (modalMode === 'add') {
+      // ✅ EXPLICITLY CHECK MODE FOR ADD vs EDIT
+      if (modalMode === 'add' && !editingPartyId) {
+        // ✅ CREATE NEW PARTY
         const res = await fetch(`${API_BASE_URL}/api/party`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -321,7 +323,8 @@ export default function Party() {
           throw new Error(e || 'Failed to create party');
         }
         message.success('Party created successfully');
-      } else if (modalMode === 'edit') {
+      } else if (modalMode === 'edit' && editingPartyId) {
+        // ✅ UPDATE EXISTING PARTY
         const res = await fetch(`${API_BASE_URL}/api/party/${editingPartyId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -332,13 +335,18 @@ export default function Party() {
           throw new Error(e || 'Failed to update party');
         }
         message.success('Party updated successfully');
+      } else {
+        // ✅ SAFETY CHECK: Invalid state
+        throw new Error(`Invalid modal state: mode=${modalMode}, editingPartyId=${editingPartyId}`);
       }
 
       setIsModalOpen(false);
       setSelectedState(null);
+      setModalMode('add');
+      setEditingPartyId(null);
       await refreshParties();
     } catch (err) {
-      message.error(err.message);
+      message.error(err?.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
