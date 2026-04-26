@@ -851,6 +851,13 @@ const RollSizeField = memo(
                             return Promise.reject(
                               new Error('Please enter a custom roll size.'),
                             );
+                          // Extract numeric value and check for negative
+                          const numericVal = parseFloat(v);
+                          if (numericVal < 0) {
+                            return Promise.reject(
+                              new Error('Roll size cannot be negative.'),
+                            );
+                          }
                           return Promise.resolve();
                         },
                       },
