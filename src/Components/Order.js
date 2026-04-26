@@ -1092,6 +1092,18 @@ export default function Order() {
     }
   };
 
+  const handleQuantityInput = (e, fieldIndex) => {
+    const quantityType = form.getFieldValue(['Products', fieldIndex, 'QuantityType']);
+    
+    if (quantityType === 'KG') {
+      // Allow decimals for KG
+      handleDecimalInput(e);
+    } else {
+      // Allow only integers for Pieces
+      handleNumbersOnlyInput(e);
+    }
+  };
+
   const validateEmail = (_, value) => {
     if (!value) return Promise.resolve();
     if (emailRegex.test(value)) return Promise.resolve();
@@ -4805,7 +4817,7 @@ export default function Order() {
                                     >
                                       <Input
                                         placeholder="e.g., 1000"
-                                        onInput={handleNumbersOnlyInput}
+                                        onInput={(e) => handleQuantityInput(e, idx)}
                                         onChange={() =>
                                           handleRateOrQuantityChange(
                                             `${idx}_Quantity`,
