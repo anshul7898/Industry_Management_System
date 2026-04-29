@@ -898,7 +898,7 @@ export default function Order() {
   const [data, setData] = useState([]);
   const [agents, setAgents] = useState([]);
   const [parties, setParties] = useState([]);
-  const [partySelectionMode, setPartySelectionMode] = useState('new');
+  const [partySelectionMode, setPartySelectionMode] = useState('existing');
   const [selectedPartyId, setSelectedPartyId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -1697,12 +1697,12 @@ export default function Order() {
     setModalMode('add');
     setEditingOrderId(null);
     setSelectedState(null);
-    setPartySelectionMode('new');
+    setPartySelectionMode('existing');
     setSelectedPartyId(null);
     setIsRepeatOrder(false);
     form.resetFields();
     form.setFieldsValue({
-      partyMode: 'new',
+      partyMode: 'existing',
       SelectedPartyId: null,
       OrderStatus: 'ToDo',
       OrderStartDate: dayjs(),
